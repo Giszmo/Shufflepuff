@@ -14,6 +14,6 @@ public interface Network {
     Message receive() throws TimeoutException, ProtocolAbortedException; // Wait for a message to be received.
     // Receive a set of messages from a set of other players.
     Map<VerificationKey, Message> receive(Set<VerificationKey> from) throws TimeoutException, ProtocolAbortedException;
-    // Regester the set of keys from whose owners we expect to receive messages.
-    void keys(Set<VerificationKey> keys);
+    // Regester the session identifier we expect and set of keys from whose owners we expect to receive messages.
+    void register(SessionIdentifier τ, Set<VerificationKey> keys);
 }

@@ -69,6 +69,7 @@ public class ShuffleMachine {
         this.network = network;
         this.crypto = crypto;
         this.coin = coin;
+        this.message = message;
 
         this.phase = ShufflePhase.Uninitiated;
 
@@ -76,7 +77,7 @@ public class ShuffleMachine {
         message.register(τ, sk, this);
 
         // These are the keys from which we will receive messages.
-        network.keys(opponentSet(1, N));
+        network.register(τ, opponentSet(1, N));
     }
 
     // the phase can be accessed concurrently in case we want to update
@@ -213,7 +214,6 @@ public class ShuffleMachine {
             // Put all temporary encryption keys into a list and hash the result.
             Message σ4 = message.make();
             for (int i = 1; i < N; i++) {
-                // Successively encrypt with the keys of the players who haven't had their turn yet.
                 σ4.append(message.make(σ1.get(players[i - 1]).readAsEncryptionKey()));
             }
 
@@ -294,7 +294,7 @@ public class ShuffleMachine {
         // Then successively and randomly select which one will be inserted until none remain.
         for (int i = N; i > 0; i --) {
             // Get a random number between 0 and N - 1 inclusive.
-            int n = crypto.getRandom(N - 1);
+            int n = crypto.getRandom(i - 1);
 
             for (int j = 0; j < n; j ++) {
                 temp.append(temp.remove());
@@ -305,7 +305,7 @@ public class ShuffleMachine {
         }
     }
 
-    boolean areEqual(Map<VerificationKey, Message> messages) {
+    static boolean areEqual(Map<VerificationKey, Message> messages) throws InvalidImplementationException {
         boolean equal = true;
 
         Message last = null;

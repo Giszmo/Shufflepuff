@@ -28,7 +28,8 @@ public class MockNetwork implements Network {
     }
 
     @Override
-    public void keys(Set<VerificationKey> keys) {
+    public void register(SessionIdentifier τ, Set<VerificationKey> keys) {
 
     }
+
 }

@@ -17,7 +17,7 @@ public interface Crypto {
     // Generate new signing key.
     SigningKey SigningKey() throws CryptographyException;
     // Get a random number between 0 and N inclusive.
-    int getRandom(int n) throws CryptographyException;
+    int getRandom(int n) throws CryptographyException, InvalidImplementationException;
     // Hash a message.
     Message hash(Message m) throws CryptographyException;
 }
