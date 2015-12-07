@@ -5,5 +5,5 @@ package com.shuffle.form;
  *
  * Created by Daniel Krawisz on 12/3/15.
  */
-public class ProtocolStartedException extends Exception {
+class ProtocolStartedException extends Exception {
 }

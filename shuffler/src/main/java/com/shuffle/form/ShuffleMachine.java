@@ -6,9 +6,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
-import java.util.Set;
 import java.util.TreeMap;
-import java.util.TreeSet;
 
 /**
  *
@@ -34,20 +32,7 @@ import java.util.TreeSet;
  *
  */
 public class ShuffleMachine {
-    SessionIdentifier τ; // The session key for this run of the protocol.
-
-    SigningKey sk; // My signing key.
-
-    VerificationKey players[]; // All the players, including myself.
-
-    int N; // the number of players.
-
-    // What is my index among the participants? (the protocol as described in the paper uses
-    // ordinal numbering, so the value of me is actually one greater than the index of our key
-    // in the array.)
-    int me;
-
-    CoinAmount ν; // The amount to be shuffled.
+    SessionIdentifier τ;
 
     Crypto crypto;
 
@@ -55,25 +40,42 @@ public class ShuffleMachine {
 
     PacketFactory packets;
 
+    Network connection;
+
     NetworkOperations network;
 
     volatile ShufflePhase phase;
 
     public ShuffleMachine(
-            SessionIdentifier τ, // The session key for this run of the protocol.
-            SigningKey sk, // The private key that represents us!
-            VerificationKey players[], // The keys representing all the players.
             PacketFactory packets,
             Crypto crypto,
             Network network,
             Coin coin) {
 
-        this.players = players;
-        this.sk = sk;
-        this.N = players.length;
         this.crypto = crypto;
         this.coin = coin;
         this.packets = packets;
+
+        this.phase = ShufflePhase.Uninitiated;
+    }
+
+    void protocolDefinition(
+            CoinAmount ν, // The amount to be shuffled.
+            SigningKey sk, // My signing key.
+            VerificationKey players[] // The keys representing all the players, in order.
+    ) throws
+            TimeoutException,
+            FormatException,
+            CryptographyException,
+            BlockChainException,
+            MempoolException,
+            InvalidImplementationException,
+            ValueException,
+            CoinNetworkException,
+            InvalidParticipantSetException {
+
+        int me = -1;
+        int N = players.length;
 
         // Determine what my index number is.
         for (int i = 1; i <= N; i ++) {
@@ -82,24 +84,8 @@ public class ShuffleMachine {
             }
         }
 
-        this.network = new NetworkOperations(τ, sk, network, this);
-
-        this.phase = ShufflePhase.Uninitiated;
-    }
-
-    void protocolDefinition() throws
-            ProtocolStartedException,
-            ProtocolAbortedException,
-            TimeoutException,
-            FormatException,
-            CryptographyException,
-            BlockChainException,
-            MempoolException,
-            InvalidImplementationException, ValueException, CoinNetworkException {
-
-        // Don't let the protocol be run more than once at a time.
-        if (phase != ShufflePhase.Uninitiated) {
-            throw new ProtocolStartedException();
+        if (me < 0) {
+            throw new InvalidParticipantSetException();
         }
 
         // The protocol is surrounded by a try block that catches BlameExceptions, which are thrown
@@ -140,7 +126,7 @@ public class ShuffleMachine {
             }
 
             // Now we wait to receive similar messages from everyone else.
-            encryptonKeys.putAll(network.receiveFrom(opponentSet(2, N)));
+            encryptonKeys.putAll(network.receiveFrom(network.opponentSet(2, N)));
 
         // Phase 2: Shuffle
         // In the shuffle phase, we create a sequence of orderings which will b successively
@@ -158,7 +144,6 @@ public class ShuffleMachine {
             Packet σ2 = packets.make();
             if (me != 1) {
                 σ2 = network.receiveFrom(players[me - 2]);
-                assert dk != null;
                 decryptAll(dk, σ2);
             }
 
@@ -211,7 +196,7 @@ public class ShuffleMachine {
             network.broadcast(σ4);
 
             // Wait for a similar message from everyone else and check that the result is the name.
-            Map<VerificationKey, Packet> hashes = network.receiveFrom(opponentSet(1, N));
+            Map<VerificationKey, Packet> hashes = network.receiveFrom(network.opponentSet(1, N));
             hashes.put(sk.VerificationKey(), σ4);
             if (!areEqual(hashes)) {
                 throw new BlameException();
@@ -231,7 +216,7 @@ public class ShuffleMachine {
             CoinTransaction t = coin.transaction(inputs, outputs);
             network.broadcast(packets.make().append(sk.makeSignature(t)));
 
-            Map<VerificationKey, Packet> σ5 = network.receiveFrom(opponentSet(1, N));
+            Map<VerificationKey, Packet> σ5 = network.receiveFrom(network.opponentSet(1, N));
 
             // Verify the signatures.
             for(Map.Entry<VerificationKey, Packet> sig : σ5.entrySet()) {
@@ -268,41 +253,35 @@ public class ShuffleMachine {
 
     // The function for public consumption which runs the protocol.
     // TODO Coming soon!! handle all these error states more delicately.
-    public ShuffleErrorState run() {
+    public ShuffleErrorState run(SessionIdentifier τ, CoinAmount ν, SigningKey sk, VerificationKey players[]) {
+
+        // Don't let the protocol be run more than once at a time.
+        if (phase != ShufflePhase.Uninitiated) {
+            return new ShuffleErrorState(this.τ, currentPhase(), new ProtocolStartedException());
+        }
+
+        // Set up interactions with the shuffle network.
+        NetworkOperations network = new NetworkOperations(τ, sk, players, connection, this);
+
         // Here we handle a bunch of lower level errors.
         try {
-            protocolDefinition();
+            protocolDefinition(ν, sk, players);
         } catch ( InvalidImplementationException
+                | InvalidParticipantSetException
                 | ValueException
                 | MempoolException
                 | BlockChainException
                 | CoinNetworkException
                 | CryptographyException
                 | TimeoutException
-                | ProtocolAbortedException
-                | ProtocolStartedException
                 | FormatException e) {
 
+            phase = ShufflePhase.Uninitiated;
             return new ShuffleErrorState(τ, currentPhase(), e);
         }
 
+        phase = ShufflePhase.Uninitiated;
         return null;
-    }
-
-    // Get the set of players other than myself from i to N.
-    private Set<VerificationKey> opponentSet(int i, int N) {
-        Set<VerificationKey> set = new TreeSet<>();
-        for(int j = i; j <= N; j ++) {
-            if (j != me) {
-                set.add(players[i - 1]);
-            }
-        }
-
-        return set;
-    }
-
-    Set<VerificationKey> opponentSet() {
-        return opponentSet(1, N);
     }
 
     // TODO

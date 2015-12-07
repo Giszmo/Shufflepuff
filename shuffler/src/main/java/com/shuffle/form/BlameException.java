@@ -5,7 +5,7 @@ package com.shuffle.form;
  *
  * This exception is thrown when malicious behavior is detected on the part of another player.
  */
-public class BlameException extends Exception {
+class BlameException extends Exception {
     BlameException() {
 
     }

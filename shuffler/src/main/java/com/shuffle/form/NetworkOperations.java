@@ -2,23 +2,45 @@ package com.shuffle.form;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * Operations relating to the verification and formatting of messages when they are sent or received.
  *
  * Created by Daniel Krawisz on 12/7/15.
  */
-public class NetworkOperations {
+class NetworkOperations {
     SessionIdentifier τ; // The session identifier of this protocol.
     Network network; // The connection to the shuffle network.
     ShuffleMachine machine; // The machine running the protocol.
     SigningKey sk;
+    int N; // the number of players.
+    int me; // The index of the current player.
+    VerificationKey players[]; // The current players.
 
-    NetworkOperations(SessionIdentifier τ, SigningKey sk, Network network, ShuffleMachine machine) {
+    NetworkOperations(SessionIdentifier τ, SigningKey sk, VerificationKey players[], Network network, ShuffleMachine machine) {
         this.τ = τ;
         this.network = network;
         this.machine = machine;
         this.sk = sk;
+        this.players = players;
+        this.N = players.length;
+    }
+
+    // Get the set of players other than myself from i to N.
+    public Set<VerificationKey> opponentSet(int i, int N) {
+        Set<VerificationKey> set = new TreeSet<>();
+        for(int j = i; j <= N; j ++) {
+            if (j != me) {
+                set.add(players[i - 1]);
+            }
+        }
+
+        return set;
+    }
+
+    public Set<VerificationKey> opponentSet() {
+        return opponentSet(1, N);
     }
 
     private void prepareForSending(Packet packet) {
@@ -28,7 +50,7 @@ public class NetworkOperations {
     }
 
     private VerificationKey determineSender(Packet packet) throws CryptographyException, FormatException {
-        Set<VerificationKey> keys = machine.opponentSet();
+        Set<VerificationKey> keys = opponentSet();
 
         for(VerificationKey key : keys) {
             if(key.readSignature(packet)) {
@@ -40,7 +62,7 @@ public class NetworkOperations {
     }
 
     public void broadcast(Packet packet) throws TimeoutException {
-        Set<VerificationKey> keys = machine.opponentSet();
+        Set<VerificationKey> keys = opponentSet();
 
         prepareForSending(packet);
 
@@ -55,7 +77,7 @@ public class NetworkOperations {
         network.sendTo(to, packet);
     }
 
-    public Packet receiveFrom(VerificationKey from) throws TimeoutException, ProtocolAbortedException, CryptographyException, FormatException, ValueException, BlameException {
+    public Packet receiveFrom(VerificationKey from) throws TimeoutException, CryptographyException, FormatException, ValueException, BlameException {
         Packet packet = network.receive();
 
         // If we receive a message, but it is not from the expected source, it might be a blame message.
@@ -88,7 +110,7 @@ public class NetworkOperations {
     }
 
     // TODO
-    public Map<VerificationKey, Packet> receiveFrom(Set<VerificationKey> from) throws TimeoutException, ProtocolAbortedException {
+    public Map<VerificationKey, Packet> receiveFrom(Set<VerificationKey> from) throws TimeoutException {
         return null;
     }
 }

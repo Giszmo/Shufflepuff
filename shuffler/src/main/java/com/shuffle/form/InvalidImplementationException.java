@@ -6,5 +6,5 @@ package com.shuffle.form;
  * This exception is thrown when a check fails that could only result from an invalid implementation
  * of the protocol itself rather than an external problem.
  */
-public class InvalidImplementationException extends Exception {
+class InvalidImplementationException extends Exception {
 }
