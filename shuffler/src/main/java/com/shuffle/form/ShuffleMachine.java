@@ -34,82 +34,72 @@ import java.util.TreeSet;
  *
  */
 public class ShuffleMachine {
+    SessionIdentifier τ; // The session key for this run of the protocol.
 
-    VerificationKey players[]; // The participants themselves.
+    SigningKey sk; // My signing key.
 
-    int N; // the number of participants.
+    VerificationKey players[]; // All the players, including myself.
 
-    SigningKey sk;
+    int N; // the number of players.
 
     // What is my index among the participants? (the protocol as described in the paper uses
     // ordinal numbering, so the value of me is actually one greater than the index of our key
     // in the array.)
     int me;
 
-    Network network;
+    CoinAmount ν; // The amount to be shuffled.
 
     Crypto crypto;
 
     Coin coin;
 
-    MessageFactory message;
+    PacketFactory packets;
+
+    NetworkOperations network;
 
     volatile ShufflePhase phase;
 
     public ShuffleMachine(
             SessionIdentifier τ, // The session key for this run of the protocol.
+            SigningKey sk, // The private key that represents us!
             VerificationKey players[], // The keys representing all the players.
-            MessageFactory message,
+            PacketFactory packets,
             Crypto crypto,
-            Coin coin,
-            Network network) {
+            Network network,
+            Coin coin) {
 
         this.players = players;
+        this.sk = sk;
         this.N = players.length;
-        this.network = network;
         this.crypto = crypto;
         this.coin = coin;
-        this.message = message;
-
-        this.phase = ShufflePhase.Uninitiated;
-
-        // Register the relevant information with the message generator.
-        message.register(τ, sk, this);
-
-        // These are the keys from which we will receive messages.
-        network.register(τ, opponentSet(1, N));
-    }
-
-    // the phase can be accessed concurrently in case we want to update
-    // the user on how the protocol is going.
-    public ShufflePhase currentPhase() {
-        return phase;
-    }
-
-    public void run(
-            CoinAmount ν, // The amount to be shuffled per particpant.
-            SigningKey sk // The private key that represents us!
-    ) throws
-                SessionIdentifierException,
-                ProtocolStartedException,
-                ProtocolAbortedException,
-                TimeoutException,
-                FormatException,
-                CryptographyException,
-                BlockChainException,
-                MempoolException,
-                InvalidImplementationException {
-
-        // Don't let the protocol be run more than once at a time.
-        if (phase != ShufflePhase.Uninitiated) {
-            throw new ProtocolStartedException();
-        }
+        this.packets = packets;
 
         // Determine what my index number is.
         for (int i = 1; i <= N; i ++) {
             if (players[i - 1].equals(sk.VerificationKey())) {
                 me = i;
             }
+        }
+
+        this.network = new NetworkOperations(τ, sk, network, this);
+
+        this.phase = ShufflePhase.Uninitiated;
+    }
+
+    void protocolDefinition() throws
+            ProtocolStartedException,
+            ProtocolAbortedException,
+            TimeoutException,
+            FormatException,
+            CryptographyException,
+            BlockChainException,
+            MempoolException,
+            InvalidImplementationException, ValueException, CoinNetworkException {
+
+        // Don't let the protocol be run more than once at a time.
+        if (phase != ShufflePhase.Uninitiated) {
+            throw new ProtocolStartedException();
         }
 
         // The protocol is surrounded by a try block that catches BlameExceptions, which are thrown
@@ -134,7 +124,7 @@ public class ShuffleMachine {
         phase = ShufflePhase.Announcement;
 
             // This will contain the new public keys.
-            Map<VerificationKey, Message> σ1 = new TreeMap<>();
+            Map<VerificationKey, Packet> encryptonKeys = new TreeMap<>();
 
             // Everyone except player 1 creates a new keypair and sends it around to everyone else.
             DecryptionKey dk = null;
@@ -144,13 +134,13 @@ public class ShuffleMachine {
                 ek = dk.EncryptionKey();
 
                 // Broadcast the key and store it in the set with everyone else's.
-                σ1.put(sk.VerificationKey(), message.make(ek));
-                network.broadcast(message.make(ek));
+                encryptonKeys.put(sk.VerificationKey(), packets.make().append(ek));
+                network.broadcast(packets.make().append(ek));
 
             }
 
             // Now we wait to receive similar messages from everyone else.
-            σ1.putAll(network.receive(opponentSet(2, N)));
+            encryptonKeys.putAll(network.receiveFrom(opponentSet(2, N)));
 
         // Phase 2: Shuffle
         // In the shuffle phase, we create a sequence of orderings which will b successively
@@ -165,19 +155,19 @@ public class ShuffleMachine {
 
             // Player one begins the cycle and encrypts its new address with everyone's key, in order.
             // Each subsequent player reorders the cycle and removes one layer of encryption.
-            Message σ2 = message.make();
+            Packet σ2 = packets.make();
             if (me != 1) {
-                Message σ2_last = network.receive();
+                σ2 = network.receiveFrom(players[me - 2]);
                 assert dk != null;
-                σ2 = message.remake(dk.Decrypt(σ2_last));
+                decryptAll(dk, σ2);
             }
 
             // Add our own address to the mix. Note that if me == N, ie, the last player, then no
             // encryption is done. That is because we have reached the last layer of encryption.
-            Message encrypted = message.make(vk_new);
+            Packet encrypted = packets.make().append(vk_new);
             for (int i = me; i < N; i++) {
                 // Successively encrypt with the keys of the players who haven't had their turn yet.
-                encrypted = σ1.get(players[i]).readAsEncryptionKey().encrypt(encrypted);
+                encrypted = encryptonKeys.get(players[i]).readEncryptionKey().encrypt(encrypted);
             }
 
             // Insert new entry and reorder the keys.
@@ -193,16 +183,16 @@ public class ShuffleMachine {
         // In this phase, the last player just broadcasts the transaction to everyone else.
         phase = ShufflePhase.BroadcastOutput;
 
-            Queue<VerificationKey> σ3;
+            Queue<VerificationKey> newAddresses;
             if (me == N) {
-                σ3 = σ2.readAsVerificationKeyList();
-                network.broadcast(message.remake(σ2));
+                newAddresses = readNewAddresses(σ2);
+                network.broadcast(σ2);
             } else {
-                σ3 = network.receive().readAsVerificationKeyList();
+                newAddresses = readNewAddresses(network.receiveFrom(players[N - 1]));
             }
 
             // Everyone else receives the broadcast and checks to make sure their message was included.
-            if (!σ3.contains(vk_new)) {
+            if (!newAddresses.contains(vk_new)) {
                 throw new BlameException();
             }
 
@@ -212,18 +202,18 @@ public class ShuffleMachine {
         phase = ShufflePhase.EquivocationCheck;
 
             // Put all temporary encryption keys into a list and hash the result.
-            Message σ4 = message.make();
+            Packet σ4 = packets.make();
             for (int i = 1; i < N; i++) {
-                σ4.append(message.make(σ1.get(players[i - 1]).readAsEncryptionKey()));
+                σ4.append(encryptonKeys.get(players[i - 1]).readEncryptionKey());
             }
 
             σ4 = crypto.hash(σ4);
             network.broadcast(σ4);
 
             // Wait for a similar message from everyone else and check that the result is the name.
-            Map<VerificationKey, Message> hash = network.receive(opponentSet(1, N));
-            hash.put(sk.VerificationKey(), σ4);
-            if (!areEqual(hash)) {
+            Map<VerificationKey, Packet> hashes = network.receiveFrom(opponentSet(1, N));
+            hashes.put(sk.VerificationKey(), σ4);
+            if (!areEqual(hashes)) {
                 throw new BlameException();
             }
 
@@ -235,17 +225,17 @@ public class ShuffleMachine {
             List<VerificationKey> inputs = new LinkedList<>();
             LinkedHashMap<VerificationKey, CoinAmount> outputs = new LinkedHashMap<>();
             Collections.addAll(inputs, players);
-            for(VerificationKey key : σ3) {
+            for(VerificationKey key : newAddresses) {
                 outputs.put(key, ν);
             }
             CoinTransaction t = coin.transaction(inputs, outputs);
-            network.broadcast(message.make(sk.sign(t)));
+            network.broadcast(packets.make().append(sk.makeSignature(t)));
 
-            Map<VerificationKey, Message> σ5 = network.receive(opponentSet(1, N));
+            Map<VerificationKey, Packet> σ5 = network.receiveFrom(opponentSet(1, N));
 
             // Verify the signatures.
-            for(Map.Entry<VerificationKey, Message> sig : σ5.entrySet()) {
-                if (!sig.getKey().verify(t, sig.getValue().readAsSignature())) {
+            for(Map.Entry<VerificationKey, Packet> sig : σ5.entrySet()) {
+                if (!sig.getKey().verify(t, sig.getValue().readCoinSignature())) {
                     throw new BlameException();
                 }
             }
@@ -266,11 +256,41 @@ public class ShuffleMachine {
         } catch (BlameException e) {
             phase = ShufflePhase.Blame;
             // TODO This is where we go if we detect malicious bahavior on the part of another player.
+            // Protocol does not actually work until this section is filled in.
         }
     }
 
+    // the phase can be accessed concurrently in case we want to update
+    // the user on how the protocol is going.
+    public ShufflePhase currentPhase() {
+        return phase;
+    }
+
+    // The function for public consumption which runs the protocol.
+    // TODO Coming soon!! handle all these error states more delicately.
+    public ShuffleErrorState run() {
+        // Here we handle a bunch of lower level errors.
+        try {
+            protocolDefinition();
+        } catch ( InvalidImplementationException
+                | ValueException
+                | MempoolException
+                | BlockChainException
+                | CoinNetworkException
+                | CryptographyException
+                | TimeoutException
+                | ProtocolAbortedException
+                | ProtocolStartedException
+                | FormatException e) {
+
+            return new ShuffleErrorState(τ, currentPhase(), e);
+        }
+
+        return null;
+    }
+
     // Get the set of players other than myself from i to N.
-    Set<VerificationKey> opponentSet(int i, int N) {
+    private Set<VerificationKey> opponentSet(int i, int N) {
         Set<VerificationKey> set = new TreeSet<>();
         for(int j = i; j <= N; j ++) {
             if (j != me) {
@@ -281,9 +301,23 @@ public class ShuffleMachine {
         return set;
     }
 
+    Set<VerificationKey> opponentSet() {
+        return opponentSet(1, N);
+    }
+
+    // TODO
+    Queue<VerificationKey> readNewAddresses(Packet packet) {
+        return null;
+    }
+
+    void decryptAll(DecryptionKey key, Packet packet) {
+        // TODO
+    }
+
     // Algorithm to randomly shuffle a linked list.
-    void shuffle(Message σ) throws CryptographyException, InvalidImplementationException, FormatException {
-        Message temp = message.make();
+    void shuffle(Packet σ) throws CryptographyException, InvalidImplementationException, FormatException {
+        // TODO -- needs to be redone in light of updated interafces.
+        /*Message temp = message.make();
         int N = σ.size();
 
         // First remove all the elements and put them in the temp list.
@@ -302,14 +336,14 @@ public class ShuffleMachine {
 
             // add the randomly selected element to the queue.
             σ.append(temp.remove());
-        }
+        }*/
     }
 
-    static boolean areEqual(Map<VerificationKey, Message> messages) throws InvalidImplementationException {
+    static boolean areEqual(Map<VerificationKey, Packet> messages) throws InvalidImplementationException {
         boolean equal = true;
 
-        Message last = null;
-        for (Map.Entry<VerificationKey, Message> e : messages.entrySet()) {
+        Packet last = null;
+        for (Map.Entry<VerificationKey, Packet> e : messages.entrySet()) {
             if (last != null) {
                 equal = equal&&last.equal(e.getValue());
                 if (!equal) {

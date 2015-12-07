@@ -1,7 +1,5 @@
 package com.shuffle.form;
 
-import com.shuffle.form.MessageFactory;
-
 /**
  * Created by Daniel Krawisz on 12/6/15.
  */

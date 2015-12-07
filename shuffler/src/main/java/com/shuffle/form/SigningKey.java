@@ -5,5 +5,6 @@ package com.shuffle.form;
  */
 public interface SigningKey {
     VerificationKey VerificationKey();
-    CoinSignature sign(CoinTransaction t);
+    CoinSignature makeSignature(CoinTransaction t);
+    Packet sign(Packet packet);
 }

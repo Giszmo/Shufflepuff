@@ -13,32 +13,40 @@ computer networks as to be capable of reading the paper linked above  and to
 provide this implementation with the correct cryptographic primitives and 
 network interactions. 
 
-The purpose of this design way is that a set of test cases can be developed for 
+The purpose of this design is that a set of test cases can be developed for
 the protocol as a whole before any work has been put into its details. This 
 means that there can already be a huge (TODO!!!!) set of test cases very early 
 in the development of a working version of the protocol, which will greatly 
 reduce the risk of introducing errors as the rest of the development work 
 proceeds. Furthermore, this protocol can be adapted to any java implementation 
-of Bitcoin.
+of Bitcoin, or any other cryptocurrency.
 
 Instructions: After reading this file, go into the form package and read 
-ShuffleMachine.java, followed by TestShuffleMachine.java. This will teach you 
-the procol and familiarize you with the services that must be provided in order 
-for this library to work. 
+ShuffleProtocol.java, followed by ShuffleMachine.java, followed by
+TestShuffleMachine.java. This will teach you the protocol and familiarize you
+with the services that must be provided in order for the library to work.
 
 Next, try running the tests. These tests will help you to detect bugs early when 
 you write your implementation.
 
-Next, go on to com.shuffle.core.package_info.java. This package implements some 
-of the interfaces in com.shuffle.form, but not all of them.
-
 After you are certain you know what to do, you must implement the following 
-interfaces: TODO
+interfaces:
+
+CoinAmount
+CoinSignature
+CoinTransaction
+VerificationKey
+SigningKey
+EncryptionKey
+DecryptionKey
+Packet
+PacketFactory
+Crypto
+Coin
+TODO I'm pretty sure that's all of them.
 
 In particular, pay attention to the exceptions that are thrown in these 
 interfaces to understand the kind of checks that will be required of the 
-implementations. You are responsible for ensuring that that these kinds of 
-errors are detected correctly.
+implementations.
 
-To use this protocol instantiate the class with com.shuffle.core.ShuffleProtocol 
-and then run() it.
+

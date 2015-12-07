@@ -14,6 +14,9 @@
  * writing ShuffleMachine.java and its tests. However, all files are still commented so as to
  * provide information easily accessible information to one who has specific questions.
  *
+ * To use this protocol instantiate the class with ShuffleProtocol
+ * and then run() it.
+ *
  * Created by Daniel Krawisz on 12/6/15.
  *
  *

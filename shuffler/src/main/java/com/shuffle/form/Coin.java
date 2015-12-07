@@ -15,7 +15,7 @@ import java.util.List;
  */
 public interface Coin {
     CoinTransaction transaction(List<VerificationKey> inputs, LinkedHashMap<VerificationKey, CoinAmount> outputs);
-    void send(CoinTransaction t);
+    void send(CoinTransaction t) throws CoinNetworkException;
     boolean unspent(VerificationKey vk);
     CoinAmount valueHeld(VerificationKey vk) throws BlockChainException, MempoolException;
 }

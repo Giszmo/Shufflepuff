@@ -7,5 +7,5 @@ package com.shuffle.form;
  */
 public interface DecryptionKey {
     EncryptionKey EncryptionKey();
-    Message Decrypt(Message m);
+    Packet decrypt(Packet m);
 }

@@ -8,12 +8,12 @@ import com.shuffle.form.ShufflePhase;
  *
  * Created by Daniel Krawisz on 12/6/15.
  */
-public class ErrorState {
+public class ShuffleErrorState {
     SessionIdentifier τ;
     ShufflePhase phase;
     Exception exception;
 
-    public ErrorState(SessionIdentifier τ, ShufflePhase phase, Exception exception) {
+    public ShuffleErrorState(SessionIdentifier τ, ShufflePhase phase, Exception exception) {
         this.τ = τ;
         this.phase = phase;
         this.exception = exception;
