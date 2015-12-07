@@ -12,6 +12,6 @@ class BlameException extends Exception {
 
     // A blame message sent from another party.
     BlameException(VerificationKey sender, Packet packet) {
-
+        // TODO
     }
 }

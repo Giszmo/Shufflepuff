@@ -1,12 +1,11 @@
 package com.shuffle.form;
 
-import com.shuffle.core.*;
-import com.shuffle.core.MessageFactory;
-
 import org.junit.Assert;
 import org.junit.Test;
 
 /**
+ * Tests the methods in the shuffle machine other than the main ones.
+ *
  * Created by Daniel Krawisz on 12/5/15.
  */
 public class TestShuffleMachineMethods {
@@ -24,13 +23,11 @@ public class TestShuffleMachineMethods {
 
     private ShuffleMachine shuffleTestInitialization(int rand[]) {
         return new ShuffleMachine(
-                new MockSessionIdentifier(),
-                new VerificationKey[]{},
-                new MockMessageFactory(),
+                new MockPacketFactory(),
                 new MockCrypto(
                         new MockRandomSequence(rand)),
-                new MockCoin(),
-                new MockNetwork());
+                new MockNetwork(),
+                new MockCoin());
     }
 
     @Test
@@ -102,10 +99,10 @@ public class TestShuffleMachineMethods {
         for(shuffleTestCase test : tests) {
             ShuffleMachine machine = shuffleTestInitialization(test.randomSequence);
 
-            MockMessage result = new MockMessage(test.input);
-            MockMessage expected = new MockMessage(test.expected);
+            MockPacket input = new MockPacket(test.input);
+            MockPacket expected = new MockPacket(test.expected);
             try {
-                machine.shuffle(result);
+                Packet result = machine.shuffle(input);
                 System.out.println("got " + result.toString() + "; expected " + expected.toString());
                 Assert.assertTrue(result.equal(expected));
             } catch (CryptographyException e) {

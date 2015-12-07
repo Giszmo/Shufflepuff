@@ -43,10 +43,10 @@ class NetworkOperations {
         return opponentSet(1, N);
     }
 
-    private void prepareForSending(Packet packet) {
+    private void prepareForSending(Packet packet) throws CryptographyException, InvalidImplementationException {
         packet.append(machine.currentPhase());
         packet.append(τ);
-        packet.sign(sk);
+        sk.sign(packet);
     }
 
     private VerificationKey determineSender(Packet packet) throws CryptographyException, FormatException {
@@ -61,7 +61,7 @@ class NetworkOperations {
         throw new FormatException();
     }
 
-    public void broadcast(Packet packet) throws TimeoutException {
+    public void broadcast(Packet packet) throws TimeoutException, CryptographyException, InvalidImplementationException {
         Set<VerificationKey> keys = opponentSet();
 
         prepareForSending(packet);
@@ -71,13 +71,13 @@ class NetworkOperations {
         }
     }
 
-    public void sendTo(VerificationKey to, Packet packet) throws TimeoutException {
+    public void sendTo(VerificationKey to, Packet packet) throws TimeoutException, CryptographyException, InvalidImplementationException {
         prepareForSending(packet);
 
         network.sendTo(to, packet);
     }
 
-    public Packet receiveFrom(VerificationKey from) throws TimeoutException, CryptographyException, FormatException, ValueException, BlameException {
+    public Packet receiveFrom(VerificationKey from) throws TimeoutException, CryptographyException, FormatException, ValueException, BlameException, InvalidImplementationException {
         Packet packet = network.receive();
 
         // If we receive a message, but it is not from the expected source, it might be a blame message.

@@ -49,12 +49,13 @@ public class ShuffleMachine {
     public ShuffleMachine(
             PacketFactory packets,
             Crypto crypto,
-            Network network,
+            Network connection,
             Coin coin) {
 
         this.crypto = crypto;
         this.coin = coin;
         this.packets = packets;
+        this.connection = connection;
 
         this.phase = ShufflePhase.Uninitiated;
     }
@@ -157,7 +158,7 @@ public class ShuffleMachine {
 
             // Insert new entry and reorder the keys.
             σ2.append(encrypted);
-            shuffle(σ2);
+            σ2 = shuffle(σ2);
 
             // Pass it along to the next player.
             if (me != N) {
@@ -294,15 +295,17 @@ public class ShuffleMachine {
     }
 
     // Algorithm to randomly shuffle a linked list.
-    void shuffle(Packet σ) throws CryptographyException, InvalidImplementationException, FormatException {
-        // TODO -- needs to be redone in light of updated interafces.
-        /*Message temp = message.make();
-        int N = σ.size();
-
-        // First remove all the elements and put them in the temp list.
-        while (σ.size() > 0) {
-            temp.append(σ.remove());
+    Packet shuffle(Packet σ) throws CryptographyException, InvalidImplementationException, FormatException {
+        // Read all elements of the packet and insert them in a Queue.
+        Queue<Packet> old = new LinkedList<>();
+        Packet shuffled = packets.make();
+        Packet element;
+        while((element = σ.poll()) != null) {
+            old.add(element);
         }
+
+        int N = old.size();
+
 
         // Then successively and randomly select which one will be inserted until none remain.
         for (int i = N; i > 0; i --) {
@@ -310,12 +313,14 @@ public class ShuffleMachine {
             int n = crypto.getRandom(i - 1);
 
             for (int j = 0; j < n; j ++) {
-                temp.append(temp.remove());
+                old.add(old.remove());
             }
 
             // add the randomly selected element to the queue.
-            σ.append(temp.remove());
-        }*/
+            shuffled.append(old.remove());
+        }
+
+        return shuffled;
     }
 
     static boolean areEqual(Map<VerificationKey, Packet> messages) throws InvalidImplementationException {

@@ -26,7 +26,7 @@ public class MockCrypto implements Crypto {
     }
 
     @Override
-    public Message hash(Message m) throws CryptographyException {
+    public Packet hash(Packet m) throws CryptographyException {
         return null;
     }
 }
