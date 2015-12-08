@@ -127,7 +127,7 @@ public class ShuffleMachine {
             }
 
             // Now we wait to receive similar messages from everyone else.
-            encryptonKeys.putAll(network.receiveFrom(network.opponentSet(2, N)));
+            encryptonKeys.putAll(network.receiveFromMultiple(network.opponentSet(2, N)));
 
         // Phase 2: Shuffle
         // In the shuffle phase, we create a sequence of orderings which will b successively
@@ -197,7 +197,7 @@ public class ShuffleMachine {
             network.broadcast(σ4);
 
             // Wait for a similar message from everyone else and check that the result is the name.
-            Map<VerificationKey, Packet> hashes = network.receiveFrom(network.opponentSet(1, N));
+            Map<VerificationKey, Packet> hashes = network.receiveFromMultiple(network.opponentSet(1, N));
             hashes.put(sk.VerificationKey(), σ4);
             if (!areEqual(hashes)) {
                 throw new BlameException();
@@ -217,7 +217,7 @@ public class ShuffleMachine {
             CoinTransaction t = coin.transaction(inputs, outputs);
             network.broadcast(packets.make().append(sk.makeSignature(t)));
 
-            Map<VerificationKey, Packet> σ5 = network.receiveFrom(network.opponentSet(1, N));
+            Map<VerificationKey, Packet> σ5 = network.receiveFromMultiple(network.opponentSet(1, N));
 
             // Verify the signatures.
             for(Map.Entry<VerificationKey, Packet> sig : σ5.entrySet()) {
@@ -243,6 +243,10 @@ public class ShuffleMachine {
             phase = ShufflePhase.Blame;
             // TODO This is where we go if we detect malicious bahavior on the part of another player.
             // Protocol does not actually work until this section is filled in.
+        } catch (BlameReceivedException e) {
+            phase = ShufflePhase.Blame;
+            // TODO this is where we go if we hear tell of malicious behavior from a third player.
+
         }
     }
 
@@ -254,7 +258,7 @@ public class ShuffleMachine {
 
     // The function for public consumption which runs the protocol.
     // TODO Coming soon!! handle all these error states more delicately.
-    public ShuffleErrorState run(SessionIdentifier τ, CoinAmount ν, SigningKey sk, VerificationKey players[]) {
+    public ShuffleErrorState run(SessionIdentifier τ, CoinAmount ν, SigningKey sk, VerificationKey players[]) throws InvalidImplementationException {
 
         // Don't let the protocol be run more than once at a time.
         if (phase != ShufflePhase.Uninitiated) {
@@ -267,8 +271,7 @@ public class ShuffleMachine {
         // Here we handle a bunch of lower level errors.
         try {
             protocolDefinition(ν, sk, players);
-        } catch ( InvalidImplementationException
-                | InvalidParticipantSetException
+        } catch ( InvalidParticipantSetException
                 | ValueException
                 | MempoolException
                 | BlockChainException
@@ -285,13 +288,27 @@ public class ShuffleMachine {
         return null;
     }
 
-    // TODO
-    Queue<VerificationKey> readNewAddresses(Packet packet) {
-        return null;
+    Queue<VerificationKey> readNewAddresses(Packet packet) throws FormatException, InvalidImplementationException {
+        Queue<VerificationKey> queue = new LinkedList<>();
+
+        Packet element;
+        while((element = packet.poll()) != null) {
+            queue.add(element.readVerificationKey());
+        }
+
+        return queue;
     }
 
-    void decryptAll(DecryptionKey key, Packet packet) {
-        // TODO
+    Packet decryptAll(DecryptionKey key, Packet packet) throws InvalidImplementationException {
+        Packet decrypted = packets.make();
+
+        Packet element;
+        while((element = packet.poll()) != null) {
+            key.decrypt(element);
+            decrypted.append(element);
+        }
+
+        return decrypted;
     }
 
     // Algorithm to randomly shuffle a linked list.
@@ -329,7 +346,7 @@ public class ShuffleMachine {
         Packet last = null;
         for (Map.Entry<VerificationKey, Packet> e : messages.entrySet()) {
             if (last != null) {
-                equal = equal&&last.equal(e.getValue());
+                equal = (equal&&last.equal(e.getValue()));
                 if (!equal) {
                     return false;
                 }

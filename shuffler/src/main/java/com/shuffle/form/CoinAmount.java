@@ -9,5 +9,5 @@ package com.shuffle.form;
  *
  */
 public interface CoinAmount {
-    boolean greater(CoinAmount ν);
+    boolean greater(CoinAmount ν) throws InvalidImplementationException;
 }

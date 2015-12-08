@@ -8,6 +8,8 @@ import java.util.Queue;
  * Created by Daniel Krawisz on 12/6/15.
  */
 public class MockPacket implements Packet {
+    MockVerificationKey from;
+    MockVerificationKey to;
     Queue<Integer> values;
 
     MockPacket(int value) {

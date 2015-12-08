@@ -1,5 +1,6 @@
 package com.shuffle.form;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -49,7 +50,7 @@ class NetworkOperations {
         sk.sign(packet);
     }
 
-    private VerificationKey determineSender(Packet packet) throws CryptographyException, FormatException {
+    VerificationKey determineSender(Packet packet) throws CryptographyException, InvalidImplementationException, FormatException, ValueException {
         Set<VerificationKey> keys = opponentSet();
 
         for(VerificationKey key : keys) {
@@ -58,7 +59,7 @@ class NetworkOperations {
             }
         }
 
-        throw new FormatException();
+        throw new ValueException(ValueException.Values.sender);
     }
 
     public void broadcast(Packet packet) throws TimeoutException, CryptographyException, InvalidImplementationException {
@@ -77,40 +78,68 @@ class NetworkOperations {
         network.sendTo(to, packet);
     }
 
-    public Packet receiveFrom(VerificationKey from) throws TimeoutException, CryptographyException, FormatException, ValueException, BlameException, InvalidImplementationException {
+    public Packet receiveFrom(VerificationKey from) throws TimeoutException, CryptographyException, FormatException, ValueException, InvalidImplementationException, BlameReceivedException {
         Packet packet = network.receive();
 
         // If we receive a message, but it is not from the expected source, it might be a blame message.
         if (!from.readSignature(packet)) {
             VerificationKey sender = determineSender(packet);
 
-            // Check that this is someone in the same round of this protocol as us.
+            // Sender is valid. What about the rest of the message?
             if (!τ.equals(packet.readSessionIdentifier())) {
-                throw new ValueException();
+                throw new ValueException(ValueException.Values.τ,τ.toString(),packet.readSessionIdentifier().toString());
             }
 
-            // It seems that one of the other players is blaming another for being a cheater!
-            // How curious. Let's find out what happened.
-            if (machine.currentPhase() != ShufflePhase.Blame) {
-                throw new BlameException(sender, packet);
+            ShufflePhase phase = packet.readShufflePhase();
+            if (phase == ShufflePhase.Blame) {
+                // It seems that one of the other players is blaming another for being a cheater!
+                // How curious. Let's find out what happened.
+                throw new BlameReceivedException(sender, packet);
             }
+
+            throw new ValueException(ValueException.Values.phase,phase.toString(), machine.currentPhase().toString());
         }
 
         // Check that this is someone in the same round of this protocol as us.
         if (!τ.equals(packet.readSessionIdentifier())) {
-            throw new ValueException();
+            throw new ValueException(ValueException.Values.τ,τ.toString(),packet.readSessionIdentifier().toString());
         }
 
         // Check that the message phase is correct.
-        if (machine.currentPhase() != packet.readShufflePhase()) {
-            throw new ValueException();
+        ShufflePhase phase = packet.readShufflePhase();
+        if (machine.currentPhase() != phase) {
+            throw new ValueException(ValueException.Values.phase,phase.toString(), machine.currentPhase().toString());
         }
 
         return packet;
     }
 
-    // TODO
-    public Map<VerificationKey, Packet> receiveFrom(Set<VerificationKey> from) throws TimeoutException {
-        return null;
+    public Map<VerificationKey, Packet> receiveFromMultiple(Set<VerificationKey> from) throws TimeoutException, CryptographyException, FormatException, InvalidImplementationException, ValueException, BlameReceivedException {
+        Map<VerificationKey, Packet> broadcasts = new HashMap<>();
+
+        while (from.size() > 0) {
+            Packet packet = network.receive();
+            VerificationKey sender = determineSender(packet);
+
+            // Check session identifier.
+            if (!τ.equals(packet.readSessionIdentifier())) {
+                throw new ValueException(ValueException.Values.τ,τ.toString(),packet.readSessionIdentifier().toString());
+            }
+
+            // Check that the message phase is correct.
+            ShufflePhase phase = packet.readShufflePhase();
+            if (phase == ShufflePhase.Blame) {
+                // Someone is blaming someone else for bad behavior!
+                throw new BlameReceivedException(sender, packet);
+            }
+            if (machine.currentPhase() != phase) {
+                throw new ValueException(ValueException.Values.phase,phase.toString(), machine.currentPhase().toString());
+            }
+
+            broadcasts.put(sender, packet);
+            from.remove(sender);
+        }
+
+        return broadcasts;
     }
 }

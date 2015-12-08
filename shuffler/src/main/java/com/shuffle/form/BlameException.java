@@ -9,9 +9,4 @@ class BlameException extends Exception {
     BlameException() {
 
     }
-
-    // A blame message sent from another party.
-    BlameException(VerificationKey sender, Packet packet) {
-        // TODO
-    }
 }

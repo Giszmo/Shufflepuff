@@ -3,6 +3,9 @@ package com.shuffle.form;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Tests the methods in the shuffle machine other than the main ones.
  *
@@ -113,5 +116,84 @@ public class TestShuffleMachineMethods {
                 Assert.fail("Unexpected FormatException");
             }
         }
+    }
+
+    private class areEqualTestCase {
+        int[] input;
+        boolean expected;
+
+        areEqualTestCase(int[] input, boolean expected) {
+            this.input = input;
+            this.expected = expected;
+        }
+    }
+
+    Map<VerificationKey, Packet> mockPacketMap(int[] input) {
+        Map<VerificationKey, Packet> map = new HashMap<>();
+
+        int key = 0;
+        for(int i : input) {
+            map.put(new MockVerificationKey(key), new MockPacket(i));
+            key++;
+        }
+
+        return map;
+    }
+
+    @Test
+    public void testAreEqual() {
+        areEqualTestCase tests[] = new areEqualTestCase[]{
+                // The empty case, of course!
+                new areEqualTestCase(
+                        new int[]{},
+                        true
+                ),
+                new areEqualTestCase(
+                        new int[]{1},
+                        true
+                ),
+                new areEqualTestCase(
+                        new int[]{1, 1},
+                        true
+                ),
+                new areEqualTestCase(
+                        new int[]{1, 2},
+                        false
+                ),
+                new areEqualTestCase(
+                        new int[]{2, 2, 2},
+                        true
+                ),
+                new areEqualTestCase(
+                        new int[]{2, 3, 2},
+                        false
+                ),
+                new areEqualTestCase(
+                        new int[]{3, 2, 2},
+                        false
+                ),
+                new areEqualTestCase(
+                        new int[]{2, 2, 3},
+                        false
+                )
+        };
+
+        for(areEqualTestCase testCase : tests) {
+            try {
+                Assert.assertEquals(testCase.expected, ShuffleMachine.areEqual(mockPacketMap(testCase.input)));
+            } catch (InvalidImplementationException e) {
+                Assert.fail("Tests have failed due to error in test class.");
+            }
+        }
+    }
+
+    @Test
+    public void testDecryptAll() {
+        // TODO
+    }
+
+    @Test
+    public void testReadNewAddresses() {
+        // TODO
     }
 }
