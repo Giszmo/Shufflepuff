@@ -7,5 +7,5 @@ package com.shuffle.form;
  */
 public interface Network {
     void sendTo(VerificationKey to, Packet packet) throws InvalidImplementationException;
-    Packet receive() throws TimeoutException;
+    Packet receive() throws TimeoutException, InvalidImplementationException, InterruptedException;
 }

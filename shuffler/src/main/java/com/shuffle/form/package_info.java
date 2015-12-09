@@ -9,10 +9,11 @@
  * performed correctly by the underlying implementations, exactly as would a mathematical paper
  * written to exposit the protocol.
  *
- * The only files in this package intended to be read are this one, SuffleMachine.java, and
- * TestShuffleMachine.java. All meaning in all other files is determined by the engineering needs of
- * writing ShuffleMachine.java and its tests. However, all files are still commented so as to
- * provide information easily accessible information to one who has specific questions.
+ * The only files in this package intended to be read are this one, SuffleMachine.java,
+ * Simulation.java and TestShuffleMachine.java. All meaning in all other files is determined by
+ * the engineering needs of writing ShuffleMachine.java and its tests. However, all files are
+ * still commented so as to provide information easily accessible information to one who has
+ * specific questions.
  *
  * To use this protocol instantiate the class with ShuffleProtocol
  * and then run() it.

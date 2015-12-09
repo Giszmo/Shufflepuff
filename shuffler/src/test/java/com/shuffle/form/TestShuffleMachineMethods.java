@@ -29,8 +29,8 @@ public class TestShuffleMachineMethods {
                 new MockPacketFactory(),
                 new MockCrypto(
                         new MockRandomSequence(rand)),
-                new MockNetwork(),
-                new MockCoin());
+                new MockCoin(),
+                new MockNetwork());
     }
 
     @Test

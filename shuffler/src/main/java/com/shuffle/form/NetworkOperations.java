@@ -78,7 +78,7 @@ class NetworkOperations {
         network.sendTo(to, packet);
     }
 
-    public Packet receiveFrom(VerificationKey from) throws TimeoutException, CryptographyException, FormatException, ValueException, InvalidImplementationException, BlameReceivedException {
+    public Packet receiveFrom(VerificationKey from) throws TimeoutException, CryptographyException, FormatException, ValueException, InvalidImplementationException, BlameReceivedException, InterruptedException {
         Packet packet = network.receive();
 
         // If we receive a message, but it is not from the expected source, it might be a blame message.
@@ -114,7 +114,7 @@ class NetworkOperations {
         return packet;
     }
 
-    public Map<VerificationKey, Packet> receiveFromMultiple(Set<VerificationKey> from) throws TimeoutException, CryptographyException, FormatException, InvalidImplementationException, ValueException, BlameReceivedException {
+    public Map<VerificationKey, Packet> receiveFromMultiple(Set<VerificationKey> from) throws TimeoutException, CryptographyException, FormatException, InvalidImplementationException, ValueException, BlameReceivedException, InterruptedException {
         Map<VerificationKey, Packet> broadcasts = new HashMap<>();
 
         while (from.size() > 0) {

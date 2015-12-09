@@ -11,11 +11,13 @@ import com.shuffle.form.ShufflePhase;
 public class ShuffleErrorState {
     SessionIdentifier τ;
     ShufflePhase phase;
+    int player;
     Exception exception;
 
-    public ShuffleErrorState(SessionIdentifier τ, ShufflePhase phase, Exception exception) {
+    public ShuffleErrorState(SessionIdentifier τ, int player, ShufflePhase phase, Exception exception) {
         this.τ = τ;
         this.phase = phase;
         this.exception = exception;
+        this.player = player;
     }
 }

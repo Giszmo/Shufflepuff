@@ -1,9 +1,14 @@
 package com.shuffle.form;
 
 /**
+ * TODO
+ *
  * Created by Daniel Krawisz on 12/5/15.
  */
 public class MockCrypto implements Crypto {
+    int signingKeyCounter;
+    int decryptionKeyCounter;
+
     MockRandomSequence rand;
 
     MockCrypto(MockRandomSequence rand) {

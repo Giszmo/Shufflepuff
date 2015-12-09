@@ -23,9 +23,9 @@ of Bitcoin, or any other cryptocurrency.
 
 Instructions: After reading this file, go into the form package and read 
 the function protocolDefinition() in ShuffleMachine.java, followed by
-TestShuffleMachine.java. (Does not exist yet) This will teach you the protocol
-and familiarize you with the services that must be provided in order for the
-library to work.
+TestShuffleMachine.java, (Does not exist yet) and Simulator.java. These will
+teach you the protocol and familiarize you with the services that must be
+provided in order for the library to work.
 
 Next, try running the tests. These tests will help you to detect bugs early when 
 you write your implementation.

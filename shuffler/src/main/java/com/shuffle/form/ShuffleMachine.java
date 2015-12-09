@@ -34,6 +34,8 @@ import java.util.TreeMap;
 public class ShuffleMachine {
     SessionIdentifier τ;
 
+    int me;
+
     Crypto crypto;
 
     Coin coin;
@@ -49,8 +51,8 @@ public class ShuffleMachine {
     public ShuffleMachine(
             PacketFactory packets,
             Crypto crypto,
-            Network connection,
-            Coin coin) {
+            Coin coin,
+            Network connection) {
 
         this.crypto = crypto;
         this.coin = coin;
@@ -73,9 +75,10 @@ public class ShuffleMachine {
             InvalidImplementationException,
             ValueException,
             CoinNetworkException,
-            InvalidParticipantSetException {
+            InvalidParticipantSetException,
+            InterruptedException {
 
-        int me = -1;
+        me = -1;
         int N = players.length;
 
         // Determine what my index number is.
@@ -153,7 +156,7 @@ public class ShuffleMachine {
             Packet encrypted = packets.make().append(vk_new);
             for (int i = me; i < N; i++) {
                 // Successively encrypt with the keys of the players who haven't had their turn yet.
-                encrypted = encryptonKeys.get(players[i]).readEncryptionKey().encrypt(encrypted);
+                encryptonKeys.get(players[i]).readEncryptionKey().encrypt(encrypted);
             }
 
             // Insert new entry and reorder the keys.
@@ -258,11 +261,11 @@ public class ShuffleMachine {
 
     // The function for public consumption which runs the protocol.
     // TODO Coming soon!! handle all these error states more delicately.
-    public ShuffleErrorState run(SessionIdentifier τ, CoinAmount ν, SigningKey sk, VerificationKey players[]) throws InvalidImplementationException {
+    public ShuffleErrorState run(SessionIdentifier τ, CoinAmount ν, SigningKey sk, VerificationKey players[]) throws InvalidImplementationException, InterruptedException {
 
         // Don't let the protocol be run more than once at a time.
         if (phase != ShufflePhase.Uninitiated) {
-            return new ShuffleErrorState(this.τ, currentPhase(), new ProtocolStartedException());
+            return new ShuffleErrorState(this.τ, -1, currentPhase(), new ProtocolStartedException());
         }
 
         // Set up interactions with the shuffle network.
@@ -281,7 +284,7 @@ public class ShuffleMachine {
                 | FormatException e) {
 
             phase = ShufflePhase.Uninitiated;
-            return new ShuffleErrorState(τ, currentPhase(), e);
+            return new ShuffleErrorState(τ, me, currentPhase(), e);
         }
 
         phase = ShufflePhase.Uninitiated;
