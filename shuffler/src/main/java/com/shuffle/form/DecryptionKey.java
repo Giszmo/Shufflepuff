@@ -7,5 +7,5 @@ package com.shuffle.form;
  */
 public interface DecryptionKey {
     EncryptionKey EncryptionKey();
-    boolean decrypt(Packet m);
+    void decrypt(Packet m) throws InvalidImplementationException, FormatException;
 }

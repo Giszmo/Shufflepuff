@@ -11,23 +11,21 @@ import java.util.Set;
  * Created by Daniel Krawisz on 12/6/15.
  */
 public interface Packet {
+    boolean equals(Packet packet) throws InvalidImplementationException;
+
     Packet append(VerificationKey vk) throws InvalidImplementationException;
     Packet append(EncryptionKey vk) throws InvalidImplementationException;
     Packet append(CoinSignature sig) throws InvalidImplementationException;
     Packet append(ShufflePhase phase) throws InvalidImplementationException;
     Packet append(SessionIdentifier τ) throws InvalidImplementationException;
-    Packet append(Packet packet) throws InvalidImplementationException;
+    Packet append(Packet packet) throws InvalidImplementationException, FormatException;
 
-    boolean equal(Packet packet) throws InvalidImplementationException;
 
-    // Strips the signature, verifies it, and returns the verification key of the signer.
-    SessionIdentifier readSessionIdentifier();
-    ShufflePhase readShufflePhase();
-
-    // Removes the next element of the packet and attempt to interpret it as an Encryption key.
-    EncryptionKey readEncryptionKey() throws FormatException, InvalidImplementationException;
-    VerificationKey readVerificationKey() throws FormatException, InvalidImplementationException;
-    CoinSignature readCoinSignature() throws FormatException, InvalidImplementationException;
+    SessionIdentifier removeSessionIdentifier() throws FormatException;
+    ShufflePhase removeShufflePhase() throws FormatException;
+    EncryptionKey removeEncryptionKey() throws FormatException, InvalidImplementationException;
+    VerificationKey removeVerificationKey() throws FormatException, InvalidImplementationException;
+    CoinSignature removeCoinSignature() throws FormatException, InvalidImplementationException;
 
     // Removes the next element of the packet. Returns null if the packet is empty.
     Packet poll();

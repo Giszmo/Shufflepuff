@@ -3,8 +3,11 @@ package com.shuffle.form;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
+import java.util.Queue;
 
 /**
  * Tests the methods in the shuffle machine other than the main ones.
@@ -24,9 +27,9 @@ public class TestShuffleMachineMethods {
         }
     }
 
-    private ShuffleMachine shuffleTestInitialization(int rand[]) {
+    private ShuffleMachine shuffleTestInitialization(VerificationKey key, int rand[]) {
         return new ShuffleMachine(
-                new MockPacketFactory(),
+                new MockPacketFactory(key),
                 new MockCrypto(
                         new MockRandomSequence(rand)),
                 new MockCoin(),
@@ -100,20 +103,26 @@ public class TestShuffleMachineMethods {
         };
 
         for(shuffleTestCase test : tests) {
-            ShuffleMachine machine = shuffleTestInitialization(test.randomSequence);
+            MockCrypto crypto = new MockCrypto();
+            VerificationKey key = null;
+            try {
+                key = crypto.SigningKey().VerificationKey();
+            } catch (CryptographyException e) {}
+            ShuffleMachine machine = shuffleTestInitialization(key, test.randomSequence);
 
-            MockPacket input = new MockPacket(test.input);
-            MockPacket expected = new MockPacket(test.expected);
+            MockPacket input = new MockPacket(test.input, key);
+            MockPacket expected = new MockPacket(test.expected, key);
             try {
                 Packet result = machine.shuffle(input);
                 System.out.println("got " + result.toString() + "; expected " + expected.toString());
-                Assert.assertTrue(result.equal(expected));
+                Assert.assertTrue(result.equals(expected));
             } catch (CryptographyException e) {
                 Assert.fail("Unexpected CryptographyException");
             } catch (InvalidImplementationException e) {
                 Assert.fail("Unexpected InvalidImplementationException");
             } catch (FormatException e) {
-                Assert.fail("Unexpected FormatException");
+                e.printStackTrace();
+                Assert.fail("Unexpected FormatException: ");
             }
         }
     }
@@ -131,10 +140,11 @@ public class TestShuffleMachineMethods {
     Map<VerificationKey, Packet> mockPacketMap(int[] input) {
         Map<VerificationKey, Packet> map = new HashMap<>();
 
-        int key = 0;
+        int index = 0;
         for(int i : input) {
-            map.put(new MockVerificationKey(key), new MockPacket(i));
-            key++;
+            MockVerificationKey key = new MockVerificationKey(index);
+            map.put(key, new MockPacket(i, key));
+            index++;
         }
 
         return map;
@@ -187,13 +197,122 @@ public class TestShuffleMachineMethods {
         }
     }
 
+    private ShuffleMachine standardTestInitialization(VerificationKey key, Crypto crypto) {
+        return new ShuffleMachine(
+                new MockPacketFactory(key),
+                crypto,
+                new MockCoin(),
+                new MockNetwork());
+    }
+
     @Test
     public void testDecryptAll() {
-        // TODO
+        MockCrypto crypto = new MockCrypto();
+
+        // Success cases.
+        try {
+            for(int i = 0; i <= 5; i++) {
+                Queue<MockPacket.Atom> input = new LinkedList<>();
+                Queue<MockPacket.Atom> output = new LinkedList<>();
+                DecryptionKey key = crypto.DecryptionKey();
+
+                for (int j = 0; j <= i; j ++) {
+                    MockPacket.Atom atom = new MockPacket.Atom(crypto.SigningKey().VerificationKey());
+
+                    output.add(atom);
+                    input.add(new MockPacket.Atom(new MockPacket.Encrypted(key.EncryptionKey(), atom)));
+                }
+
+                ShuffleMachine machine = standardTestInitialization(crypto.SigningKey().VerificationKey(), crypto);
+
+                VerificationKey vk = crypto.SigningKey().VerificationKey();
+                Packet result = machine.decryptAll(key, new MockPacket(input, vk));
+
+                Assert.assertTrue(result.equals(new MockPacket(output, vk)));
+            }
+        } catch (CryptographyException e) {
+            Assert.fail("Unexpected CryptographyException:");
+        } catch (FormatException e) {
+            e.printStackTrace();
+            Assert.fail("Unexpected FormatException:");
+        } catch (InvalidImplementationException e) {
+            Assert.fail("Unexpected InvalidImplementationException:");
+        }
+
+        // Fail cases.
+        try {
+            for(int i = 0; i <= 5; i++) {
+                Queue<MockPacket.Atom> input = new LinkedList<>();
+                DecryptionKey key = crypto.DecryptionKey();
+
+                for (int j = 0; j <= i; j++) {
+                    MockPacket.Atom atom = new MockPacket.Atom(crypto.SigningKey().VerificationKey());
+
+                    input.add(new MockPacket.Atom(new MockPacket.Encrypted(key.EncryptionKey(), atom)));
+                }
+
+                ShuffleMachine machine = standardTestInitialization(crypto.SigningKey().VerificationKey(), crypto);
+
+                VerificationKey vk = crypto.SigningKey().VerificationKey();
+                try {
+                machine.decryptAll(key, new MockPacket(input, vk));
+                } catch (FormatException e) {
+                }
+            }
+        } catch (CryptographyException | InvalidImplementationException e) {
+            Assert.fail();
+        }
     }
 
     @Test
     public void testReadNewAddresses() {
-        // TODO
+        MockCrypto crypto = new MockCrypto();
+
+        // Success cases.
+        try {
+            for (int i = 0; i <= 5; i++) {
+                Queue<VerificationKey> expected = new LinkedList<>();
+                Queue<MockPacket.Atom> input = new LinkedList<>();
+
+                for (int j = 0; j <= i; j ++) {
+                    VerificationKey key = crypto.SigningKey().VerificationKey();
+
+                    expected.add(key);
+                    input.add(new MockPacket.Atom(key));
+                }
+
+                ShuffleMachine machine = standardTestInitialization(crypto.SigningKey().VerificationKey(), crypto);
+
+                Queue<VerificationKey> result = machine.readNewAddresses(new MockPacket(input, crypto.SigningKey().VerificationKey()));
+
+                Assert.assertTrue(result.equals(expected));
+            }
+        } catch (CryptographyException | FormatException | InvalidImplementationException e) {
+            Assert.fail();
+        }
+
+        // fail cases.
+        try {
+            for (int i = 0; i <= 5; i++) {
+                Queue<MockPacket.Atom> input = new LinkedList<>();
+
+                for (int j = 0; j <= i; j++) {
+                    VerificationKey key = crypto.SigningKey().VerificationKey();
+
+                    input.add(new MockPacket.Atom(key));
+                }
+
+                input.add(new MockPacket.Atom(3));
+                ShuffleMachine machine = standardTestInitialization(crypto.SigningKey().VerificationKey(), crypto);
+
+                try {
+                    machine.readNewAddresses(new MockPacket(input, crypto.SigningKey().VerificationKey()));
+                    Assert.fail();
+                } catch (FormatException e) {
+                }
+            }
+        } catch (CryptographyException | InvalidImplementationException e) {
+            Assert.fail();
+        }
     }
 }

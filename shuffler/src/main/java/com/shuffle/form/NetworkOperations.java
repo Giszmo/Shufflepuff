@@ -86,11 +86,11 @@ class NetworkOperations {
             VerificationKey sender = determineSender(packet);
 
             // Sender is valid. What about the rest of the message?
-            if (!τ.equals(packet.readSessionIdentifier())) {
-                throw new ValueException(ValueException.Values.τ,τ.toString(),packet.readSessionIdentifier().toString());
+            if (!τ.equals(packet.removeSessionIdentifier())) {
+                throw new ValueException(ValueException.Values.τ,τ.toString(),packet.removeSessionIdentifier().toString());
             }
 
-            ShufflePhase phase = packet.readShufflePhase();
+            ShufflePhase phase = packet.removeShufflePhase();
             if (phase == ShufflePhase.Blame) {
                 // It seems that one of the other players is blaming another for being a cheater!
                 // How curious. Let's find out what happened.
@@ -101,12 +101,12 @@ class NetworkOperations {
         }
 
         // Check that this is someone in the same round of this protocol as us.
-        if (!τ.equals(packet.readSessionIdentifier())) {
-            throw new ValueException(ValueException.Values.τ,τ.toString(),packet.readSessionIdentifier().toString());
+        if (!τ.equals(packet.removeSessionIdentifier())) {
+            throw new ValueException(ValueException.Values.τ,τ.toString(),packet.removeSessionIdentifier().toString());
         }
 
         // Check that the message phase is correct.
-        ShufflePhase phase = packet.readShufflePhase();
+        ShufflePhase phase = packet.removeShufflePhase();
         if (machine.currentPhase() != phase) {
             throw new ValueException(ValueException.Values.phase,phase.toString(), machine.currentPhase().toString());
         }
@@ -122,12 +122,12 @@ class NetworkOperations {
             VerificationKey sender = determineSender(packet);
 
             // Check session identifier.
-            if (!τ.equals(packet.readSessionIdentifier())) {
-                throw new ValueException(ValueException.Values.τ,τ.toString(),packet.readSessionIdentifier().toString());
+            if (!τ.equals(packet.removeSessionIdentifier())) {
+                throw new ValueException(ValueException.Values.τ,τ.toString(),packet.removeSessionIdentifier().toString());
             }
 
             // Check that the message phase is correct.
-            ShufflePhase phase = packet.readShufflePhase();
+            ShufflePhase phase = packet.removeShufflePhase();
             if (phase == ShufflePhase.Blame) {
                 // Someone is blaming someone else for bad behavior!
                 throw new BlameReceivedException(sender, packet);

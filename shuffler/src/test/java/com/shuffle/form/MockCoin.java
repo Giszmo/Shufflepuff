@@ -6,6 +6,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
+ *
+ *
  * Created by Daniel Krawisz on 12/5/15.
  */
 public class MockCoin implements Coin {

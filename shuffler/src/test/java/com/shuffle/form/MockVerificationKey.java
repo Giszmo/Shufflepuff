@@ -6,17 +6,20 @@ package com.shuffle.form;
  * Created by Daniel Krawisz on 12/7/15.
  */
 public class MockVerificationKey implements VerificationKey {
-    int identity;
+    int index;
 
-    public MockVerificationKey(int identity) {
-        this.identity = identity;
+    public MockVerificationKey(int index) {
+        this.index = index;
     }
-
 
     // These functions are not implemented yet.
     @Override
     public boolean verify(CoinTransaction t, CoinSignature sig) throws InvalidImplementationException {
-        throw new InvalidImplementationException();
+        if (!(sig instanceof MockCoinSignature)) {
+            throw new InvalidImplementationException();
+        }
+
+        return (((MockCoinSignature)sig).t.equals(t)) && (((MockCoinSignature)sig).key.equals(this));
     }
 
     @Override
@@ -25,7 +28,7 @@ public class MockVerificationKey implements VerificationKey {
             throw new InvalidImplementationException();
         }
 
-        return identity == ((MockVerificationKey)vk).identity;
+        return index == ((MockVerificationKey)vk).index;
     }
 
     @Override
@@ -34,6 +37,10 @@ public class MockVerificationKey implements VerificationKey {
             throw new InvalidImplementationException();
         }
 
-        return identity == ((MockPacket)packet).from.identity;
+        return equals(((MockPacket)packet).signer);
+    }
+
+    public String toString() {
+        return "MockVerificationKey[" + index + "]";
     }
 }

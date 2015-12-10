@@ -6,5 +6,5 @@ package com.shuffle.form;
 public interface SigningKey {
     VerificationKey VerificationKey() throws CryptographyException;
     CoinSignature makeSignature(CoinTransaction t) throws CryptographyException;
-    void sign(Packet packet) throws CryptographyException;
+    void sign(Packet packet) throws CryptographyException, InvalidImplementationException;
 }

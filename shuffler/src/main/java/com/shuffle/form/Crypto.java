@@ -19,5 +19,5 @@ public interface Crypto {
     // Get a random number between 0 and N inclusive.
     int getRandom(int n) throws CryptographyException, InvalidImplementationException;
     // Hash a message.
-    Packet hash(Packet m) throws CryptographyException;
+    void hash(Packet m) throws CryptographyException, InvalidImplementationException;
 }

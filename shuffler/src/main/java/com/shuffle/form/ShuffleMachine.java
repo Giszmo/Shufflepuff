@@ -156,7 +156,7 @@ public class ShuffleMachine {
             Packet encrypted = packets.make().append(vk_new);
             for (int i = me; i < N; i++) {
                 // Successively encrypt with the keys of the players who haven't had their turn yet.
-                encryptonKeys.get(players[i]).readEncryptionKey().encrypt(encrypted);
+                encryptonKeys.get(players[i]).removeEncryptionKey().encrypt(encrypted);
             }
 
             // Insert new entry and reorder the keys.
@@ -169,8 +169,8 @@ public class ShuffleMachine {
             }
 
         // Phase 3: broadcast outputs.
-        // In this phase, the last player just broadcasts the transaction to everyone else.
-        phase = ShufflePhase.BroadcastOutput;
+            // In this phase, the last player just broadcasts the transaction to everyone else.
+            phase = ShufflePhase.BroadcastOutput;
 
             Queue<VerificationKey> newAddresses;
             if (me == N) {
@@ -193,10 +193,10 @@ public class ShuffleMachine {
             // Put all temporary encryption keys into a list and hash the result.
             Packet σ4 = packets.make();
             for (int i = 1; i < N; i++) {
-                σ4.append(encryptonKeys.get(players[i - 1]).readEncryptionKey());
+                σ4.append(encryptonKeys.get(players[i - 1]).removeEncryptionKey());
             }
 
-            σ4 = crypto.hash(σ4);
+            crypto.hash(σ4);
             network.broadcast(σ4);
 
             // Wait for a similar message from everyone else and check that the result is the name.
@@ -224,7 +224,7 @@ public class ShuffleMachine {
 
             // Verify the signatures.
             for(Map.Entry<VerificationKey, Packet> sig : σ5.entrySet()) {
-                if (!sig.getKey().verify(t, sig.getValue().readCoinSignature())) {
+                if (!sig.getKey().verify(t, sig.getValue().removeCoinSignature())) {
                     throw new BlameException();
                 }
             }
@@ -296,13 +296,13 @@ public class ShuffleMachine {
 
         Packet element;
         while((element = packet.poll()) != null) {
-            queue.add(element.readVerificationKey());
+            queue.add(element.removeVerificationKey());
         }
 
         return queue;
     }
 
-    Packet decryptAll(DecryptionKey key, Packet packet) throws InvalidImplementationException {
+    Packet decryptAll(DecryptionKey key, Packet packet) throws InvalidImplementationException, FormatException {
         Packet decrypted = packets.make();
 
         Packet element;
@@ -349,7 +349,7 @@ public class ShuffleMachine {
         Packet last = null;
         for (Map.Entry<VerificationKey, Packet> e : messages.entrySet()) {
             if (last != null) {
-                equal = (equal&&last.equal(e.getValue()));
+                equal = (equal&&last.equals(e.getValue()));
                 if (!equal) {
                     return false;
                 }
