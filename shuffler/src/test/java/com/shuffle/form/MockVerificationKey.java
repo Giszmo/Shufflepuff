@@ -23,9 +23,9 @@ public class MockVerificationKey implements VerificationKey {
     }
 
     @Override
-    public boolean equals(VerificationKey vk) throws InvalidImplementationException {
+    public boolean equals(Object vk) {
         if(!(vk instanceof MockVerificationKey)) {
-            throw new InvalidImplementationException();
+            return false;
         }
 
         return index == ((MockVerificationKey)vk).index;
@@ -42,5 +42,10 @@ public class MockVerificationKey implements VerificationKey {
 
     public String toString() {
         return "MockVerificationKey[" + index + "]";
+    }
+
+    @Override
+    public int hashCode() {
+        return index;
     }
 }

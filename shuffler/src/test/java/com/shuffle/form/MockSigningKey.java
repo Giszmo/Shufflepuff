@@ -28,7 +28,7 @@ public class MockSigningKey implements SigningKey {
             throw new InvalidImplementationException();
         }
 
-        if (((MockPacket)packet).signer != null) {
+        if (((MockPacket)packet).signer == null) {
             throw new CryptographyException();
         }
 

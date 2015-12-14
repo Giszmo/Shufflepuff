@@ -11,7 +11,6 @@ import java.util.Set;
  * Created by Daniel Krawisz on 12/6/15.
  */
 public interface Packet {
-    boolean equals(Packet packet) throws InvalidImplementationException;
 
     Packet append(VerificationKey vk) throws InvalidImplementationException;
     Packet append(EncryptionKey vk) throws InvalidImplementationException;

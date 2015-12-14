@@ -1,5 +1,6 @@
 package com.shuffle.form;
 
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -59,6 +60,13 @@ public class Simulator {
         public PacketFactory packets;
         public Crypto crypto;
         public Coin coin;
+
+        public InitialState(SigningKey key, PacketFactory packets, Crypto crypto, Coin coin) {
+            this.key = key;
+            this.packets = packets;
+            this.crypto = crypto;
+            this.coin = coin;
+        }
     }
 
     // Could be a real or a malicious player.
@@ -77,7 +85,12 @@ public class Simulator {
         CoinAmount ν; SigningKey sk;
         VerificationKey[] players;
 
-        HonestAdversary(PacketFactory packets, Crypto crypto, Coin coin) {
+        HonestAdversary(SessionIdentifier τ, CoinAmount ν, SigningKey sk, VerificationKey[] players,
+                PacketFactory packets, Crypto crypto, Coin coin) {
+            this.τ = τ;
+            this.ν = ν;
+            this.sk = sk;
+            this.players = players;
             this.network = new Network();
             this.machine = new ShuffleMachine(packets, crypto, coin, network);
         }
@@ -85,7 +98,11 @@ public class Simulator {
         @Override
         public ShuffleErrorState turnOn() throws InvalidImplementationException {
             try {
-                return machine.run(τ, ν, sk, players);
+                ShuffleErrorState err = machine.run(τ, ν, sk, players);
+                if (err == null) {
+                    return new ShuffleErrorState(null, -1, null, null);
+                }
+                return err;
             } catch (InterruptedException e) {
                 return new ShuffleErrorState(τ, -1, machine.currentPhase(), e);
             }
@@ -132,6 +149,7 @@ public class Simulator {
         public BlackBox(Adversary machine) {
             this.machine = machine;
             thread = null;
+            q = new LinkedBlockingQueue<>();
         }
 
         public void deliver(Packet packet) throws InvalidImplementationException {
@@ -188,38 +206,45 @@ public class Simulator {
         }
     }
 
-    public Simulator(SessionIdentifier τ, CoinAmount ν, InitialState[] init) throws CryptographyException {
+    public Simulator(SessionIdentifier τ, CoinAmount ν, InitialState[] init)  {
         this.τ = τ;
         this.ν = ν;
         this.players = new VerificationKey[init.length];
 
-        this.machines = new ConcurrentHashMap<>();
+        machines = new ConcurrentHashMap<>();
 
         int i = 0;
-        for (InitialState in : init) {
-            players[i] = in.key.VerificationKey();
-            machines.put(in.key.VerificationKey(),
-                new BlackBox(
-                    new HonestAdversary(in.packets, in.crypto, in.coin)));
-            i++;
+        try {
+            for (InitialState in : init) {
+                players[i] = in.key.VerificationKey();
+                machines.put(in.key.VerificationKey(),
+                        new BlackBox(
+                                new HonestAdversary(τ, ν, in.key, players, in.packets, in.crypto, in.coin)));
+                i++;
+            }
+        } catch (CryptographyException e) {
+            e.printStackTrace();
         }
+
     }
 
     public List<ShuffleErrorState> runSimulation() {
-        Timer timer = new Timer();
+        //Timer timer = new Timer();
         List<Future<ShuffleErrorState>> wait = new LinkedList<>();
         List<ShuffleErrorState> results = new LinkedList<>();
 
         // First run all the machines.
-        for (Map.Entry<VerificationKey, BlackBox> machine : machines.entrySet()) {
+        for (BlackBox machine : machines.values()) {
             // TODO allow for the machines to be started in different orders.
-            wait.add(machine.getValue().doIt());
+            Future<ShuffleErrorState> future = machine.doIt();
+            wait.add(future);
         }
 
         // TODO Allow for timeouts.
         while (wait.size() != 0) {
-            Future<ShuffleErrorState> future = null;
-            for(Iterator<Future<ShuffleErrorState>> i = wait.iterator(); i.hasNext(); future = i.next()) {
+            Iterator<Future<ShuffleErrorState>> i = wait.iterator();
+            while (i.hasNext()) {
+                Future<ShuffleErrorState> future = i.next();
                 if (future.isDone()) {
                     try {
                         results.add(future.get());

@@ -1,7 +1,6 @@
 package com.shuffle.form;
 
 /**
- * TODO
  *
  * Created by Daniel Krawisz on 12/8/15.
  */

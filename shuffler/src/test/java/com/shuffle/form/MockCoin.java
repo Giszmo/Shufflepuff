@@ -2,6 +2,7 @@ package com.shuffle.form;
 
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -18,6 +19,17 @@ public class MockCoin implements Coin {
 
     ConcurrentLinkedQueue<CoinTransaction> sentList;
     ConcurrentHashMap<VerificationKey, BlockchainEntry> blockchain;
+
+    public MockCoin(Map<VerificationKey, BlockchainEntry> blockchain) {
+        this.sentList = new ConcurrentLinkedQueue<>();
+        this.blockchain = new ConcurrentHashMap<>();
+        this.blockchain.putAll(blockchain);
+    };
+
+    public MockCoin() {
+        this.sentList = new ConcurrentLinkedQueue<>();
+        this.blockchain = new ConcurrentHashMap<>();
+    }
 
     @Override
     public CoinTransaction transaction(List<VerificationKey> inputs, LinkedHashMap<VerificationKey, CoinAmount> outputs) {

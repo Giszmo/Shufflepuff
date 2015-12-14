@@ -79,13 +79,18 @@ public class MockPacket implements Packet{
             this.encrypted = encrypted;
         }
 
-        boolean equals(Atom a) throws InvalidImplementationException {
+        public boolean equals(Object o) {
+            if (!(o instanceof Atom)) {
+                return false;
+            }
+
+            Atom a = (Atom)o;
+
             return a != null &&
                 (this == a ||
                     a.τ == τ && a.phase == phase && a.sig == sig && a.index == index &&
                         ((a.ek == null && ek == null) || (a.ek != null && ek != null && ek.equals(a.ek))) &&
                         ((a.vk == null && vk == null) || (a.vk != null && vk != null && vk.equals(a.vk))));
-
         }
 
         public String toString() {
@@ -203,12 +208,12 @@ public class MockPacket implements Packet{
     }
 
     @Override
-    public boolean equals(Packet packet) throws InvalidImplementationException {
-        if (!(packet instanceof MockPacket)) {
-            throw new InvalidImplementationException();
+    public boolean equals(Object o) {
+        if (!(o instanceof MockPacket)) {
+            return false;
         }
 
-        Queue<Atom> mock = ((MockPacket)packet).atoms;
+        Queue<Atom> mock = ((MockPacket)o).atoms;
 
         if (mock == atoms) {
             return true;

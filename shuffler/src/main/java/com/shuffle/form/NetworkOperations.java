@@ -3,7 +3,7 @@ package com.shuffle.form;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
+import java.util.HashSet;
 
 /**
  * Operations relating to the verification and formatting of messages when they are sent or received.
@@ -16,7 +16,6 @@ class NetworkOperations {
     ShuffleMachine machine; // The machine running the protocol.
     SigningKey sk;
     int N; // the number of players.
-    int me; // The index of the current player.
     VerificationKey players[]; // The current players.
 
     NetworkOperations(SessionIdentifier τ, SigningKey sk, VerificationKey players[], Network network, ShuffleMachine machine) {
@@ -29,25 +28,26 @@ class NetworkOperations {
     }
 
     // Get the set of players other than myself from i to N.
-    public Set<VerificationKey> opponentSet(int i, int N) {
-        Set<VerificationKey> set = new TreeSet<>();
-        for(int j = i; j <= N; j ++) {
-            if (j != me) {
-                set.add(players[i - 1]);
+    public Set<VerificationKey> opponentSet(int i, int n) throws CryptographyException, InvalidImplementationException {
+        if (i < 1) {
+            i = 1;
+        }
+        Set<VerificationKey> set = new HashSet<>();
+        for(int j = i; j <= n; j ++) {
+            if (j > N) {
+                return set;
+            }
+
+            if (!sk.VerificationKey().equals(players[j - 1])) {
+                set.add(players[j - 1]);
             }
         }
 
         return set;
     }
 
-    public Set<VerificationKey> opponentSet() {
+    public Set<VerificationKey> opponentSet() throws CryptographyException, InvalidImplementationException {
         return opponentSet(1, N);
-    }
-
-    private void prepareForSending(Packet packet) throws CryptographyException, InvalidImplementationException {
-        packet.append(machine.currentPhase());
-        packet.append(τ);
-        sk.sign(packet);
     }
 
     VerificationKey determineSender(Packet packet) throws CryptographyException, InvalidImplementationException, FormatException, ValueException {
@@ -60,6 +60,12 @@ class NetworkOperations {
         }
 
         throw new ValueException(ValueException.Values.sender);
+    }
+
+    private void prepareForSending(Packet packet) throws CryptographyException, InvalidImplementationException {
+        packet.append(machine.currentPhase());
+        packet.append(τ);
+        sk.sign(packet);
     }
 
     public void broadcast(Packet packet) throws TimeoutException, CryptographyException, InvalidImplementationException {

@@ -46,7 +46,7 @@ public class ShuffleMachine {
 
     NetworkOperations network;
 
-    volatile ShufflePhase phase;
+    ShufflePhase phase;
 
     public ShuffleMachine(
             PacketFactory packets,

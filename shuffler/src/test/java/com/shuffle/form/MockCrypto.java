@@ -4,7 +4,6 @@ import java.util.LinkedList;
 import java.util.Queue;
 
 /**
- * TODO
  *
  * Created by Daniel Krawisz on 12/5/15.
  */
@@ -16,14 +15,14 @@ public class MockCrypto implements Crypto {
 
     MockCrypto() {
         this.rand = null;
-        signingKeyCounter = 0;
-        decryptionKeyCounter = 0;
+        signingKeyCounter = 1;
+        decryptionKeyCounter = 1;
     }
 
     MockCrypto(MockRandomSequence rand) {
         this.rand = rand;
-        signingKeyCounter = 0;
-        decryptionKeyCounter = 0;
+        signingKeyCounter = 1;
+        decryptionKeyCounter = 1;
     }
 
     @Override
