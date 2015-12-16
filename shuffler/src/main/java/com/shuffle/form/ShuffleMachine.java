@@ -261,11 +261,11 @@ public class ShuffleMachine {
 
     // The function for public consumption which runs the protocol.
     // TODO Coming soon!! handle all these error states more delicately.
-    public ShuffleErrorState run(SessionIdentifier τ, CoinAmount ν, SigningKey sk, VerificationKey players[]) throws InvalidImplementationException, InterruptedException {
+    public ReturnState run(SessionIdentifier τ, CoinAmount ν, SigningKey sk, VerificationKey players[]) throws InvalidImplementationException, InterruptedException {
 
         // Don't let the protocol be run more than once at a time.
         if (phase != ShufflePhase.Uninitiated) {
-            return new ShuffleErrorState(this.τ, -1, currentPhase(), new ProtocolStartedException());
+            return new ReturnState(this.τ, -1, currentPhase(), new ProtocolStartedException());
         }
 
         // Set up interactions with the shuffle network.
@@ -284,7 +284,7 @@ public class ShuffleMachine {
                 | FormatException e) {
 
             phase = ShufflePhase.Uninitiated;
-            return new ShuffleErrorState(τ, me, currentPhase(), e);
+            return new ReturnState(τ, me, currentPhase(), e);
         }
 
         phase = ShufflePhase.Uninitiated;

@@ -8,16 +8,16 @@ import com.shuffle.form.ShufflePhase;
  *
  * Created by Daniel Krawisz on 12/6/15.
  */
-public class ShuffleErrorState {
+public class ReturnState {
+    boolean success;
     SessionIdentifier τ;
     ShufflePhase phase;
-    int player;
     Exception exception;
 
-    public ShuffleErrorState(SessionIdentifier τ, int player, ShufflePhase phase, Exception exception) {
+    public ReturnState(boolean success, SessionIdentifier τ, ShufflePhase phase, Exception exception) {
+        this.success = success;
         this.τ = τ;
         this.phase = phase;
         this.exception = exception;
-        this.player = player;
     }
 }

@@ -1,11 +1,8 @@
 package com.shuffle.form;
 
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
-import java.util.Timer;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -71,7 +68,7 @@ public class Simulator {
 
     // Could be a real or a malicious player.
     private interface Adversary {
-        ShuffleErrorState turnOn() throws InvalidImplementationException;
+        ReturnState turnOn() throws InvalidImplementationException;
         ShufflePhase currentPhase();
         void deliver(Packet packet);
     }
@@ -96,15 +93,15 @@ public class Simulator {
         }
 
         @Override
-        public ShuffleErrorState turnOn() throws InvalidImplementationException {
+        public ReturnState turnOn() throws InvalidImplementationException {
             try {
-                ShuffleErrorState err = machine.run(τ, ν, sk, players);
+                ReturnState err = machine.run(τ, ν, sk, players);
                 if (err == null) {
-                    return new ShuffleErrorState(null, -1, null, null);
+                    return new ReturnState(null, -1, null, null);
                 }
                 return err;
             } catch (InterruptedException e) {
-                return new ShuffleErrorState(τ, -1, machine.currentPhase(), e);
+                return new ReturnState(τ, -1, machine.currentPhase(), e);
             }
         }
 
@@ -123,7 +120,7 @@ public class Simulator {
     private class MaliciousAdversary implements Adversary{
 
         @Override
-        public ShuffleErrorState turnOn() throws InvalidImplementationException {
+        public ReturnState turnOn() throws InvalidImplementationException {
             return null;
         }
 
@@ -144,7 +141,7 @@ public class Simulator {
         Thread thread;
 
         // Used to send a message from the new thread to the old one.
-        BlockingQueue<ShuffleErrorState> q;
+        BlockingQueue<ReturnState> q;
 
         public BlackBox(Adversary machine) {
             this.machine = machine;
@@ -162,13 +159,13 @@ public class Simulator {
             }
         }
 
-        public Future<ShuffleErrorState> doIt() {
+        public Future<ReturnState> doIt() {
             // Start new thread.
             thread = new Thread(this);
             thread.start();
 
             // Wait for message from new thread.
-            return new Future<ShuffleErrorState>() {
+            return new Future<ReturnState>() {
                 @Override
                 public boolean cancel(boolean b) {
                     return false;
@@ -185,12 +182,12 @@ public class Simulator {
                 }
 
                 @Override
-                public ShuffleErrorState get() throws InterruptedException, ExecutionException {
+                public ReturnState get() throws InterruptedException, ExecutionException {
                     return q.take();
                 }
 
                 @Override
-                public ShuffleErrorState get(long l, TimeUnit timeUnit) throws InterruptedException, ExecutionException, java.util.concurrent.TimeoutException {
+                public ReturnState get(long l, TimeUnit timeUnit) throws InterruptedException, ExecutionException, java.util.concurrent.TimeoutException {
                     return q.poll(l, timeUnit);
                 }
             };
@@ -201,7 +198,7 @@ public class Simulator {
             try {
                 q.add(machine.turnOn());
             } catch (InvalidImplementationException e) {
-                q.add(new ShuffleErrorState(τ, -1, machine.currentPhase(), e));
+                q.add(new ReturnState(τ, -1, machine.currentPhase(), e));
             }
         }
     }
@@ -228,23 +225,23 @@ public class Simulator {
 
     }
 
-    public List<ShuffleErrorState> runSimulation() {
+    public List<ReturnState> runSimulation() {
         //Timer timer = new Timer();
-        List<Future<ShuffleErrorState>> wait = new LinkedList<>();
-        List<ShuffleErrorState> results = new LinkedList<>();
+        List<Future<ReturnState>> wait = new LinkedList<>();
+        List<ReturnState> results = new LinkedList<>();
 
         // First run all the machines.
         for (BlackBox machine : machines.values()) {
             // TODO allow for the machines to be started in different orders.
-            Future<ShuffleErrorState> future = machine.doIt();
+            Future<ReturnState> future = machine.doIt();
             wait.add(future);
         }
 
         // TODO Allow for timeouts.
         while (wait.size() != 0) {
-            Iterator<Future<ShuffleErrorState>> i = wait.iterator();
+            Iterator<Future<ReturnState>> i = wait.iterator();
             while (i.hasNext()) {
-                Future<ShuffleErrorState> future = i.next();
+                Future<ReturnState> future = i.next();
                 if (future.isDone()) {
                     try {
                         results.add(future.get());
