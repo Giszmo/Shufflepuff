@@ -1,0 +1,42 @@
+package com.shuffle.protocol;
+
+/**
+ * TODO
+ *
+ * Created by Daniel Krawisz on 12/7/15.
+ */
+public class MockVerificationKey implements VerificationKey {
+    int index;
+
+    public MockVerificationKey(int index) {
+        this.index = index;
+    }
+
+    // These functions are not implemented yet.
+    @Override
+    public boolean verify(CoinTransaction t, CoinSignature sig) throws InvalidImplementationException {
+        if (!(sig instanceof MockCoinSignature)) {
+            throw new InvalidImplementationException();
+        }
+
+        return (((MockCoinSignature)sig).t.equals(t)) && (((MockCoinSignature)sig).key.equals(this));
+    }
+
+    @Override
+    public boolean equals(Object vk) {
+        if(!(vk instanceof MockVerificationKey)) {
+            return false;
+        }
+
+        return index == ((MockVerificationKey)vk).index;
+    }
+
+    public String toString() {
+        return "MockVerificationKey[" + index + "]";
+    }
+
+    @Override
+    public int hashCode() {
+        return index;
+    }
+}
