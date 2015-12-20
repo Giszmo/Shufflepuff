@@ -6,5 +6,5 @@ package com.shuffle.protocol;
  * Created by Daniel Krawisz on 12/5/15.
  */
 public interface CoinSignature {
-    boolean equals(CoinSignature sig) throws InvalidImplementationException;
+    boolean equals(CoinSignature sig) throws InvalidImplementationError;
 }

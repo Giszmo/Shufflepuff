@@ -11,9 +11,9 @@ public class MockCoinAmount implements Coin.CoinAmount {
     }
 
     @Override
-    public boolean greater(Coin.CoinAmount ν) throws InvalidImplementationException {
+    public boolean greater(Coin.CoinAmount ν) throws InvalidImplementationError {
         if (!(ν instanceof MockCoinAmount)) {
-            throw new InvalidImplementationException();
+            throw new InvalidImplementationError();
         }
 
         return amount > ((MockCoinAmount)ν).amount;

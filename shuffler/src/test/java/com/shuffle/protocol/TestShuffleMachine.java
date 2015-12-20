@@ -74,7 +74,7 @@ public class TestShuffleMachine {
                 }
                 tests.put(caseNo, test);
                 caseNo ++;
-            } catch (CryptographyException e) {
+            } catch (CryptographyError e) {
                 Assert.fail("could not create test case " + caseNo);
             }
         }

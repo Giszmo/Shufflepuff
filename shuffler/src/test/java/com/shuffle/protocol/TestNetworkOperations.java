@@ -84,9 +84,9 @@ public class TestNetworkOperations  {
             Set<VerificationKey> result = null;
             try {
                 result = netop.opponentSet(test.i, test.n);
-            } catch (CryptographyException e) {
+            } catch (CryptographyError e) {
                 Assert.fail("Unexpected CryptographyException.");
-            } catch (InvalidImplementationException e) {
+            } catch (InvalidImplementationError e) {
                 Assert.fail("Unexpected InvalidImplementationException.");
             }
 
@@ -145,12 +145,12 @@ public class TestNetworkOperations  {
 
             try {
                 netop.broadcast(new Packet(messages.make(), new MockSessionIdentifier(), ShufflePhase.Shuffling, sk.VerificationKey()));
-            } catch (TimeoutException e) {
+            } catch (TimeoutError e) {
                 Assert.fail("Unexpected exception.");
-            } catch (CryptographyException e) {
+            } catch (CryptographyError e) {
                 e.printStackTrace();
                 Assert.fail("Unexpected CryptograhyException.");
-            } catch (InvalidImplementationException e) {
+            } catch (InvalidImplementationError e) {
                 Assert.fail("Unexpected InvalidImplementationException.");
             }
         }
@@ -213,11 +213,11 @@ public class TestNetworkOperations  {
                     Assert.assertTrue(new MockVerificationKey(test.recipient).equals(msg.getValue()));
                 }
 
-            } catch (InvalidImplementationException e) {
+            } catch (InvalidImplementationError e) {
                 Assert.fail("Unexpected InvalidImplementationException");
-            } catch (CryptographyException e) {
+            } catch (CryptographyError e) {
                 Assert.fail("Unexpected CryptographyException");
-            } catch (TimeoutException e) {
+            } catch (TimeoutError e) {
                 Assert.fail("Unexpected TimeoutException");
             }
         }
@@ -243,7 +243,7 @@ public class TestNetworkOperations  {
     public void testReceiveFrom() {
         receiveFromTestCase tests[] = new receiveFromTestCase[]{
                 // time out exception test case.
-                new receiveFromTestCase(new int []{1,2,3}, 2, ShufflePhase.Shuffling, null, new TimeoutException()),
+                new receiveFromTestCase(new int []{1,2,3}, 2, ShufflePhase.Shuffling, null, new TimeoutError()),
                 // Various malformed inbox.
                 // TODO
         };
@@ -269,8 +269,8 @@ public class TestNetworkOperations  {
                 NetworkOperations netop = new NetworkOperations(τ, sk, players, network);
 
                 netop.receiveFrom(new MockVerificationKey(test.requested), test.phase);
-            } catch (TimeoutException | CryptographyException | FormatException | BlameReceivedException
-                    | ValueException | InterruptedException | InvalidImplementationException e) {
+            } catch (TimeoutError | CryptographyError | FormatException | BlameReceivedException
+                    | ValueException | InterruptedException | InvalidImplementationError e) {
                 if (test.e != null) {
                     if (!test.e.getClass().equals(e.getClass())) {
                         Assert.fail("Wrong exception encountered.");

@@ -15,13 +15,13 @@ import java.util.List;
  */
 public interface Coin {
     CoinTransaction transaction(List<CoinAddress> inputs, LinkedHashMap<CoinAddress, CoinAmount> outputs);
-    void send(CoinTransaction t) throws CoinNetworkException;
+    void send(CoinTransaction t) throws CoinNetworkError;
     boolean unspent(CoinAddress addr);
-    CoinAmount valueHeld(CoinAddress addr) throws BlockchainException, MempoolException;
+    CoinAmount valueHeld(CoinAddress addr) throws BlockchainError, MempoolError;
 
     // Represents an amount of Bitcoin or other cryptocurrency.
     interface CoinAmount {
-        boolean greater(CoinAmount ν) throws InvalidImplementationException;
+        boolean greater(CoinAmount ν) throws InvalidImplementationError;
     }
 
     interface CoinAddress {}

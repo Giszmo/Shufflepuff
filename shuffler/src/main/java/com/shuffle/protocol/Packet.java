@@ -1,10 +1,9 @@
 package com.shuffle.protocol;
 
-import java.util.Iterator;
-import java.util.Queue;
-
 /**
- *
+ * Represents a coin shuffle message with context information attached that is necessary to
+ * detect low-level errors. The main protocol does not need to worry about that stuff, so
+ * it just uses the Message type for most of what it does.
  *
  * Created by Daniel Krawisz on 12/9/15.
  */

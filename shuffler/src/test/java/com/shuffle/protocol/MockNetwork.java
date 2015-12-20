@@ -70,13 +70,13 @@ public class MockNetwork implements Network {
     }
 
     @Override
-    public void sendTo(VerificationKey to, Packet packet) throws InvalidImplementationException {
+    public void sendTo(VerificationKey to, Packet packet) throws InvalidImplementationError {
         if (!(packet instanceof Packet)) {
-            throw new InvalidImplementationException();
+            throw new InvalidImplementationError();
         }
 
         if (!(to instanceof MockVerificationKey)) {
-            throw new InvalidImplementationException();
+            throw new InvalidImplementationError();
         }
 
         final MockVerificationKey mockTo = (MockVerificationKey)to;
@@ -86,9 +86,9 @@ public class MockNetwork implements Network {
     }
 
     @Override
-    public Packet receive() throws TimeoutException {
+    public Packet receive() throws TimeoutError {
         if (sent.size() == 0) {
-            throw new TimeoutException();
+            throw new TimeoutError();
         }
 
         return sent.remove();

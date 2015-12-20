@@ -11,12 +11,12 @@ public class MockSigningKey implements SigningKey {
     }
 
     @Override
-    public VerificationKey VerificationKey() throws CryptographyException {
+    public VerificationKey VerificationKey() throws CryptographyError {
         return new MockVerificationKey(index);
     }
 
     @Override
-    public CoinSignature makeSignature(Coin.CoinTransaction t) throws CryptographyException {
+    public CoinSignature makeSignature(Coin.CoinTransaction t) throws CryptographyError {
         return new MockCoinSignature(t, new MockVerificationKey(index));
     }
 

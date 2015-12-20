@@ -1,6 +1,5 @@
 package com.shuffle.protocol;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -95,14 +94,14 @@ public final class ShuffleMachine {
             SigningKey sk, // My signing key.
             VerificationKey players[] // The keys representing all the players, in order.
     ) throws
-            TimeoutException,
+            TimeoutError,
             FormatException,
-            CryptographyException,
-            BlockchainException,
-            MempoolException,
-            InvalidImplementationException,
+            CryptographyError,
+            BlockchainError,
+            MempoolError,
+            InvalidImplementationError,
             ValueException,
-            CoinNetworkException,
+            CoinNetworkError,
             InvalidParticipantSetException,
             InterruptedException {
 
@@ -293,7 +292,7 @@ public final class ShuffleMachine {
 
     // The function for public consumption which runs the protocol.
     // TODO Coming soon!! handle all these error states more delicately.
-    public ReturnState run(Coin.CoinAmount ν, SigningKey sk, VerificationKey players[]) throws InvalidImplementationException, InterruptedException {
+    public ReturnState run(Coin.CoinAmount ν, SigningKey sk, VerificationKey players[]) throws InvalidImplementationError, InterruptedException {
 
         // Don't let the protocol be run more than once at a time.
         if (phase != ShufflePhase.Uninitiated) {
@@ -318,11 +317,11 @@ public final class ShuffleMachine {
             return new ReturnState(true, τ, endPhase, null, null);
         } catch ( InvalidParticipantSetException
                 | ValueException
-                | MempoolException
-                | BlockchainException
-                | CoinNetworkException
-                | CryptographyException
-                | TimeoutException
+                | MempoolError
+                | BlockchainError
+                | CoinNetworkError
+                | CryptographyError
+                | TimeoutError
                 | FormatException e) {
 
             return new ReturnState(false, τ, currentPhase(), e, null);
@@ -339,7 +338,7 @@ public final class ShuffleMachine {
         return keys;
     }
 
-    Queue<Coin.CoinAddress> readNewAddresses(Message message) throws FormatException, InvalidImplementationException {
+    Queue<Coin.CoinAddress> readNewAddresses(Message message) throws FormatException, InvalidImplementationError {
         Queue<Coin.CoinAddress> queue = new LinkedList<>();
 
         Message copy = messages.copy(message);
@@ -350,7 +349,7 @@ public final class ShuffleMachine {
         return queue;
     }
 
-    Message decryptAll(Message message, DecryptionKey key) throws InvalidImplementationException, CryptographyException, FormatException {
+    Message decryptAll(Message message, DecryptionKey key) throws InvalidImplementationError, CryptographyError, FormatException {
         Message decrypted = messages.make();
 
         Message copy = messages.copy(message);
@@ -362,7 +361,7 @@ public final class ShuffleMachine {
     }
 
     // Algorithm to randomly shuffle a linked list.
-    Message shuffle(Message σ) throws CryptographyException, InvalidImplementationException, FormatException {
+    Message shuffle(Message σ) throws CryptographyError, InvalidImplementationError, FormatException {
         Message copy = messages.copy(σ);
         Message shuffled = messages.make();
 
@@ -390,7 +389,7 @@ public final class ShuffleMachine {
         return shuffled;
     }
 
-    static boolean areEqual(Map<VerificationKey, Message> messages) throws InvalidImplementationException {
+    static boolean areEqual(Map<VerificationKey, Message> messages) throws InvalidImplementationError {
         boolean equal = true;
 
         Message last = null;

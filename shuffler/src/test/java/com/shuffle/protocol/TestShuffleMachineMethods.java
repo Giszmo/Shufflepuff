@@ -4,7 +4,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
 
@@ -106,7 +105,7 @@ public class TestShuffleMachineMethods {
             SigningKey key = null;
             try {
                 key = crypto.SigningKey();
-            } catch (CryptographyException e) {}
+            } catch (CryptographyError e) {}
             SessionIdentifier τ = new MockSessionIdentifier();
             ShuffleMachine machine = shuffleTestInitialization(τ, test.randomSequence);
 
@@ -124,9 +123,9 @@ public class TestShuffleMachineMethods {
                 Message result = machine.shuffle(input);
                 System.out.println("got " + result.toString() + "; expected " + expected.toString());
                 Assert.assertTrue(result.equals(expected));
-            } catch (CryptographyException e) {
+            } catch (CryptographyError e) {
                 Assert.fail("Unexpected CryptographyException");
-            } catch (InvalidImplementationException e) {
+            } catch (InvalidImplementationError e) {
                 Assert.fail("Unexpected InvalidImplementationException");
             } catch (FormatException e) {
                 e.printStackTrace();
@@ -145,7 +144,7 @@ public class TestShuffleMachineMethods {
         }
     }
 
-    Map<VerificationKey, Message> mockPacketMap(int[] input) throws CryptographyException {
+    Map<VerificationKey, Message> mockPacketMap(int[] input) throws CryptographyError {
         Map<VerificationKey, Message> map = new HashMap<>();
 
         int index = 0;
@@ -199,9 +198,9 @@ public class TestShuffleMachineMethods {
         for(areEqualTestCase testCase : tests) {
             try {
                 Assert.assertEquals(testCase.expected, ShuffleMachine.areEqual(mockPacketMap(testCase.input)));
-            } catch (InvalidImplementationException e) {
+            } catch (InvalidImplementationError e) {
                 Assert.fail("Tests have failed due to error in test class.");
-            } catch (CryptographyException e) {
+            } catch (CryptographyError e) {
                 Assert.fail("Unexpected CryptographyExcption.");
             }
         }
@@ -243,12 +242,12 @@ public class TestShuffleMachineMethods {
 
                 Assert.assertTrue(result.equals(output));
             }
-        } catch (CryptographyException e) {
+        } catch (CryptographyError e) {
             Assert.fail("Unexpected CryptographyException:");
         } catch (FormatException e) {
             e.printStackTrace();
             Assert.fail("Unexpected FormatException:");
-        } catch (InvalidImplementationException e) {
+        } catch (InvalidImplementationError e) {
             Assert.fail("Unexpected InvalidImplementationException:");
         }
 
@@ -267,7 +266,7 @@ public class TestShuffleMachineMethods {
                     }
 
                     input.attach(crypto.SigningKey().VerificationKey().address());
-                } catch (CryptographyException e) {
+                } catch (CryptographyError e) {
                     Assert.fail();
                 }
 
@@ -276,10 +275,10 @@ public class TestShuffleMachineMethods {
                 try {
                     machine.decryptAll(new MockMessage().attach(input), key);
                     Assert.fail("Exception should have been thrown.");
-                } catch (FormatException | CryptographyException e) {
+                } catch (FormatException | CryptographyError e) {
                 }
             }
-        } catch (InvalidImplementationException e) {
+        } catch (InvalidImplementationError e) {
             e.printStackTrace();
             Assert.fail();
         }
@@ -309,7 +308,7 @@ public class TestShuffleMachineMethods {
 
                 Assert.assertTrue(expected.equals(new MockMessage().attachAddrs(result)));
             }
-        } catch (CryptographyException | FormatException | InvalidImplementationException e) {
+        } catch (CryptographyError | FormatException | InvalidImplementationError e) {
             Assert.fail();
         }
 
@@ -332,7 +331,7 @@ public class TestShuffleMachineMethods {
                 } catch (FormatException e) {
                 }
             }
-        } catch (CryptographyException | InvalidImplementationException e) {
+        } catch (CryptographyError | InvalidImplementationError e) {
             Assert.fail();
         }
     }

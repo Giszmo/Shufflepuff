@@ -36,17 +36,17 @@ public class MockCrypto implements Crypto {
     }
 
     @Override
-    public synchronized DecryptionKey DecryptionKey() throws CryptographyException {
+    public synchronized DecryptionKey DecryptionKey() throws CryptographyError {
         return new MockDecryptionKey(decryptionKeyCounter++);
     }
 
     @Override
-    public synchronized SigningKey SigningKey() throws CryptographyException {
+    public synchronized SigningKey SigningKey() throws CryptographyError {
         return new MockSigningKey(signingKeyCounter++);
     }
 
     @Override
-    public synchronized int getRandom(int n) throws CryptographyException, InvalidImplementationException {
+    public synchronized int getRandom(int n) throws CryptographyError, InvalidImplementationError {
         if (rand == null) {
             return notCryptographicallySecure.nextInt(n + 1);
         }
@@ -54,9 +54,9 @@ public class MockCrypto implements Crypto {
     }
 
     @Override
-    public synchronized Message hash(Message m) throws CryptographyException, InvalidImplementationException {
+    public synchronized Message hash(Message m) throws CryptographyError, InvalidImplementationError {
         if (!(m instanceof MockMessage)) {
-            throw new InvalidImplementationException();
+            throw new InvalidImplementationError();
         }
 
         MockMessage p = ((MockMessage)m).copy();

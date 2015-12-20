@@ -163,9 +163,9 @@ public class MockMessage implements Message {
     }
 
     @Override
-    public Message attach(Message message) throws InvalidImplementationException {
+    public Message attach(Message message) throws InvalidImplementationError {
         if (!(message instanceof MockMessage)) {
-            throw new InvalidImplementationException();
+            throw new InvalidImplementationError();
         }
 
         atoms.addAll(((MockMessage) message).atoms);

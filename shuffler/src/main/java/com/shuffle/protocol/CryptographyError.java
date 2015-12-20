@@ -5,5 +5,5 @@ package com.shuffle.protocol;
  *
  * Created by Daniel Krawisz on 12/5/15.
  */
-public class CryptographyException extends Exception {
+public class CryptographyError extends Error {
 }

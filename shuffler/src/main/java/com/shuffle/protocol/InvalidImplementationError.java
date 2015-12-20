@@ -10,5 +10,5 @@ package com.shuffle.protocol;
  * Created by Daniel Krawisz on 12/6/15.
  *
  */
-public class InvalidImplementationException extends Exception {
+public class InvalidImplementationError extends Error {
 }

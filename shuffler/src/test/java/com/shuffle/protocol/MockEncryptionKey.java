@@ -12,7 +12,7 @@ public class MockEncryptionKey implements EncryptionKey {
     }
 
     @Override
-    public Coin.CoinAddress encrypt(Coin.CoinAddress m) throws CryptographyException {
+    public Coin.CoinAddress encrypt(Coin.CoinAddress m) throws CryptographyError {
         return new MockEncryptedCoinAddress(m, this);
     }
 

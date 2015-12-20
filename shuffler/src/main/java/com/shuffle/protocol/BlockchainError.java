@@ -6,5 +6,5 @@ package com.shuffle.protocol;
  * An exception to be thrown if the Bitcoin blockchain is inaccessable.
  * 
  */
-public class BlockchainException extends Exception {
+public class BlockchainError extends Error {
 }

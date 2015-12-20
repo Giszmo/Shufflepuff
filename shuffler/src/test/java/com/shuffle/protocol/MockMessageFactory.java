@@ -13,9 +13,9 @@ public class MockMessageFactory implements MessageFactory {
     }
 
     @Override
-    public Message copy(Message message) throws InvalidImplementationException {
+    public Message copy(Message message) throws InvalidImplementationError {
         if (!(message instanceof MockMessage)) {
-            throw new InvalidImplementationException();
+            throw new InvalidImplementationError();
         }
 
         MockMessage mock = (MockMessage)message;

@@ -1,7 +1,5 @@
 package com.shuffle.protocol;
 
-import java.util.Queue;
-
 /**
  * Created by Daniel Krawisz on 12/19/15.
  */
@@ -12,7 +10,7 @@ public interface Message {
     Message attach(Coin.CoinAddress addr);
     Message attach(CoinSignature sig);
 
-    Message attach(Message message) throws InvalidImplementationException;
+    Message attach(Message message) throws InvalidImplementationError;
 
     EncryptionKey readEncryptionKey() throws FormatException;
     CoinSignature readCoinSignature() throws FormatException;

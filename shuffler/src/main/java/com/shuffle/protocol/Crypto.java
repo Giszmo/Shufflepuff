@@ -13,11 +13,11 @@ package com.shuffle.protocol;
  */
 public interface Crypto {
     // Generate new decryption key.
-    DecryptionKey DecryptionKey() throws CryptographyException;
+    DecryptionKey DecryptionKey() throws CryptographyError;
     // Generate new signing key.
-    SigningKey SigningKey() throws CryptographyException;
+    SigningKey SigningKey() throws CryptographyError;
     // Get a random number between 0 and N inclusive.
-    int getRandom(int n) throws CryptographyException, InvalidImplementationException;
+    int getRandom(int n) throws CryptographyError, InvalidImplementationError;
     // Hash a message.
-    Message hash(Message m) throws CryptographyException, InvalidImplementationException;
+    Message hash(Message m) throws CryptographyError, InvalidImplementationError;
 }

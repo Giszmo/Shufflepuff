@@ -14,7 +14,7 @@ public final class ReturnState {
     Exception exception = null;
     Set<ShuffleMachine.Blame> blame = null;
 
-    public ReturnState(boolean success, SessionIdentifier τ, ShufflePhase phase, Exception exception, Set<ShuffleMachine.Blame> blame) {
+    public ReturnState(boolean success, SessionIdentifier τ, ShufflePhase phase, Throwable exception, Set<ShuffleMachine.Blame> blame) {
         this.success = success;
         this.τ = τ;
         this.phase = phase;

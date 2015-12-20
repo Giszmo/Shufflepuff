@@ -37,21 +37,21 @@ public final class Simulator {
         }
 
         @Override
-        public void sendTo(VerificationKey to, Packet packet) throws InvalidImplementationException, TimeoutException {
+        public void sendTo(VerificationKey to, Packet packet) throws InvalidImplementationError, TimeoutError {
             try {
                 Simulator.this.sendTo(to, new Packet(messages.copy(packet.message), packet.τ, packet.phase, packet.signer));
             } catch (InterruptedException e) {
                 // This means that the thread running the machine we are delivering to has been interrupted.
                 // This would look like a timeout if this were happening over a real network.
-                throw new TimeoutException();
+                throw new TimeoutError();
             }
         }
 
         @Override
-        public Packet receive() throws TimeoutException, InterruptedException {
+        public Packet receive() throws TimeoutError, InterruptedException {
             Packet next = inbox.poll(1, TimeUnit.SECONDS);
             if (next == null) {
-                throw new TimeoutException();
+                throw new TimeoutError();
             }
             return next;
         }
@@ -78,7 +78,7 @@ public final class Simulator {
 
     // Could be a real or a malicious player.
     private interface Adversary {
-        ReturnState turnOn() throws InvalidImplementationException;
+        ReturnState turnOn() throws InvalidImplementationError;
         ShufflePhase currentPhase();
         void deliver(Packet packet) throws InterruptedException;
         SigningKey identity();
@@ -105,7 +105,7 @@ public final class Simulator {
         }
 
         @Override
-        public ReturnState turnOn() throws InvalidImplementationException {
+        public ReturnState turnOn() throws InvalidImplementationError {
             try {
                 return machine.run(ν, sk, players);
             } catch (InterruptedException e) {
@@ -133,7 +133,7 @@ public final class Simulator {
     private class MaliciousAdversary implements Adversary{
 
         @Override
-        public ReturnState turnOn() throws InvalidImplementationException {
+        public ReturnState turnOn() throws InvalidImplementationError {
             return null;
         }
 
@@ -167,7 +167,7 @@ public final class Simulator {
             q = new LinkedBlockingQueue<>();
         }
 
-        public void deliver(Packet packet) throws InvalidImplementationException, InterruptedException {
+        public void deliver(Packet packet) throws InvalidImplementationError, InterruptedException {
             machine.deliver(packet);
         }
 
@@ -241,7 +241,7 @@ public final class Simulator {
         public void run() {
             try {
                 q.add(machine.turnOn());
-            } catch (InvalidImplementationException e) {
+            } catch (InvalidImplementationError e) {
                 q.add(new ReturnState(false, τ, machine.currentPhase(), e, null));
             }
         }
@@ -266,7 +266,7 @@ public final class Simulator {
                         new BlackBox(new HonestAdversary(τ, ν, in.key, players)));
                 i++;
             }
-        } catch (CryptographyException e) {
+        } catch (CryptographyError e) {
             e.printStackTrace();
         }
 
@@ -306,7 +306,7 @@ public final class Simulator {
     }
 
     // TODO allow the simulator to monitor all inbox and do malicious things with them.
-    public void sendTo(VerificationKey to, Packet packet) throws InvalidImplementationException, InterruptedException {
+    public void sendTo(VerificationKey to, Packet packet) throws InvalidImplementationError, InterruptedException {
         machines.get(to).deliver(packet);
     }
 

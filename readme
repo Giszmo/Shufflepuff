@@ -15,39 +15,37 @@ network interactions.
 
 The purpose of this design is that a set of test cases can be developed for
 the protocol as a whole before any work has been put into its details. This 
-means that there can already be a huge (TODO!!!!) set of test cases very early 
+means that there can already be a huge set of test cases very early
 in the development of a working version of the protocol, which will greatly 
 reduce the risk of introducing errors as the rest of the development work 
-proceeds. Furthermore, this protocol can be adapted to any java implementation 
+proceeds. Furthermore, this protocol can be adapted to any java implementation
 of Bitcoin, or any other cryptocurrency.
+
+Right now there are only positive test cases and the correct responses for
+malicious behavior have not been implemented yet.
 
 Instructions: After reading this file, go into the form package and read 
 the function protocolDefinition() in ShuffleMachine.java, followed by
-TestShuffleMachine.java, (Does not exist yet) and Simulator.java. These will
-teach you the protocol and familiarize you with the services that must be
-provided in order for the library to work.
+TestShuffleMachine.java, and Simulator.java. Try running the tests.
 
-Next, try running the tests. These tests will help you to detect bugs early when 
-you write your implementation.
+Finally, implement the following interfaces:
 
-After you are certain you know what to do, you must implement the following 
-interfaces:
-
+Coin
+CoinAddress
 CoinAmount
 CoinSignature
 CoinTransaction
-VerificationKey
-SigningKey
-EncryptionKey
-DecryptionKey
-Packet
-PacketFactory
-Crypto
-Coin
-TODO I'm pretty sure that's all of them.
 
-In particular, pay attention to the exceptions that are thrown in these 
-interfaces to understand the kind of checks that will be required of the 
-implementations.
+Crypto
+DecryptionKey
+EncryptionKey
+SigningKey
+VerificationKey
+
+SessionIdentifier
+MessageFactory
+Message
+
+Network
 
 

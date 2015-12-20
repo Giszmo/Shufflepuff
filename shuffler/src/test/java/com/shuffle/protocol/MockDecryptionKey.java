@@ -22,7 +22,7 @@ public class MockDecryptionKey implements DecryptionKey {
 
     @Override
     // Intended to decrypt a single element.
-    public Coin.CoinAddress decrypt(Coin.CoinAddress m) throws FormatException, CryptographyException {
+    public Coin.CoinAddress decrypt(Coin.CoinAddress m) throws FormatException, CryptographyError {
 
         if (!(m instanceof MockEncryptedCoinAddress)) {
             throw new FormatException();
@@ -31,7 +31,7 @@ public class MockDecryptionKey implements DecryptionKey {
         MockEncryptedCoinAddress enc = ((MockEncryptedCoinAddress)m);
 
         if (!enc.key.equals(key)) {
-            throw new CryptographyException();
+            throw new CryptographyError();
         }
 
         return ((MockEncryptedCoinAddress)m).encrypted;

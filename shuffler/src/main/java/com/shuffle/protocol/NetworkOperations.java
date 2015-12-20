@@ -31,7 +31,7 @@ class NetworkOperations {
     }
 
     // Get the set of players other than myself from i to N.
-    public Set<VerificationKey> opponentSet(int i, int n) throws CryptographyException, InvalidImplementationException {
+    public Set<VerificationKey> opponentSet(int i, int n) throws CryptographyError, InvalidImplementationError {
         if (i < 1) {
             i = 1;
         }
@@ -49,11 +49,11 @@ class NetworkOperations {
         return set;
     }
 
-    public Set<VerificationKey> opponentSet() throws CryptographyException, InvalidImplementationException {
+    public Set<VerificationKey> opponentSet() throws CryptographyError, InvalidImplementationError {
         return opponentSet(1, N);
     }
 
-    public void broadcast(Packet packet) throws TimeoutException, CryptographyException, InvalidImplementationException {
+    public void broadcast(Packet packet) throws TimeoutError, CryptographyError, InvalidImplementationError {
         Set<VerificationKey> keys = opponentSet();
 
         for (VerificationKey key : keys) {
@@ -61,15 +61,15 @@ class NetworkOperations {
         }
     }
 
-    public void sendTo(VerificationKey to, Packet packet) throws TimeoutException, CryptographyException, InvalidImplementationException {
+    public void sendTo(VerificationKey to, Packet packet) throws TimeoutError, CryptographyError, InvalidImplementationError {
         network.sendTo(to, packet);
     }
 
     // Get the next message from the phase we're in. It's possible for other players to get
     // ahead under some circumstances, so we have to keep their messages to look at later.
     Packet getNextMessage(ShufflePhase expectedPhase)
-            throws FormatException, CryptographyException, BlameReceivedException,
-            InterruptedException, TimeoutException, InvalidImplementationException, ValueException {
+            throws FormatException, CryptographyError, BlameReceivedException,
+            InterruptedException, TimeoutError, InvalidImplementationError, ValueException {
 
         // Go through the queue of received messages if any are there.
         if (received.size() > 0) {
@@ -109,8 +109,8 @@ class NetworkOperations {
     }
 
     public Message receiveFrom(VerificationKey from, ShufflePhase expectedPhase)
-            throws TimeoutException, CryptographyException, FormatException, ValueException,
-            InvalidImplementationException, com.shuffle.protocol.BlameReceivedException, InterruptedException {
+            throws TimeoutError, CryptographyError, FormatException, ValueException,
+            InvalidImplementationError, com.shuffle.protocol.BlameReceivedException, InterruptedException {
 
         Packet packet = getNextMessage(expectedPhase);
 
@@ -123,8 +123,8 @@ class NetworkOperations {
     }
 
     public Map<VerificationKey, Message> receiveFromMultiple(Set<VerificationKey> from, ShufflePhase expectedPhase)
-            throws TimeoutException, CryptographyException, FormatException,
-            InvalidImplementationException,ValueException, BlameReceivedException, InterruptedException {
+            throws TimeoutError, CryptographyError, FormatException,
+            InvalidImplementationError,ValueException, BlameReceivedException, InterruptedException {
 
         // Collect the messages in here.
         Map<VerificationKey, Message> broadcasts = new HashMap<>();

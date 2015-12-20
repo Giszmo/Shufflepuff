@@ -13,9 +13,9 @@ public class MockCoinSignature implements CoinSignature {
     }
 
     @Override
-    public boolean equals(CoinSignature sig) throws InvalidImplementationException {
+    public boolean equals(CoinSignature sig) throws InvalidImplementationError {
         if (!(sig instanceof MockCoinSignature)) {
-            throw new InvalidImplementationException();
+            throw new InvalidImplementationError();
         }
 
         return (key.equals((MockCoinSignature)sig));
