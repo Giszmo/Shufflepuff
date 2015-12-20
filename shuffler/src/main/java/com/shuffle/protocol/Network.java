@@ -6,6 +6,6 @@ package com.shuffle.protocol;
  * Created by Daniel Krawisz on 12/7/15.
  */
 public interface Network {
-    void sendTo(VerificationKey to, Message message) throws InvalidImplementationException, TimeoutException;
-    Message receive() throws TimeoutException, InvalidImplementationException, InterruptedException;
+    void sendTo(VerificationKey to, Packet packet) throws InvalidImplementationException, TimeoutException;
+    Packet receive() throws TimeoutException, InvalidImplementationException, InterruptedException;
 }

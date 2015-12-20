@@ -8,17 +8,17 @@ import java.util.Queue;
  * Created by Daniel Krawisz on 12/5/15.
  */
 public class MockNetwork implements Network {
-    public static class SentMessage implements Map.Entry<MockMessage, MockVerificationKey> {
-        MockMessage packet;
+    public static class SentMessage implements Map.Entry<Packet, MockVerificationKey> {
+        Packet packet;
         MockVerificationKey to;
 
-        public SentMessage(MockMessage packet, MockVerificationKey to) {
+        public SentMessage(Packet packet, MockVerificationKey to) {
             this.to = to;
             this.packet = packet;
         }
 
         @Override
-        public MockMessage getKey() {
+        public Packet getKey() {
             return packet;
         }
 
@@ -52,26 +52,26 @@ public class MockNetwork implements Network {
         }
     }
 
-    Queue<Map.Entry<MockMessage, MockVerificationKey>> responses;
-    Queue<MockMessage> sent;
+    Queue<Map.Entry<Packet, MockVerificationKey>> responses;
+    Queue<Packet> sent;
 
     MockNetwork() {
         this.sent = new LinkedList<>();
         this.responses = new LinkedList<>();
     }
 
-    MockNetwork(Queue<MockMessage> sent) {
+    MockNetwork(Queue<Packet> sent) {
         this.sent = sent;
         this.responses = new LinkedList<>();
     }
 
-    Queue<Map.Entry<MockMessage, MockVerificationKey>> getResponses() {
+    Queue<Map.Entry<Packet, MockVerificationKey>> getResponses() {
         return responses;
     }
 
     @Override
-    public void sendTo(VerificationKey to, Message message) throws InvalidImplementationException {
-        if (!(message instanceof MockMessage)) {
+    public void sendTo(VerificationKey to, Packet packet) throws InvalidImplementationException {
+        if (!(packet instanceof Packet)) {
             throw new InvalidImplementationException();
         }
 
@@ -80,13 +80,13 @@ public class MockNetwork implements Network {
         }
 
         final MockVerificationKey mockTo = (MockVerificationKey)to;
-        final MockMessage mockPacket = (MockMessage) message;
+        final Packet mockPacket = (Packet) packet;
 
         responses.add(new SentMessage(mockPacket, mockTo));
     }
 
     @Override
-    public Message receive() throws TimeoutException {
+    public Packet receive() throws TimeoutException {
         if (sent.size() == 0) {
             throw new TimeoutException();
         }

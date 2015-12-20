@@ -6,7 +6,7 @@ package com.shuffle.protocol;
  * Created by Daniel Krawisz on 12/8/15.
  */
 public class MockDecryptionKey implements DecryptionKey {
-    int index;
+    final int index;
     MockEncryptionKey key;
 
     public MockDecryptionKey(int index) {
@@ -19,25 +19,26 @@ public class MockDecryptionKey implements DecryptionKey {
         return key;
     }
 
+
     @Override
     // Intended to decrypt a single element.
-    public void decrypt(Message m) throws InvalidImplementationException, FormatException {
-        if (!(m instanceof MockMessage)) {
-            throw new InvalidImplementationException();
-        }
+    public Coin.CoinAddress decrypt(Coin.CoinAddress m) throws FormatException, CryptographyException {
 
-        MockMessage p = (MockMessage)m;
-
-        if (p.atoms.size() != 1) {
+        if (!(m instanceof MockEncryptedCoinAddress)) {
             throw new FormatException();
         }
 
-        MockMessage.Encrypted data = p.atoms.peek().encrypted;
-        if (data == null || !key.equals(data.by)) {
-            throw new FormatException();
+        MockEncryptedCoinAddress enc = ((MockEncryptedCoinAddress)m);
+
+        if (!enc.key.equals(key)) {
+            throw new CryptographyException();
         }
 
-        p.atoms.remove();
-        p.atoms.add(data.encrypted);
+        return ((MockEncryptedCoinAddress)m).encrypted;
+    }
+
+    @Override
+    public String toString() {
+        return "dk[" + index + "]";
     }
 }

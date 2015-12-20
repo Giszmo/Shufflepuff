@@ -5,5 +5,5 @@ package com.shuffle.protocol;
  */
 public interface SigningKey {
     VerificationKey VerificationKey() throws CryptographyException;
-    CoinSignature makeSignature(CoinTransaction t) throws CryptographyException;
+    CoinSignature makeSignature(Coin.CoinTransaction t) throws CryptographyException;
 }

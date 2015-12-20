@@ -4,10 +4,10 @@ package com.shuffle.protocol;
  * Created by Daniel Krawisz on 12/9/15.
  */
 public class MockCoinSignature implements CoinSignature {
-    CoinTransaction t;
+    Coin.CoinTransaction t;
     MockVerificationKey key;
 
-    MockCoinSignature(CoinTransaction t, MockVerificationKey key) {
+    MockCoinSignature(Coin.CoinTransaction t, MockVerificationKey key) {
         this.t = t;
         this.key = key;
     }
@@ -19,5 +19,10 @@ public class MockCoinSignature implements CoinSignature {
         }
 
         return (key.equals((MockCoinSignature)sig));
+    }
+
+    @Override
+    public int hashCode() {
+        return key.hashCode();
     }
 }

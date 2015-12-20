@@ -8,11 +8,11 @@ package com.shuffle.protocol;
  */
 final class BlameReceivedException extends Exception {
     VerificationKey sender;
-    Message message;
+    Packet packet;
 
     // A blame message sent from another party.
-    BlameReceivedException(VerificationKey sender, Message message) {
+    BlameReceivedException(VerificationKey sender, Packet packet) {
         this.sender = sender;
-        this.message = message;
+        this.packet = packet;
     }
 }

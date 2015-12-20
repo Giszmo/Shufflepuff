@@ -4,7 +4,7 @@ package com.shuffle.protocol;
  * Created by Daniel Krawisz on 12/9/15.
  */
 public class MockSigningKey implements SigningKey {
-    int index;
+    final int index;
 
     MockSigningKey(int index) {
         this.index = index;
@@ -16,7 +16,7 @@ public class MockSigningKey implements SigningKey {
     }
 
     @Override
-    public CoinSignature makeSignature(CoinTransaction t) throws CryptographyException {
+    public CoinSignature makeSignature(Coin.CoinTransaction t) throws CryptographyException {
         return new MockCoinSignature(t, new MockVerificationKey(index));
     }
 
@@ -31,7 +31,7 @@ public class MockSigningKey implements SigningKey {
 
     @Override
     public String toString() {
-        return "MockVerificationKey[" + index + "]";
+        return "sk[" + index + "]";
     }
 
     @Override

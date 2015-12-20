@@ -6,7 +6,7 @@ package com.shuffle.protocol;
  * Created by Daniel Krawisz on 12/7/15.
  */
 public class MockVerificationKey implements VerificationKey {
-    int index;
+    final int index;
 
     public MockVerificationKey(int index) {
         this.index = index;
@@ -14,7 +14,7 @@ public class MockVerificationKey implements VerificationKey {
 
     // These functions are not implemented yet.
     @Override
-    public boolean verify(CoinTransaction t, CoinSignature sig) throws InvalidImplementationException {
+    public boolean verify(Coin.CoinTransaction t, CoinSignature sig) throws InvalidImplementationException {
         if (!(sig instanceof MockCoinSignature)) {
             throw new InvalidImplementationException();
         }
@@ -31,8 +31,13 @@ public class MockVerificationKey implements VerificationKey {
         return index == ((MockVerificationKey)vk).index;
     }
 
+    @Override
+    public Coin.CoinAddress address() {
+        return new MockCoinAddress(index);
+    }
+
     public String toString() {
-        return "MockVerificationKey[" + index + "]";
+        return "vk[" + index + "]";
     }
 
     @Override

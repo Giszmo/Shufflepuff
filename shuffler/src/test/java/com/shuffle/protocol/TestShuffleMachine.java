@@ -27,18 +27,18 @@ public class TestShuffleMachine {
     public class testCase {
         String description = null;
         SessionIdentifier τ;
-        CoinAmount ν;
+        Coin.CoinAmount ν;
         Coin coin;
         Map<SigningKey, Expected> machines = new HashMap<>();
 
-        testCase(SessionIdentifier τ, CoinAmount ν, Coin coin, String desc) {
+        testCase(SessionIdentifier τ, Coin.CoinAmount ν, Coin coin, String desc) {
             this.τ = τ;
             this.description = desc;
             this.ν = ν;
             this.coin = coin;
         }
 
-        testCase(SessionIdentifier τ, CoinAmount ν, Coin coin) {
+        testCase(SessionIdentifier τ, Coin.CoinAmount ν, Coin coin) {
             this.τ = τ;
             this.ν = ν;
             this.coin = coin;
@@ -65,7 +65,7 @@ public class TestShuffleMachine {
 
                 for (int i = 1; i <= players; i++) {
                     MockSigningKey key = new MockSigningKey(i);
-                    coin.put(key.VerificationKey(), new MockCoin.Output(new MockCoinAmount(20), false));
+                    coin.put(key.VerificationKey().address(), new MockCoin.Output(new MockCoinAmount(20), false));
                     test.put(new MockSigningKey(i),
                             new Expected(
                                     new Simulator.InitialState(key),
@@ -81,7 +81,7 @@ public class TestShuffleMachine {
 
         // Tests for successful runs.
         for (Map.Entry<Integer, testCase> test : tests.entrySet()) {
-            System.out.println("running test case " + test.getKey() + ": " + test.getValue().description);
+            System.out.println("running test case " + test.getKey()  + (test.getValue().description != null ? ": " + test.getValue().description : ""));
 
             List<Simulator.InitialState> init = new LinkedList<>();
 

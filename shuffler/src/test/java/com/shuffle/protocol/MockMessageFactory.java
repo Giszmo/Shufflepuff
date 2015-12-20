@@ -8,8 +8,8 @@ public class MockMessageFactory implements MessageFactory {
     public MockMessageFactory() {}
 
     @Override
-    public Message make(SessionIdentifier τ, ShufflePhase phase, SigningKey sk) {
-        return new MockMessage(τ, phase, sk);
+    public Message make() {
+        return new MockMessage();
     }
 
     @Override
@@ -20,6 +20,6 @@ public class MockMessageFactory implements MessageFactory {
 
         MockMessage mock = (MockMessage)message;
 
-        return new MockMessage(mock.τ, mock.phase, mock.signer).attach(mock.atoms);
+        return mock.copy();
     }
 }

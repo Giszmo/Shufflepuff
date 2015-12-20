@@ -28,9 +28,9 @@ public class MockCoin implements Coin {
     }
 
     ConcurrentLinkedQueue<CoinTransaction> sentList;
-    ConcurrentHashMap<VerificationKey, Output> blockchain;
+    ConcurrentHashMap<CoinAddress, Output> blockchain;
 
-    public MockCoin(Map<VerificationKey, Output> blockchain) {
+    public MockCoin(Map<CoinAddress, Output> blockchain) {
         this.sentList = new ConcurrentLinkedQueue<>();
         this.blockchain = new ConcurrentHashMap<>();
         this.blockchain.putAll(blockchain);
@@ -41,12 +41,12 @@ public class MockCoin implements Coin {
         this.blockchain = new ConcurrentHashMap<>();
     }
 
-    public synchronized void put(VerificationKey key, Output entry) {
-        blockchain.put(key, entry);
+    public synchronized void put(CoinAddress addr, Output entry) {
+        blockchain.put(addr, entry);
     }
 
     @Override
-    public synchronized CoinTransaction transaction(List<VerificationKey> inputs, LinkedHashMap<VerificationKey, CoinAmount> outputs) {
+    public synchronized CoinTransaction transaction(List<CoinAddress> inputs, LinkedHashMap<CoinAddress, CoinAmount> outputs) {
         return new MockCoinTransaction(inputs, outputs);
     }
 
@@ -56,8 +56,8 @@ public class MockCoin implements Coin {
     }
 
     @Override
-    public synchronized boolean unspent(VerificationKey vk) {
-        Output entry = blockchain.get(vk);
+    public synchronized boolean unspent(CoinAddress addr) {
+        Output entry = blockchain.get(addr);
         if (entry == null) {
             return false;
         }
@@ -66,9 +66,8 @@ public class MockCoin implements Coin {
     }
 
     @Override
-    public synchronized CoinAmount valueHeld(VerificationKey vk) {
-
-        Output entry = blockchain.get(vk);
+    public synchronized CoinAmount valueHeld(CoinAddress addr) {
+        Output entry = blockchain.get(addr);
         if (entry == null || entry.spent) {
             return new MockCoinAmount(0);
         }

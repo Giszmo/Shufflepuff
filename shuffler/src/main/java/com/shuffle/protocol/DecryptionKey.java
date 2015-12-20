@@ -7,5 +7,5 @@ package com.shuffle.protocol;
  */
 public interface DecryptionKey {
     EncryptionKey EncryptionKey();
-    void decrypt(Message m) throws InvalidImplementationException, FormatException;
+    Coin.CoinAddress decrypt(Coin.CoinAddress m) throws FormatException, CryptographyException;
 }

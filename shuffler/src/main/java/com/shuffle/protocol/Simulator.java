@@ -23,23 +23,23 @@ public final class Simulator {
     ConcurrentMap<VerificationKey, BlackBox> machines;
     VerificationKey players[];
     SessionIdentifier τ;
-    CoinAmount ν;
+    Coin.CoinAmount ν;
     MessageFactory messages;
     Crypto crypto;
     Coin coin;
 
     // This implementation of Network connects each shuffle machine to the simulator.
     private class Network implements com.shuffle.protocol.Network {
-        BlockingQueue<Message> inbox;
+        BlockingQueue<Packet> inbox;
 
         Network() {
             this.inbox = new LinkedBlockingQueue<>();
         }
 
         @Override
-        public void sendTo(VerificationKey to, Message message) throws InvalidImplementationException, TimeoutException {
+        public void sendTo(VerificationKey to, Packet packet) throws InvalidImplementationException, TimeoutException {
             try {
-                Simulator.this.sendTo(to, messages.copy(message));
+                Simulator.this.sendTo(to, new Packet(messages.copy(packet.message), packet.τ, packet.phase, packet.signer));
             } catch (InterruptedException e) {
                 // This means that the thread running the machine we are delivering to has been interrupted.
                 // This would look like a timeout if this were happening over a real network.
@@ -48,16 +48,16 @@ public final class Simulator {
         }
 
         @Override
-        public Message receive() throws TimeoutException, InterruptedException {
-            Message next = inbox.poll(1, TimeUnit.SECONDS);
+        public Packet receive() throws TimeoutException, InterruptedException {
+            Packet next = inbox.poll(1, TimeUnit.SECONDS);
             if (next == null) {
                 throw new TimeoutException();
             }
             return next;
         }
 
-        public void deliver(Message message) throws InterruptedException {
-            inbox.put(message);
+        public void deliver(Packet packet) throws InterruptedException {
+            inbox.put(packet);
         }
     }
 
@@ -80,7 +80,7 @@ public final class Simulator {
     private interface Adversary {
         ReturnState turnOn() throws InvalidImplementationException;
         ShufflePhase currentPhase();
-        void deliver(Message message) throws InterruptedException;
+        void deliver(Packet packet) throws InterruptedException;
         SigningKey identity();
     }
 
@@ -90,11 +90,11 @@ public final class Simulator {
         Network network;
 
         SessionIdentifier τ;
-        CoinAmount ν;
+        Coin.CoinAmount ν;
         SigningKey sk;
         VerificationKey[] players;
 
-        HonestAdversary(SessionIdentifier τ, CoinAmount ν, SigningKey sk,
+        HonestAdversary(SessionIdentifier τ, Coin.CoinAmount ν, SigningKey sk,
                         VerificationKey[] players) {
             this.τ = τ;
             this.ν = ν;
@@ -119,8 +119,8 @@ public final class Simulator {
         }
 
         @Override
-        public void deliver(Message message) throws InterruptedException {
-            network.deliver(message);
+        public void deliver(Packet packet) throws InterruptedException {
+            network.deliver(packet);
         }
 
         @Override
@@ -143,7 +143,7 @@ public final class Simulator {
         }
 
         @Override
-        public void deliver(Message message) {
+        public void deliver(Packet packet) {
 
         }
 
@@ -167,8 +167,8 @@ public final class Simulator {
             q = new LinkedBlockingQueue<>();
         }
 
-        public void deliver(Message message) throws InvalidImplementationException, InterruptedException {
-            machine.deliver(message);
+        public void deliver(Packet packet) throws InvalidImplementationException, InterruptedException {
+            machine.deliver(packet);
         }
 
         public void interrupt() {
@@ -247,7 +247,7 @@ public final class Simulator {
         }
     }
 
-    public Simulator(SessionIdentifier τ, CoinAmount ν, List<InitialState> init, MessageFactory messages, Crypto crypto, Coin coin)  {
+    public Simulator(SessionIdentifier τ, Coin.CoinAmount ν, List<InitialState> init, MessageFactory messages, Crypto crypto, Coin coin)  {
         if (τ == null || ν == null || init == null) throw new NullPointerException();
         this.τ = τ;
         this.ν = ν;
@@ -257,8 +257,6 @@ public final class Simulator {
         this.coin = coin;
 
         machines = new ConcurrentHashMap<>();
-
-        System.out.println("Setting up simulation. initial states: " + init.toString());
 
         int i = 0;
         try {
@@ -308,8 +306,8 @@ public final class Simulator {
     }
 
     // TODO allow the simulator to monitor all inbox and do malicious things with them.
-    public void sendTo(VerificationKey to, Message message) throws InvalidImplementationException, InterruptedException {
-        machines.get(to).deliver(message);
+    public void sendTo(VerificationKey to, Packet packet) throws InvalidImplementationException, InterruptedException {
+        machines.get(to).deliver(packet);
     }
 
 }

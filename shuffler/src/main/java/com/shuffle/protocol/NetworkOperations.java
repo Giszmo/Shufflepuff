@@ -20,7 +20,7 @@ class NetworkOperations {
     int N; // the number of players.
     VerificationKey players[]; // The current players.
 
-    Queue<Message> received = new LinkedList<>(); // A queue of messages that has been reived that we aren't ready to look at yet.
+    Queue<Packet> received = new LinkedList<>(); // A queue of messages that has been reived that we aren't ready to look at yet.
 
     NetworkOperations(SessionIdentifier τ, SigningKey sk, VerificationKey players[], Network network) {
         this.τ = τ;
@@ -53,58 +53,58 @@ class NetworkOperations {
         return opponentSet(1, N);
     }
 
-    public void broadcast(Message message) throws TimeoutException, CryptographyException, InvalidImplementationException {
+    public void broadcast(Packet packet) throws TimeoutException, CryptographyException, InvalidImplementationException {
         Set<VerificationKey> keys = opponentSet();
 
         for (VerificationKey key : keys) {
-            network.sendTo(key, message);
+            network.sendTo(key, packet);
         }
     }
 
-    public void sendTo(VerificationKey to, Message message) throws TimeoutException, CryptographyException, InvalidImplementationException {
-        network.sendTo(to, message);
+    public void sendTo(VerificationKey to, Packet packet) throws TimeoutException, CryptographyException, InvalidImplementationException {
+        network.sendTo(to, packet);
     }
 
     // Get the next message from the phase we're in. It's possible for other players to get
     // ahead under some circumstances, so we have to keep their messages to look at later.
-    Message getNextMessage(ShufflePhase expectedPhase)
+    Packet getNextMessage(ShufflePhase expectedPhase)
             throws FormatException, CryptographyException, BlameReceivedException,
             InterruptedException, TimeoutException, InvalidImplementationException, ValueException {
 
         // Go through the queue of received messages if any are there.
         if (received.size() > 0) {
-            Iterator<Message> i = received.iterator();
+            Iterator<Packet> i = received.iterator();
             while (i.hasNext()) {
-                Message message = i.next();
+                Packet packet = i.next();
 
                 // Return any that matches what we're looking for.
-                if (expectedPhase == message.getShufflePhase()) {
+                if (expectedPhase == packet.phase) {
                     i.remove();
-                    return message;
+                    return packet;
                 }
             }
         }
 
         // Now we wait for the right message from the network, since we haven't already received it.
         while (true) {
-            Message message = network.receive();
-            VerificationKey sender = message.getSigner();
-            ShufflePhase phase = message.getShufflePhase();
+            Packet packet = network.receive();
+            VerificationKey sender = packet.signer;
+            ShufflePhase phase = packet.phase;
 
             // Check that this is someone in the same session of this protocol as us.
-            if (!τ.equals(message.getSessionIdentifier())) {
-                throw new ValueException(ValueException.Values.τ, τ.toString(), message.getSessionIdentifier().toString());
+            if (!τ.equals(packet.τ)) {
+                throw new ValueException(ValueException.Values.τ, τ.toString(), packet.τ.toString());
             }
 
             if (expectedPhase == phase) {
-                return message;
+                return packet;
             }
 
             if (phase == ShufflePhase.Blame) {
-                throw new BlameReceivedException(sender, message);
+                throw new BlameReceivedException(sender, packet);
             }
 
-            received.add(message);
+            received.add(packet);
         }
     }
 
@@ -112,15 +112,14 @@ class NetworkOperations {
             throws TimeoutException, CryptographyException, FormatException, ValueException,
             InvalidImplementationException, com.shuffle.protocol.BlameReceivedException, InterruptedException {
 
-        Message message = getNextMessage(expectedPhase);
-        VerificationKey sender = message.getSigner();
+        Packet packet = getNextMessage(expectedPhase);
 
         // If we receive a message, but it is not from the expected source, it might be a blame message.
-        if (!from.equals(sender)) {
-            throw new ValueException(ValueException.Values.phase, message.getShufflePhase().toString(), expectedPhase.toString());
+        if (!from.equals(packet.signer)) {
+            throw new ValueException(ValueException.Values.phase, packet.phase.toString(), expectedPhase.toString());
         }
 
-        return message;
+        return packet.message;
     }
 
     public Map<VerificationKey, Message> receiveFromMultiple(Set<VerificationKey> from, ShufflePhase expectedPhase)
@@ -131,10 +130,10 @@ class NetworkOperations {
         Map<VerificationKey, Message> broadcasts = new HashMap<>();
 
         while (from.size() > 0) {
-            Message message = getNextMessage(expectedPhase);
-            VerificationKey sender = message.getSigner();
+            Packet packet = getNextMessage(expectedPhase);
+            VerificationKey sender = packet.signer;
 
-            broadcasts.put(sender, message);
+            broadcasts.put(sender, packet.message);
             from.remove(sender);
         }
 

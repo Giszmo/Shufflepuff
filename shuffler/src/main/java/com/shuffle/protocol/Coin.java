@@ -14,8 +14,18 @@ import java.util.List;
  *
  */
 public interface Coin {
-    CoinTransaction transaction(List<VerificationKey> inputs, LinkedHashMap<VerificationKey, CoinAmount> outputs);
+    CoinTransaction transaction(List<CoinAddress> inputs, LinkedHashMap<CoinAddress, CoinAmount> outputs);
     void send(CoinTransaction t) throws CoinNetworkException;
-    boolean unspent(VerificationKey vk);
-    CoinAmount valueHeld(VerificationKey vk) throws BlockchainException, MempoolException;
+    boolean unspent(CoinAddress addr);
+    CoinAmount valueHeld(CoinAddress addr) throws BlockchainException, MempoolException;
+
+    // Represents an amount of Bitcoin or other cryptocurrency.
+    interface CoinAmount {
+        boolean greater(CoinAmount ν) throws InvalidImplementationException;
+    }
+
+    interface CoinAddress {}
+
+    // A representation of a Bitcoin or other cryptocurrency transaction.
+    interface CoinTransaction {}
 }

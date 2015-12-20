@@ -144,7 +144,7 @@ public class TestNetworkOperations  {
             NetworkOperations netop = new NetworkOperations(τ, sk, players, network);
 
             try {
-                netop.broadcast(messages.make(new MockSessionIdentifier(), ShufflePhase.Shuffling, sk));
+                netop.broadcast(new Packet(messages.make(), new MockSessionIdentifier(), ShufflePhase.Shuffling, sk.VerificationKey()));
             } catch (TimeoutException e) {
                 Assert.fail("Unexpected exception.");
             } catch (CryptographyException e) {
@@ -196,17 +196,17 @@ public class TestNetworkOperations  {
                 }
 
                 // Set up the shuffle machine (only used to query for the current phase).
-                MockMessageFactory packets = new MockMessageFactory();
+                MockMessageFactory message = new MockMessageFactory();
                 SessionIdentifier τ = new MockSessionIdentifier();
-                ShuffleMachine machine = new ShuffleMachine(τ, packets, new MockCrypto(8989), new MockCoin(), network);
+                ShuffleMachine machine = new ShuffleMachine(τ, message, new MockCrypto(8989), new MockCoin(), network);
                 machine.phase = ShufflePhase.Shuffling;
 
                 // Set up the network operations object.
                 NetworkOperations netop = new NetworkOperations(τ, sk, players, network);
 
-                netop.sendTo(new MockVerificationKey(test.recipient), packets.make(new MockSessionIdentifier(), ShufflePhase.Shuffling, sk));
+                netop.sendTo(new MockVerificationKey(test.recipient), new Packet(new MockMessage(), new MockSessionIdentifier(), ShufflePhase.Shuffling, sk.VerificationKey()));
 
-                Queue<Map.Entry<MockMessage, MockVerificationKey>> responses = network.getResponses();
+                Queue<Map.Entry<Packet, MockVerificationKey>> responses = network.getResponses();
                 Assert.assertEquals(1, responses.size());
 
                 for (Map.Entry msg : responses) {
@@ -227,10 +227,10 @@ public class TestNetworkOperations  {
         int[] players;
         int requested; // The player that the message was expected from.
         ShufflePhase phase; // The expected phase.
-        MockMessage packet;
+        Packet packet;
         Exception e; // If an exception is expected.
 
-        public receiveFromTestCase(int[] players, int requested, ShufflePhase phase,MockMessage packet, Exception e) {
+        public receiveFromTestCase(int[] players, int requested, ShufflePhase phase,Packet packet, Exception e) {
             this.players = players;
             this.requested = requested;
             this.packet = packet;

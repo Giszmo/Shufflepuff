@@ -112,10 +112,16 @@ public class TestShuffleMachineMethods {
 
             ShufflePhase phase = ShufflePhase.Shuffling;
 
-            MockMessage input = new MockMessage(τ, phase, key).attach(test.input);
-            MockMessage expected = new MockMessage(τ, phase, key).attach(test.expected);
+            Message input = new MockMessage();
+            for (int i : test.input) {
+                input.attach(new MockCoinAddress(i));
+            }
+            Message expected = new MockMessage();
+            for (int i : test.expected) {
+                expected.attach(new MockCoinAddress(i));
+            }
             try {
-                Message result = machine.shuffle(input, key);
+                Message result = machine.shuffle(input);
                 System.out.println("got " + result.toString() + "; expected " + expected.toString());
                 Assert.assertTrue(result.equals(expected));
             } catch (CryptographyException e) {
@@ -145,7 +151,7 @@ public class TestShuffleMachineMethods {
         int index = 0;
         for(int i : input) {
             MockSigningKey key = new MockSigningKey(index);
-            map.put(key.VerificationKey(), new MockMessage(new MockSessionIdentifier(), ShufflePhase.Shuffling, key).attach(i));
+            map.put(key.VerificationKey(), new MockMessage().attach(new MockCoinAddress(i)));
             index++;
         }
 
@@ -212,19 +218,20 @@ public class TestShuffleMachineMethods {
     @Test
     public void testDecryptAll() {
         MockCrypto crypto = new MockCrypto(56);
+        MessageFactory messages = new MockMessageFactory();
 
         // Success cases.
         try {
             for(int i = 0; i <= 5; i++) {
-                Queue<MockMessage.Atom> input = new LinkedList<>();
-                Queue<MockMessage.Atom> output = new LinkedList<>();
-                DecryptionKey key = crypto.DecryptionKey();
+                Message input = messages.make();
+                Message output = messages.make();
+                DecryptionKey dk = crypto.DecryptionKey();
 
                 for (int j = 0; j <= i; j ++) {
-                    MockMessage.Atom atom = new MockMessage.Atom(crypto.SigningKey().VerificationKey());
+                    Coin.CoinAddress addr = crypto.SigningKey().VerificationKey().address();
 
-                    output.add(atom);
-                    input.add(new MockMessage.Atom(new MockMessage.Encrypted(key.EncryptionKey(), atom)));
+                    output.attach(addr);
+                    input.attach(new MockEncryptedCoinAddress(addr, dk.EncryptionKey()));
                 }
 
                 SessionIdentifier τ = new MockSessionIdentifier();
@@ -232,9 +239,9 @@ public class TestShuffleMachineMethods {
 
                 SigningKey sk = crypto.SigningKey();
                 ShufflePhase phase = ShufflePhase.Shuffling;
-                Message result = machine.decryptAll(key, new MockMessage(τ, phase, sk).attach(input), sk);
+                Message result = machine.decryptAll(new MockMessage().attach(input), dk);
 
-                Assert.assertTrue(result.equals(new MockMessage(τ, phase, sk).attach(output)));
+                Assert.assertTrue(result.equals(output));
             }
         } catch (CryptographyException e) {
             Assert.fail("Unexpected CryptographyException:");
@@ -249,24 +256,31 @@ public class TestShuffleMachineMethods {
         try {
             for(int i = 0; i <= 5; i++) {
                 MockSessionIdentifier τ = new MockSessionIdentifier();
-                Queue<MockMessage.Atom> input = new LinkedList<>();
-                DecryptionKey key = crypto.DecryptionKey();
+                Message input = new MockMessage();
+                DecryptionKey key = null;
+                try {
+                    key = crypto.DecryptionKey();
 
-                for (int j = 0; j <= i; j++) {
-                    MockMessage.Atom atom = new MockMessage.Atom(crypto.SigningKey().VerificationKey());
+                    for (int j = 0; j <= i; j++) {
 
-                    input.add(new MockMessage.Atom(new MockMessage.Encrypted(key.EncryptionKey(), atom)));
+                        input.attach(new MockEncryptedCoinAddress(crypto.SigningKey().VerificationKey().address(), key.EncryptionKey()));
+                    }
+
+                    input.attach(crypto.SigningKey().VerificationKey().address());
+                } catch (CryptographyException e) {
+                    Assert.fail();
                 }
 
                 ShuffleMachine machine = standardTestInitialization(τ, crypto);
 
-                SigningKey sk = crypto.SigningKey();
                 try {
-                machine.decryptAll(key, new MockMessage(τ, ShufflePhase.Shuffling, sk).attach(input), sk);
-                } catch (FormatException e) {
+                    machine.decryptAll(new MockMessage().attach(input), key);
+                    Assert.fail("Exception should have been thrown.");
+                } catch (FormatException | CryptographyException e) {
                 }
             }
-        } catch (CryptographyException | InvalidImplementationException e) {
+        } catch (InvalidImplementationException e) {
+            e.printStackTrace();
             Assert.fail();
         }
     }
@@ -278,22 +292,22 @@ public class TestShuffleMachineMethods {
         // Success cases.
         try {
             for (int i = 0; i <= 5; i++) {
-                Queue<VerificationKey> expected = new LinkedList<>();
-                Queue<MockMessage.Atom> input = new LinkedList<>();
+                Message expected = new MockMessage();
+                Message input = new MockMessage();
 
                 for (int j = 0; j <= i; j ++) {
-                    VerificationKey key = crypto.SigningKey().VerificationKey();
+                    Coin.CoinAddress addr = crypto.SigningKey().VerificationKey().address();
 
-                    expected.add(key);
-                    input.add(new MockMessage.Atom(key));
+                    expected.attach(addr);
+                    input.attach(addr);
                 }
 
                 SessionIdentifier τ = new MockSessionIdentifier();
                 ShuffleMachine machine = standardTestInitialization(τ, crypto);
 
-                Queue<VerificationKey> result = machine.readNewAddresses(new MockMessage(τ, ShufflePhase.Shuffling, crypto.SigningKey()).attach(input));
+                Queue<Coin.CoinAddress> result = machine.readNewAddresses(new MockMessage().attach(input));
 
-                Assert.assertTrue(result.equals(expected));
+                Assert.assertTrue(expected.equals(new MockMessage().attachAddrs(result)));
             }
         } catch (CryptographyException | FormatException | InvalidImplementationException e) {
             Assert.fail();
@@ -302,20 +316,18 @@ public class TestShuffleMachineMethods {
         // fail cases.
         try {
             for (int i = 0; i <= 5; i++) {
-                Queue<MockMessage.Atom> input = new LinkedList<>();
+                Message input = new MockMessage();
 
                 for (int j = 0; j <= i; j++) {
-                    VerificationKey key = crypto.SigningKey().VerificationKey();
-
-                    input.add(new MockMessage.Atom(key));
+                    input.attach(crypto.SigningKey().VerificationKey().address());
                 }
 
-                input.add(new MockMessage.Atom(3));
+                input.attach(new MockEncryptionKey(14));
                 SessionIdentifier τ = new MockSessionIdentifier();
                 ShuffleMachine machine = standardTestInitialization(τ, crypto);
 
                 try {
-                    machine.readNewAddresses(new MockMessage(τ, ShufflePhase.Shuffling, crypto.SigningKey()).attach(input));
+                    machine.readNewAddresses(new MockMessage().attach(input));
                     Assert.fail();
                 } catch (FormatException e) {
                 }

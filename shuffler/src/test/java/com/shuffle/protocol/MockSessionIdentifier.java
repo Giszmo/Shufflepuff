@@ -5,17 +5,22 @@ package com.shuffle.protocol;
  */
 public class MockSessionIdentifier implements SessionIdentifier {
     @Override
-    public boolean equals(SessionIdentifier τ) throws InvalidImplementationException {
-        if (!(τ instanceof MockSessionIdentifier)) {
-            throw new InvalidImplementationException();
+    public boolean equals(Object o) {
+        if (!(o instanceof MockSessionIdentifier)) {
+            return false;
         }
 
-        MockSessionIdentifier s = (MockSessionIdentifier)τ;
+        MockSessionIdentifier s = (MockSessionIdentifier)o;
 
         if (this == s) {
             return true;
         }
 
         return false;
+    }
+
+    @Override
+    public String toString() {
+        return "τ[]";
     }
 }
