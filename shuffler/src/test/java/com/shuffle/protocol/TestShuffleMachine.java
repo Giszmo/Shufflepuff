@@ -103,8 +103,8 @@ public class TestShuffleMachine {
                 Assert.assertNotNull(result);
 
                 if (expected.output.success && !result.success) {
-                    if (result.exception != null) {
-                        result.exception.printStackTrace();
+                    if (result.error != null) {
+                        result.error.printStackTrace();
                     }
                     if (result.blame != null) {
                         System.out.println(result.blame.toString());

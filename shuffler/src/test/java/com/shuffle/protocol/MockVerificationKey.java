@@ -14,7 +14,7 @@ public class MockVerificationKey implements VerificationKey {
 
     // These functions are not implemented yet.
     @Override
-    public boolean verify(Coin.CoinTransaction t, CoinSignature sig) throws InvalidImplementationError {
+    public boolean verify(Coin.CoinTransaction t, Coin.CoinSignature sig) throws InvalidImplementationError {
         if (!(sig instanceof MockCoinSignature)) {
             throw new InvalidImplementationError();
         }

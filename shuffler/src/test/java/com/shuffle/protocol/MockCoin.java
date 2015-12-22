@@ -55,15 +55,6 @@ public class MockCoin implements Coin {
         sentList.add(t);
     }
 
-    @Override
-    public synchronized boolean unspent(CoinAddress addr) {
-        Output entry = blockchain.get(addr);
-        if (entry == null) {
-            return false;
-        }
-
-        return !entry.spent;
-    }
 
     @Override
     public synchronized CoinAmount valueHeld(CoinAddress addr) {
@@ -73,5 +64,10 @@ public class MockCoin implements Coin {
         }
 
         return entry.amountHeld;
+    }
+
+    @Override
+    public CoinTransaction getOffendingTransaction(CoinAddress addr, CoinAmount ν) {
+        return null; // TODO
     }
 }

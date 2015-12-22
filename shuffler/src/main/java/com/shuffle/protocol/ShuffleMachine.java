@@ -261,7 +261,7 @@ public final class ShuffleMachine {
 
             // Check that the transaction is still valid.
             for(Coin.CoinAddress input : inputs) {
-                if (!coin.unspent(input)) {
+                if (!coin.valueHeld(input).greater(ν)) {
                     throw new BlameException();
                 }
             }

@@ -16,7 +16,7 @@ public class MockSigningKey implements SigningKey {
     }
 
     @Override
-    public CoinSignature makeSignature(Coin.CoinTransaction t) throws CryptographyError {
+    public Coin.CoinSignature makeSignature(Coin.CoinTransaction t) throws CryptographyError {
         return new MockCoinSignature(t, new MockVerificationKey(index));
     }
 

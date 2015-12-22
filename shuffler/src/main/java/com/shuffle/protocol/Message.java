@@ -8,11 +8,12 @@ public interface Message {
 
     Message attach(EncryptionKey ek);
     Message attach(Coin.CoinAddress addr);
-    Message attach(CoinSignature sig);
+    Message attach(Coin.CoinSignature sig);
+    Message attach(Coin.CoinTransaction t);
 
     Message attach(Message message) throws InvalidImplementationError;
 
     EncryptionKey readEncryptionKey() throws FormatException;
-    CoinSignature readCoinSignature() throws FormatException;
+    Coin.CoinSignature readCoinSignature() throws FormatException;
     Coin.CoinAddress readCoinAddress() throws FormatException;
 }

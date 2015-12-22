@@ -228,9 +228,9 @@ public class TestNetworkOperations  {
         int requested; // The player that the message was expected from.
         ShufflePhase phase; // The expected phase.
         Packet packet;
-        Exception e; // If an exception is expected.
+        Error e; // If an exception is expected.
 
-        public receiveFromTestCase(int[] players, int requested, ShufflePhase phase,Packet packet, Exception e) {
+        public receiveFromTestCase(int[] players, int requested, ShufflePhase phase,Packet packet, Error e) {
             this.players = players;
             this.requested = requested;
             this.packet = packet;
