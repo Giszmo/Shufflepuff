@@ -49,30 +49,6 @@ public final class ShuffleMachine {
 
     ShufflePhase phase;
 
-    // A class that is returned if a player is identified as having attempted to cheat.
-    public final class Blame {
-        ShufflePhase phase;
-        int cheater;
-
-        @Override
-        public boolean equals(Object o) {
-            if(!(o instanceof ShuffleMachine.Blame)) {
-                return false;
-            }
-
-            Blame b = (Blame)o;
-
-            return phase == b.phase && cheater == b.cheater;
-        }
-
-        @Override
-        public int hashCode() {
-            return 13 * cheater + 17 * phase.ordinal();
-        }
-    }
-
-    Set<Blame> blame = new HashSet<>();
-
     public ShuffleMachine(
             SessionIdentifier τ,
             MessageFactory messages,
@@ -89,7 +65,7 @@ public final class ShuffleMachine {
         this.phase = ShufflePhase.Uninitiated;
     }
 
-    void protocolDefinition(
+    BlameMatrix protocolDefinition(
             Coin.CoinAmount ν, // The amount to be shuffled.
             SigningKey sk, // My signing key.
             VerificationKey players[] // The keys representing all the players, in order.
@@ -133,7 +109,8 @@ public final class ShuffleMachine {
             // Check that each participant has the required amounts.
             for(VerificationKey player : players) {
                 if (!coin.valueHeld(player.address()).greater(ν)) {
-                    throw new BlameException();
+                    // Enter the blame phase.
+                    throw new BlameException(phase);
                 }
             }
 
@@ -153,7 +130,7 @@ public final class ShuffleMachine {
 
                 // Broadcast the key and store it in the set with everyone else's.
                 encryptonKeys.put(vk, ek);
-                network.broadcast(new Packet(messages.make().attach(ek), τ, phase, vk));
+                network.broadcast(messages.make().attach(ek), phase, vk);
             }
 
             // Now we wait to receive similar inbox from everyone else.
@@ -192,25 +169,25 @@ public final class ShuffleMachine {
 
             // Pass it along to the next player.
             if (me != N) {
-                network.sendTo(players[me], new Packet(σ2, τ, phase, vk));
+                network.send(new Packet(σ2, τ, phase, vk, players[me]));
             }
 
         // Phase 3: broadcast outputs.
-            // In this phase, the last player just broadcasts the transaction to everyone else.
-            phase = ShufflePhase.BroadcastOutput;
+        // In this phase, the last player just broadcasts the transaction to everyone else.
+        phase = ShufflePhase.BroadcastOutput;
 
             Queue<Coin.CoinAddress> newAddresses;
             if (me == N) {
                 // The last player adds his own new address in without encrypting anything and shuffles the result.
                 newAddresses = readNewAddresses(σ2);
-                network.broadcast(new Packet(σ2, τ, phase, vk));
+                network.broadcast(σ2, phase, vk);
             } else {
                 newAddresses = readNewAddresses(network.receiveFrom(players[N - 1], phase));
             }
 
             // Everyone else receives the broadcast and checks to make sure their message was included.
             if (!newAddresses.contains(addr_new)) {
-                throw new BlameException();
+                throw new BlameException(phase);
             }
 
         // Phase 4: equivocation check.
@@ -225,13 +202,13 @@ public final class ShuffleMachine {
             }
 
             σ4 = crypto.hash(σ4);
-            network.broadcast(new Packet(σ4, τ, phase, vk));
+            network.broadcast(σ4, phase, vk);
 
             // Wait for a similar message from everyone else and check that the result is the name.
             Map<VerificationKey, Message> hashes = network.receiveFromMultiple(network.opponentSet(1, N), phase);
             hashes.put(vk, σ4);
             if (!areEqual(hashes)) {
-                throw new BlameException();
+                throw new BlameException(phase);
             }
 
         // Phase 5: verification and submission.
@@ -248,21 +225,21 @@ public final class ShuffleMachine {
                 outputs.put(addr, ν);
             }
             Coin.CoinTransaction t = coin.transaction(inputs, outputs);
-            network.broadcast(new Packet(messages.make().attach(sk.makeSignature(t)), τ, phase, vk));
+            network.broadcast(messages.make().attach(sk.makeSignature(t)), phase, vk);
 
             Map<VerificationKey, Message> σ5 = network.receiveFromMultiple(network.opponentSet(1, N), phase);
 
             // Verify the signatures.
             for(Map.Entry<VerificationKey, Message> sig : σ5.entrySet()) {
                 if (!sig.getKey().verify(t, sig.getValue().readCoinSignature())) {
-                    throw new BlameException();
+                    throw new BlameException(phase);
                 }
             }
 
             // Check that the transaction is still valid.
             for(Coin.CoinAddress input : inputs) {
                 if (!coin.valueHeld(input).greater(ν)) {
-                    throw new BlameException();
+                    throw new BlameException(phase);
                 }
             }
 
@@ -282,12 +259,29 @@ public final class ShuffleMachine {
             // TODO this is where we go if we hear tell of malicious behavior from a third player.
             e.printStackTrace();
         }
+
+        return null;
     }
 
     // the phase can be accessed concurrently in case we want to update
     // the user on how the protocol is going.
     public ShufflePhase currentPhase() {
         return phase;
+    }
+
+    // When a player has insufficient funds.
+    private void blameInsufficientFunds() {
+
+    }
+
+    // The equivocation check fails and some player has equivocated.
+    private void blameEquivocation() {
+
+    }
+
+    // Some misbehavior that has occurred during the shuffle phase.
+    private void blameShuffleMisbehavior() {
+
     }
 
     // The function for public consumption which runs the protocol.
@@ -308,7 +302,7 @@ public final class ShuffleMachine {
 
         // Here we handle a bunch of lower level errors.
         try {
-            protocolDefinition(ν, sk, players);
+            BlameMatrix blame = protocolDefinition(ν, sk, players);
 
             ShufflePhase endPhase = currentPhase();
             if (endPhase == ShufflePhase.Blame) {

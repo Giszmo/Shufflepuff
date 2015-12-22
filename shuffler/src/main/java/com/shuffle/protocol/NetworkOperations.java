@@ -3,6 +3,7 @@ package com.shuffle.protocol;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
@@ -20,7 +21,8 @@ class NetworkOperations {
     int N; // the number of players.
     VerificationKey players[]; // The current players.
 
-    Queue<Packet> received = new LinkedList<>(); // A queue of messages that has been reived that we aren't ready to look at yet.
+    Queue<Packet> delivered = new LinkedList<>(); // A queue of messages that has been delivered that we aren't ready to look at yet.
+    Queue<Packet> seen = new LinkedList<>(); // A queue of messages that have been seen, in the order looked at.
 
     NetworkOperations(SessionIdentifier τ, SigningKey sk, VerificationKey players[], Network network) {
         this.τ = τ;
@@ -53,27 +55,23 @@ class NetworkOperations {
         return opponentSet(1, N);
     }
 
-    public void broadcast(Packet packet) throws TimeoutError, CryptographyError, InvalidImplementationError {
+    public void broadcast(Message message, ShufflePhase phase, VerificationKey from) throws TimeoutError, CryptographyError, InvalidImplementationError {
         Set<VerificationKey> keys = opponentSet();
 
-        for (VerificationKey key : keys) {
-            network.sendTo(key, packet);
+        for (VerificationKey to : keys) {
+            network.sendTo(to, new Packet(message, τ, phase, from, to));
         }
     }
 
-    public void sendTo(VerificationKey to, Packet packet) throws TimeoutError, CryptographyError, InvalidImplementationError {
-        network.sendTo(to, packet);
+    public void send(Packet packet) throws TimeoutError, CryptographyError, InvalidImplementationError {
+        network.sendTo(packet.recipient, packet);
     }
 
-    // Get the next message from the phase we're in. It's possible for other players to get
-    // ahead under some circumstances, so we have to keep their messages to look at later.
-    Packet getNextMessage(ShufflePhase expectedPhase)
-            throws FormatException, CryptographyError, BlameReceivedException,
-            InterruptedException, TimeoutError, InvalidImplementationError, ValueException {
-
+    // This method should only be called by receiveNextPacket
+    private Packet findPacket(ShufflePhase expectedPhase) throws InterruptedException, ValueException, BlameReceivedException {
         // Go through the queue of received messages if any are there.
-        if (received.size() > 0) {
-            Iterator<Packet> i = received.iterator();
+        if (delivered.size() > 0) {
+            Iterator<Packet> i = delivered.iterator();
             while (i.hasNext()) {
                 Packet packet = i.next();
 
@@ -96,6 +94,11 @@ class NetworkOperations {
                 throw new ValueException(ValueException.Values.τ, τ.toString(), packet.τ.toString());
             }
 
+            // Check that this message is intended for us.
+            if (!packet.recipient.equals(sk.VerificationKey())) {
+                throw new ValueException(ValueException.Values.recipient, sk.VerificationKey().toString(), packet.recipient.toString());
+            }
+
             if (expectedPhase == phase) {
                 return packet;
             }
@@ -104,15 +107,38 @@ class NetworkOperations {
                 throw new BlameReceivedException(sender, packet);
             }
 
-            received.add(packet);
+            delivered.add(packet);
         }
+    }
+
+    // Get the next message from the phase we're in. It's possible for other players to get
+    // ahead under some circumstances, so we have to keep their messages to look at later.
+    Packet receiveNextPacket(ShufflePhase expectedPhase)
+            throws FormatException, CryptographyError, BlameReceivedException,
+            InterruptedException, TimeoutError, InvalidImplementationError, ValueException {
+
+        Packet packet = findPacket(expectedPhase);
+        seen.add(packet);
+        return packet;
+    }
+
+    List<Packet> getPacketsByPhase(ShufflePhase phase) {
+        List<Packet> selection = new LinkedList<>();
+
+        for (Packet packet : seen) {
+            if (packet.phase == phase) {
+                selection.add(packet);
+            }
+        }
+
+        return selection;
     }
 
     public Message receiveFrom(VerificationKey from, ShufflePhase expectedPhase)
             throws TimeoutError, CryptographyError, FormatException, ValueException,
             InvalidImplementationError, com.shuffle.protocol.BlameReceivedException, InterruptedException {
 
-        Packet packet = getNextMessage(expectedPhase);
+        Packet packet = receiveNextPacket(expectedPhase);
 
         // If we receive a message, but it is not from the expected source, it might be a blame message.
         if (!from.equals(packet.signer)) {
@@ -130,7 +156,7 @@ class NetworkOperations {
         Map<VerificationKey, Message> broadcasts = new HashMap<>();
 
         while (from.size() > 0) {
-            Packet packet = getNextMessage(expectedPhase);
+            Packet packet = receiveNextPacket(expectedPhase);
             VerificationKey sender = packet.signer;
 
             broadcasts.put(sender, packet.message);

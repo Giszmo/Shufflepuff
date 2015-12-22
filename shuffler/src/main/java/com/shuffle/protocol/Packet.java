@@ -13,13 +13,15 @@ public class Packet {
     SessionIdentifier τ;
     ShufflePhase phase;
     VerificationKey signer;
+    VerificationKey recipient;
 
-    public Packet(Message message, SessionIdentifier τ, ShufflePhase phase, VerificationKey signer) {
+    public Packet(Message message, SessionIdentifier τ, ShufflePhase phase, VerificationKey signer, VerificationKey recipient) {
         if (τ == null || phase == null || signer == null) {
             throw new NullPointerException();
         }
 
         this.signer = signer;
+        this.recipient = recipient;
         this.phase = phase;
         this.τ = τ;
         this.message = message;

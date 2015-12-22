@@ -12,9 +12,9 @@ public final class ReturnState {
     SessionIdentifier τ;
     ShufflePhase phase;
     Throwable error = null;
-    Set<ShuffleMachine.Blame> blame = null;
+    BlameMatrix blame = null;
 
-    public ReturnState(boolean success, SessionIdentifier τ, ShufflePhase phase, Throwable error, Set<ShuffleMachine.Blame> blame) {
+    public ReturnState(boolean success, SessionIdentifier τ, ShufflePhase phase, Throwable error, BlameMatrix blame) {
         this.success = success;
         this.τ = τ;
         this.phase = phase;

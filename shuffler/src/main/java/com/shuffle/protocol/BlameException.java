@@ -6,7 +6,9 @@ package com.shuffle.protocol;
  * This exception is thrown when malicious behavior is detected on the part of another player.
  */
 final class BlameException extends Exception {
-    BlameException() {
+    ShufflePhase phase;
 
+    BlameException(ShufflePhase phase) {
+        this.phase = phase;
     }
 }

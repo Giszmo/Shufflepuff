@@ -144,7 +144,7 @@ public class TestNetworkOperations  {
             NetworkOperations netop = new NetworkOperations(τ, sk, players, network);
 
             try {
-                netop.broadcast(new Packet(messages.make(), new MockSessionIdentifier(), ShufflePhase.Shuffling, sk.VerificationKey()));
+                netop.broadcast(messages.make(), ShufflePhase.Shuffling, sk.VerificationKey());
             } catch (TimeoutError e) {
                 Assert.fail("Unexpected exception.");
             } catch (CryptographyError e) {
@@ -171,7 +171,7 @@ public class TestNetworkOperations  {
     }
 
     @Test
-    public void testSendTo() {
+    public void testSend() {
         sendToTestCase tests[] = new sendToTestCase[]{
                 // Case where recipient does not exist.
                 new sendToTestCase(1, 2, 0, false),
@@ -204,7 +204,12 @@ public class TestNetworkOperations  {
                 // Set up the network operations object.
                 NetworkOperations netop = new NetworkOperations(τ, sk, players, network);
 
-                netop.sendTo(new MockVerificationKey(test.recipient), new Packet(new MockMessage(), new MockSessionIdentifier(), ShufflePhase.Shuffling, sk.VerificationKey()));
+                netop.send(new Packet(
+                        new MockMessage(),
+                        new MockSessionIdentifier(),
+                        ShufflePhase.Shuffling,
+                        sk.VerificationKey(),
+                        new MockVerificationKey(test.recipient)));
 
                 Queue<Map.Entry<Packet, MockVerificationKey>> responses = network.getResponses();
                 Assert.assertEquals(1, responses.size());

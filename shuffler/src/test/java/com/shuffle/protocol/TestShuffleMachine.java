@@ -79,7 +79,19 @@ public class TestShuffleMachine {
             }
         }
 
-        // Tests for successful runs.
+        // Error test cases:
+        // Player has insufficient funds.
+        // A player spends his funds while the protocol is going on.
+        // A player lies about another having insufficient funds.
+        // A player sends different encryption keys to different players.
+        // A player sends different output vectors to different players.
+        // A player lies about the equivocation check.
+        // A player drops an address during phase 2.
+        // A player drops an address and adds another one.
+        // A player drops an address and adds a duplicate.
+        // Different combinations of these at the same time.
+
+        // Run the tests.
         for (Map.Entry<Integer, testCase> test : tests.entrySet()) {
             System.out.println("running test case " + test.getKey()  + (test.getValue().description != null ? ": " + test.getValue().description : ""));
 

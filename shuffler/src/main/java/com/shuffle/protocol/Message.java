@@ -10,10 +10,13 @@ public interface Message {
     Message attach(Coin.CoinAddress addr);
     Message attach(Coin.CoinSignature sig);
     Message attach(Coin.CoinTransaction t);
+    Message attach(Packet packet);
 
     Message attach(Message message) throws InvalidImplementationError;
 
     EncryptionKey readEncryptionKey() throws FormatException;
     Coin.CoinSignature readCoinSignature() throws FormatException;
     Coin.CoinAddress readCoinAddress() throws FormatException;
+    Coin.CoinTransaction readCoinTransaction() throws FormatException;
+    Packet readPacket() throws FormatException;
 }

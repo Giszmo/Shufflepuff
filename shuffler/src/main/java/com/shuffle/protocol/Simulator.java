@@ -39,7 +39,7 @@ public final class Simulator {
         @Override
         public void sendTo(VerificationKey to, Packet packet) throws InvalidImplementationError, TimeoutError {
             try {
-                Simulator.this.sendTo(to, new Packet(messages.copy(packet.message), packet.τ, packet.phase, packet.signer));
+                Simulator.this.sendTo(to, new Packet(messages.copy(packet.message), packet.τ, packet.phase, packet.signer, packet.recipient));
             } catch (InterruptedException e) {
                 // This means that the thread running the machine we are delivering to has been interrupted.
                 // This would look like a timeout if this were happening over a real network.
