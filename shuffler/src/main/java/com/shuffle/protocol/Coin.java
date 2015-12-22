@@ -16,8 +16,15 @@ import java.util.List;
 public interface Coin {
     CoinTransaction transaction(List<CoinAddress> inputs, LinkedHashMap<CoinAddress, CoinAmount> outputs);
     void send(CoinTransaction t) throws CoinNetworkError;
-    boolean unspent(CoinAddress addr);
+
     CoinAmount valueHeld(CoinAddress addr) throws BlockchainError, MempoolError;
+
+    // Returns either a transaction that sent from the given address that caused it to have .
+    // insufficient funds or a transaction that sent to a given address that caused it to have
+    // insufficient funds. 
+    CoinTransaction getOffendingTransaction(CoinAddress addr, CoinAmount ν);
+
+    // Returns the transaction that sent to a given address.
 
     // Represents an amount of Bitcoin or other cryptocurrency.
     interface CoinAmount {
@@ -28,4 +35,8 @@ public interface Coin {
 
     // A representation of a Bitcoin or other cryptocurrency transaction.
     interface CoinTransaction {}
+
+    // Representing a digital signature of a bitcoin transaction.
+    interface CoinSignature {
+    }
 }

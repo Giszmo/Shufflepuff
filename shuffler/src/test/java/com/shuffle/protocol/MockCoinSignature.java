@@ -3,7 +3,7 @@ package com.shuffle.protocol;
 /**
  * Created by Daniel Krawisz on 12/9/15.
  */
-public class MockCoinSignature implements CoinSignature {
+public class MockCoinSignature implements Coin.CoinSignature {
     Coin.CoinTransaction t;
     MockVerificationKey key;
 
@@ -13,12 +13,12 @@ public class MockCoinSignature implements CoinSignature {
     }
 
     @Override
-    public boolean equals(CoinSignature sig) throws InvalidImplementationError {
-        if (!(sig instanceof MockCoinSignature)) {
-            throw new InvalidImplementationError();
+    public boolean equals(Object o) {
+        if (!(o instanceof MockCoinSignature)) {
+            return false;
         }
 
-        return (key.equals((MockCoinSignature)sig));
+        return (key.equals((MockCoinSignature)o));
     }
 
     @Override

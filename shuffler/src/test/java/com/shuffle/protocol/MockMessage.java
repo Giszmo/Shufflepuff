@@ -34,7 +34,7 @@ public class MockMessage implements Message {
     public static class Atom {
         public Coin.CoinAddress addr = null;
         public EncryptionKey ek = null;
-        public CoinSignature sig = null;
+        public Coin.CoinSignature sig = null;
         public Hash hash = null;
 
         public Atom(Coin.CoinAddress addr) {
@@ -45,7 +45,7 @@ public class MockMessage implements Message {
             this.ek = ek;
         }
 
-        public Atom(CoinSignature sig) {
+        public Atom(Coin.CoinSignature sig) {
             this.sig = sig;
         }
 
@@ -157,7 +157,7 @@ public class MockMessage implements Message {
     }
 
     @Override
-    public Message attach(CoinSignature sig) {
+    public Message attach(Coin.CoinSignature sig) {
         atoms.add(new Atom(sig));
         return this;
     }
@@ -194,7 +194,7 @@ public class MockMessage implements Message {
     }
 
     @Override
-    public CoinSignature readCoinSignature() throws FormatException {
+    public Coin.CoinSignature readCoinSignature() throws FormatException {
         Atom atom = atoms.peek();
         if (atom == null || atom.sig == null) {
             throw new FormatException();
