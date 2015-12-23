@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.shuffle.protocol.TestShuffleMachineMethods" tests="4" skipped="0" failures="0" errors="0" timestamp="2015-12-23T09:39:37" hostname="gummi-pony" time="0.002">
+  <properties/>
+  <testcase name="testReadNewAddresses" classname="com.shuffle.protocol.TestShuffleMachineMethods" time="0.0"/>
+  <testcase name="testAreEqual" classname="com.shuffle.protocol.TestShuffleMachineMethods" time="0.001"/>
+  <testcase name="shuffleTest" classname="com.shuffle.protocol.TestShuffleMachineMethods" time="0.001"/>
+  <testcase name="testDecryptAll" classname="com.shuffle.protocol.TestShuffleMachineMethods" time="0.0"/>
+  <system-out><![CDATA[got []; expected []
+got [ad[1]]; expected [ad[1]]
+got [ad[2], ad[1]]; expected [ad[2], ad[1]]
+got [ad[1], ad[2]]; expected [ad[1], ad[2]]
+got [ad[3], ad[1], ad[2]]; expected [ad[3], ad[1], ad[2]]
+got [ad[3], ad[2], ad[1]]; expected [ad[3], ad[2], ad[1]]
+got [ad[2], ad[1], ad[3]]; expected [ad[2], ad[1], ad[3]]
+got [ad[1], ad[3], ad[2]]; expected [ad[1], ad[3], ad[2]]
+got [ad[2], ad[3], ad[1], ad[4]]; expected [ad[2], ad[3], ad[1], ad[4]]
+got [ad[3], ad[2], ad[5], ad[1], ad[4]]; expected [ad[3], ad[2], ad[5], ad[1], ad[4]]
+got [ad[4], ad[1], ad[2], ad[3], ad[6], ad[5]]; expected [ad[4], ad[1], ad[2], ad[3], ad[6], ad[5]]
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
