@@ -1,7 +1,8 @@
 package com.shuffle.protocol;
 
-import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Queue;
 
 /**
  * TO BE IMPLEMENTED BY THE USER
@@ -14,29 +15,29 @@ import java.util.List;
  *
  */
 public interface Coin {
-    CoinTransaction transaction(List<CoinAddress> inputs, LinkedHashMap<CoinAddress, CoinAmount> outputs);
-    void send(CoinTransaction t) throws CoinNetworkError;
+    Transaction shuffleTransaction(Amount ν, List<Address> inputs, Queue<Address> shuffledOutputs, Map<VerificationKey, Address> changeOutputs);
+    void send(Transaction t) throws CoinNetworkError;
 
-    CoinAmount valueHeld(CoinAddress addr) throws BlockchainError, MempoolError;
+    Amount valueHeld(Address addr) throws BlockchainError, MempoolError;
 
     // Returns either a transaction that sent from the given address that caused it to have .
     // insufficient funds or a transaction that sent to a given address that caused it to have
     // insufficient funds.
-    CoinTransaction getOffendingTransaction(CoinAddress addr, CoinAmount ν);
+    Transaction getOffendingTransaction(Address addr, Amount ν);
 
     // Returns the transaction that sent to a given address.
 
     // Represents an amount of Bitcoin or other cryptocurrency.
-    interface CoinAmount {
-        boolean greater(CoinAmount ν) throws InvalidImplementationError;
+    interface Amount {
+        boolean greater(Amount ν) throws InvalidImplementationError;
     }
 
-    interface CoinAddress {}
+    interface Address {}
 
     // A representation of a Bitcoin or other cryptocurrency transaction.
-    interface CoinTransaction {}
+    interface Transaction {}
 
     // Representing a digital signature of a bitcoin transaction.
-    interface CoinSignature {
+    interface Signature {
     }
 }

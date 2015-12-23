@@ -23,7 +23,7 @@ public final class Simulator {
     ConcurrentMap<VerificationKey, BlackBox> machines;
     VerificationKey players[];
     SessionIdentifier τ;
-    Coin.CoinAmount ν;
+    Coin.Amount ν;
     MessageFactory messages;
     Crypto crypto;
     Coin coin;
@@ -90,11 +90,11 @@ public final class Simulator {
         Network network;
 
         SessionIdentifier τ;
-        Coin.CoinAmount ν;
+        Coin.Amount ν;
         SigningKey sk;
         VerificationKey[] players;
 
-        HonestAdversary(SessionIdentifier τ, Coin.CoinAmount ν, SigningKey sk,
+        HonestAdversary(SessionIdentifier τ, Coin.Amount ν, SigningKey sk,
                         VerificationKey[] players) {
             this.τ = τ;
             this.ν = ν;
@@ -107,7 +107,7 @@ public final class Simulator {
         @Override
         public ReturnState turnOn() throws InvalidImplementationError {
             try {
-                return machine.run(ν, sk, players);
+                return machine.run(ν, sk, null, players);
             } catch (InterruptedException e) {
                 return new ReturnState(false, τ, machine.currentPhase(), e, null);
             }
@@ -247,7 +247,7 @@ public final class Simulator {
         }
     }
 
-    public Simulator(SessionIdentifier τ, Coin.CoinAmount ν, List<InitialState> init, MessageFactory messages, Crypto crypto, Coin coin)  {
+    public Simulator(SessionIdentifier τ, Coin.Amount ν, List<InitialState> init, MessageFactory messages, Crypto crypto, Coin coin)  {
         if (τ == null || ν == null || init == null) throw new NullPointerException();
         this.τ = τ;
         this.ν = ν;

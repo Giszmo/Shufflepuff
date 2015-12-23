@@ -6,4 +6,6 @@ package com.shuffle.protocol;
  * Created by Daniel Krawisz on 12/3/15.
  */
 public interface SessionIdentifier {
+    String version();
+    String id();
 }

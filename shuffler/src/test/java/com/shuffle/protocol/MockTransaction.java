@@ -4,26 +4,27 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 
 /**
  * Created by Daniel Krawisz on 12/8/15.
  */
-public class MockCoinTransaction implements Coin.CoinTransaction {
-    List<Coin.CoinAddress> inputs;
-    LinkedHashMap<Coin.CoinAddress, Coin.CoinAmount> outputs;
+public class MockTransaction implements Coin.Transaction {
+    List<Coin.Address> inputs;
+    LinkedHashMap<Coin.Address, Coin.Amount> outputs;
 
-    public MockCoinTransaction(List<Coin.CoinAddress> inputs, LinkedHashMap<Coin.CoinAddress, Coin.CoinAmount> outputs) {
+    public MockTransaction(List<Coin.Address> inputs, LinkedHashMap<Coin.Address, Coin.Amount> outputs) {
         this.inputs = inputs;
         this.outputs = outputs;
     }
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof MockCoinTransaction)) {
+        if (!(o instanceof MockTransaction)) {
             return false;
         }
 
-        MockCoinTransaction mock = (MockCoinTransaction)o;
+        MockTransaction mock = (MockTransaction)o;
 
         if (this == mock) {
             return true;
@@ -37,19 +38,19 @@ public class MockCoinTransaction implements Coin.CoinTransaction {
             return true;
         }
 
-        Iterator<Coin.CoinAddress> i1 = inputs.iterator();
-        Iterator<Coin.CoinAddress> i2 = mock.inputs.iterator();
+        Iterator<Coin.Address> i1 = inputs.iterator();
+        Iterator<Coin.Address> i2 = mock.inputs.iterator();
 
         while(i1.hasNext()) {
-            Coin.CoinAddress c1 = i1.next();
-            Coin.CoinAddress c2 = i2.next();
+            Coin.Address c1 = i1.next();
+            Coin.Address c2 = i2.next();
 
             if (!c1.equals(c2)) {
                 return false;
             }
         }
 
-        for (Map.Entry<Coin.CoinAddress, Coin.CoinAmount> output : outputs.entrySet()) {
+        for (Map.Entry<Coin.Address, Coin.Amount> output : outputs.entrySet()) {
             if (!output.getValue().equals(mock.outputs.get(output.getKey()))) {
                 return false;
             }

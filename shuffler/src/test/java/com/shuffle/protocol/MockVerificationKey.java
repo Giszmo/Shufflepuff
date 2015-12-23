@@ -14,12 +14,12 @@ public class MockVerificationKey implements VerificationKey {
 
     // These functions are not implemented yet.
     @Override
-    public boolean verify(Coin.CoinTransaction t, Coin.CoinSignature sig) throws InvalidImplementationError {
-        if (!(sig instanceof MockCoinSignature)) {
+    public boolean verify(Coin.Transaction t, Coin.Signature sig) throws InvalidImplementationError {
+        if (!(sig instanceof MockSignature)) {
             throw new InvalidImplementationError();
         }
 
-        return (((MockCoinSignature)sig).t.equals(t)) && (((MockCoinSignature)sig).key.equals(this));
+        return (((MockSignature)sig).t.equals(t)) && (((MockSignature)sig).key.equals(this));
     }
 
     @Override
@@ -32,8 +32,8 @@ public class MockVerificationKey implements VerificationKey {
     }
 
     @Override
-    public Coin.CoinAddress address() {
-        return new MockCoinAddress(index);
+    public Coin.Address address() {
+        return new MockAddress(index);
     }
 
     public String toString() {

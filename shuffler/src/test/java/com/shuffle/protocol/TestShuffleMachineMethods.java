@@ -113,11 +113,11 @@ public class TestShuffleMachineMethods {
 
             Message input = new MockMessage();
             for (int i : test.input) {
-                input.attach(new MockCoinAddress(i));
+                input.attach(new MockAddress(i));
             }
             Message expected = new MockMessage();
             for (int i : test.expected) {
-                expected.attach(new MockCoinAddress(i));
+                expected.attach(new MockAddress(i));
             }
             try {
                 Message result = machine.shuffle(input);
@@ -150,7 +150,7 @@ public class TestShuffleMachineMethods {
         int index = 0;
         for(int i : input) {
             MockSigningKey key = new MockSigningKey(index);
-            map.put(key.VerificationKey(), new MockMessage().attach(new MockCoinAddress(i)));
+            map.put(key.VerificationKey(), new MockMessage().attach(new MockAddress(i)));
             index++;
         }
 
@@ -227,10 +227,10 @@ public class TestShuffleMachineMethods {
                 DecryptionKey dk = crypto.DecryptionKey();
 
                 for (int j = 0; j <= i; j ++) {
-                    Coin.CoinAddress addr = crypto.SigningKey().VerificationKey().address();
+                    Coin.Address addr = crypto.SigningKey().VerificationKey().address();
 
                     output.attach(addr);
-                    input.attach(new MockEncryptedCoinAddress(addr, dk.EncryptionKey()));
+                    input.attach(new MockEncryptedAddress(addr, dk.EncryptionKey()));
                 }
 
                 SessionIdentifier τ = new MockSessionIdentifier();
@@ -262,7 +262,7 @@ public class TestShuffleMachineMethods {
 
                     for (int j = 0; j <= i; j++) {
 
-                        input.attach(new MockEncryptedCoinAddress(crypto.SigningKey().VerificationKey().address(), key.EncryptionKey()));
+                        input.attach(new MockEncryptedAddress(crypto.SigningKey().VerificationKey().address(), key.EncryptionKey()));
                     }
 
                     input.attach(crypto.SigningKey().VerificationKey().address());
@@ -295,7 +295,7 @@ public class TestShuffleMachineMethods {
                 Message input = new MockMessage();
 
                 for (int j = 0; j <= i; j ++) {
-                    Coin.CoinAddress addr = crypto.SigningKey().VerificationKey().address();
+                    Coin.Address addr = crypto.SigningKey().VerificationKey().address();
 
                     expected.attach(addr);
                     input.attach(addr);
@@ -304,7 +304,7 @@ public class TestShuffleMachineMethods {
                 SessionIdentifier τ = new MockSessionIdentifier();
                 ShuffleMachine machine = standardTestInitialization(τ, crypto);
 
-                Queue<Coin.CoinAddress> result = machine.readNewAddresses(new MockMessage().attach(input));
+                Queue<Coin.Address> result = machine.readNewAddresses(new MockMessage().attach(input));
 
                 Assert.assertTrue(expected.equals(new MockMessage().attachAddrs(result)));
             }

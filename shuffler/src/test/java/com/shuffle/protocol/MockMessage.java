@@ -32,16 +32,17 @@ public class MockMessage implements Message {
     }
 
     public static class Atom {
-        public Coin.CoinAddress addr = null;
+        public Coin.Address addr = null;
         public EncryptionKey ek = null;
-        public Coin.CoinSignature sig = null;
+        public Coin.Signature sig = null;
         public Hash hash = null;
+        public BlameMatrix.Blame blame;
 
-        public Coin.CoinTransaction t;
+        public Coin.Transaction t;
         // Sometimes, we have to send whole packets that we previously received.
         public Packet packet;
 
-        public Atom(Coin.CoinAddress addr) {
+        public Atom(Coin.Address addr) {
             this.addr = addr;
         }
 
@@ -49,7 +50,7 @@ public class MockMessage implements Message {
             this.ek = ek;
         }
 
-        public Atom(Coin.CoinSignature sig) {
+        public Atom(Coin.Signature sig) {
             this.sig = sig;
         }
 
@@ -57,13 +58,15 @@ public class MockMessage implements Message {
             this.hash = hash;
         }
 
-        public Atom(Coin.CoinTransaction t) {
+        public Atom(Coin.Transaction t) {
             this.t = t;
         }
 
         public Atom(Packet packet) {
             this.packet = packet;
         }
+
+        public Atom(BlameMatrix.Blame blame) {this.blame = blame;}
 
         @Override
         public boolean equals(Object o) {
@@ -77,7 +80,8 @@ public class MockMessage implements Message {
                     ((a.ek == null && ek == null) || (a.ek != null && ek != null && ek.equals(a.ek))) &&
                     ((a.addr == null && addr == null) || (a.addr != null && addr != null && addr.equals(a.addr)))
                      && ((a.t == null && t == null) || (a.t != null && t != null && t.equals(a.t))) &&
-                    ((a.packet == null && packet == null) || (a.packet != null && packet != null && packet.equals(a.packet)));
+                    ((a.packet == null && packet == null) || (a.packet != null && packet != null && packet.equals(a.packet)))
+                     && ((a.blame == null && blame == null) || (a.blame != null && blame != null && blame.equals(a.blame)));
         }
 
         @Override
@@ -105,6 +109,10 @@ public class MockMessage implements Message {
 
             if (packet != null) {
                 return packet.toString();
+            }
+
+            if (blame != null) {
+                return blame.toString();
             }
 
             return "";
@@ -136,6 +144,10 @@ public class MockMessage implements Message {
                 return new Atom(packet);
             }
 
+            if (blame != null) {
+                return new Atom(blame);
+            }
+
             return null;
         }
     }
@@ -161,8 +173,8 @@ public class MockMessage implements Message {
         return this;
     }
 
-    public Message attachAddrs(Queue<Coin.CoinAddress> addrs) {
-        for (Coin.CoinAddress addr : addrs) {
+    public Message attachAddrs(Queue<Coin.Address> addrs) {
+        for (Coin.Address addr : addrs) {
             attach(addr);
         }
 
@@ -181,27 +193,25 @@ public class MockMessage implements Message {
     }
 
     @Override
-    public Message attach(Coin.CoinAddress addr) {
-        atoms.add(new Atom(addr));
+    public Message attach(Coin.Address addr) {
+        if (addr != null) {
+            atoms.add(new Atom(addr));
+        }
         return this;
     }
 
     @Override
-    public Message attach(Coin.CoinSignature sig) {
+    public Message attach(Coin.Signature sig) {
         atoms.add(new Atom(sig));
         return this;
     }
 
     @Override
-    public Message attach(Coin.CoinTransaction t) {
-        atoms.add(new Atom(t));
+    public Message attach(BlameMatrix.Blame blame) {
+        if (blame != null) {
+            atoms.add(new Atom(blame));
+        }
         return this;
-    }
-
-    @Override
-    public Message attach(Packet packet) {
-        atoms.add(new Atom(packet));
-        return null;
     }
 
     @Override
@@ -226,7 +236,7 @@ public class MockMessage implements Message {
     }
 
     @Override
-    public Coin.CoinAddress readCoinAddress() throws FormatException {
+    public Coin.Address readCoinAddress() throws FormatException {
         Atom atom = atoms.peek();
         if (atom == null || atom.addr == null) {
             throw new FormatException();
@@ -236,27 +246,17 @@ public class MockMessage implements Message {
     }
 
     @Override
-    public Coin.CoinTransaction readCoinTransaction() throws FormatException {
+    public BlameMatrix.Blame readBlame() throws FormatException {
         Atom atom = atoms.peek();
-        if (atom == null || atom.t == null) {
+        if (atom == null || atom.blame == null) {
             throw new FormatException();
         }
 
-        return atoms.remove().t;
+        return atoms.remove().blame;
     }
 
     @Override
-    public Packet readPacket() throws FormatException {
-        Atom atom = atoms.peek();
-        if (atom == null || atom.packet == null) {
-            throw new FormatException();
-        }
-
-        return atoms.remove().packet;
-    }
-
-    @Override
-    public Coin.CoinSignature readCoinSignature() throws FormatException {
+    public Coin.Signature readCoinSignature() throws FormatException {
         Atom atom = atoms.peek();
         if (atom == null || atom.sig == null) {
             throw new FormatException();

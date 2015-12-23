@@ -3,20 +3,20 @@ package com.shuffle.protocol;
 /**
  * Created by Daniel Krawisz on 12/7/15.
  */
-public class MockCoinAmount implements Coin.CoinAmount {
+public class MockAmount implements Coin.Amount {
     int amount;
 
-    MockCoinAmount(int amount) {
+    MockAmount(int amount) {
         this.amount = amount;
     }
 
     @Override
-    public boolean greater(Coin.CoinAmount ν) throws InvalidImplementationError {
-        if (!(ν instanceof MockCoinAmount)) {
+    public boolean greater(Coin.Amount ν) throws InvalidImplementationError {
+        if (!(ν instanceof MockAmount)) {
             throw new InvalidImplementationError();
         }
 
-        return amount > ((MockCoinAmount)ν).amount;
+        return amount > ((MockAmount)ν).amount;
     }
 
     @Override
@@ -30,10 +30,10 @@ public class MockCoinAmount implements Coin.CoinAmount {
             return false;
         }
 
-        if (!(o instanceof MockCoinAmount)) {
+        if (!(o instanceof MockAmount)) {
             return false;
         }
 
-        return amount == ((MockCoinAmount)o).amount;
+        return amount == ((MockAmount)o).amount;
     }
 }

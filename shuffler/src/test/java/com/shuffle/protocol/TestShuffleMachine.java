@@ -27,18 +27,18 @@ public class TestShuffleMachine {
     public class testCase {
         String description = null;
         SessionIdentifier τ;
-        Coin.CoinAmount ν;
+        Coin.Amount ν;
         Coin coin;
         Map<SigningKey, Expected> machines = new HashMap<>();
 
-        testCase(SessionIdentifier τ, Coin.CoinAmount ν, Coin coin, String desc) {
+        testCase(SessionIdentifier τ, Coin.Amount ν, Coin coin, String desc) {
             this.τ = τ;
             this.description = desc;
             this.ν = ν;
             this.coin = coin;
         }
 
-        testCase(SessionIdentifier τ, Coin.CoinAmount ν, Coin coin) {
+        testCase(SessionIdentifier τ, Coin.Amount ν, Coin coin) {
             this.τ = τ;
             this.ν = ν;
             this.coin = coin;
@@ -61,11 +61,11 @@ public class TestShuffleMachine {
 
                 SessionIdentifier τ = new MockSessionIdentifier();
                 MockCoin coin = new MockCoin();
-                testCase test = new testCase(τ, new MockCoinAmount(17), coin, "successful run with " + players + " players.");
+                testCase test = new testCase(τ, new MockAmount(17), coin, "successful run with " + players + " players.");
 
                 for (int i = 1; i <= players; i++) {
                     MockSigningKey key = new MockSigningKey(i);
-                    coin.put(key.VerificationKey().address(), new MockCoin.Output(new MockCoinAmount(20), false));
+                    coin.put(key.VerificationKey().address(), new MockCoin.Output(new MockAmount(20), false));
                     test.put(new MockSigningKey(i),
                             new Expected(
                                     new Simulator.InitialState(key),

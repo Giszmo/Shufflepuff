@@ -7,16 +7,14 @@ public interface Message {
     boolean isEmpty();
 
     Message attach(EncryptionKey ek);
-    Message attach(Coin.CoinAddress addr);
-    Message attach(Coin.CoinSignature sig);
-    Message attach(Coin.CoinTransaction t);
-    Message attach(Packet packet);
+    Message attach(Coin.Address addr);
+    Message attach(Coin.Signature sig);
+    Message attach(BlameMatrix.Blame blame);
 
     Message attach(Message message) throws InvalidImplementationError;
 
     EncryptionKey readEncryptionKey() throws FormatException;
-    Coin.CoinSignature readCoinSignature() throws FormatException;
-    Coin.CoinAddress readCoinAddress() throws FormatException;
-    Coin.CoinTransaction readCoinTransaction() throws FormatException;
-    Packet readPacket() throws FormatException;
+    Coin.Signature readCoinSignature() throws FormatException;
+    Coin.Address readCoinAddress() throws FormatException;
+    BlameMatrix.Blame readBlame() throws FormatException;
 }

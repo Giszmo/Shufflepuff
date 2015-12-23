@@ -1,6 +1,7 @@
 /**
  *
- * This package implements Coin and Crypto from com.shuffle.protocol using BitcoinJ.
+ * This package uses BitcoinJ to implement Coin, VerificationKey, and SigningKey
+ * from com.shuffle.protocol
  *
  */
 package com.shuffle.bitcoinj;

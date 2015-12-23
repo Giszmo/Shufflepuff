@@ -3,20 +3,20 @@ package com.shuffle.protocol;
 /**
  * Created by Daniel Krawisz on 12/19/15.
  */
-public class MockCoinAddress implements Coin.CoinAddress {
+public class MockAddress implements Coin.Address {
     int index;
 
-    public MockCoinAddress(int index) {
+    public MockAddress(int index) {
         this.index = index;
     }
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof MockCoinAddress)) {
+        if (!(o instanceof MockAddress)) {
             return false;
         }
 
-        return index == ((MockCoinAddress)o).index;
+        return index == ((MockAddress)o).index;
     }
 
     @Override

@@ -9,5 +9,5 @@ package com.shuffle.protocol;
  */
 public interface DecryptionKey {
     EncryptionKey EncryptionKey();
-    Coin.CoinAddress decrypt(Coin.CoinAddress m) throws FormatException, CryptographyError;
+    Coin.Address decrypt(Coin.Address m) throws FormatException, CryptographyError;
 }

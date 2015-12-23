@@ -12,8 +12,8 @@ public class MockEncryptionKey implements EncryptionKey {
     }
 
     @Override
-    public Coin.CoinAddress encrypt(Coin.CoinAddress m) throws CryptographyError {
-        return new MockEncryptedCoinAddress(m, this);
+    public Coin.Address encrypt(Coin.Address m) throws CryptographyError {
+        return new MockEncryptedAddress(m, this);
     }
 
     @Override

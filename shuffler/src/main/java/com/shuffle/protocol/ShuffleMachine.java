@@ -1,13 +1,11 @@
 package com.shuffle.protocol;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
-import java.util.Set;
 
 /**
  *
@@ -66,8 +64,9 @@ public final class ShuffleMachine {
     }
 
     BlameMatrix protocolDefinition(
-            Coin.CoinAmount ν, // The amount to be shuffled.
+            Coin.Amount ν, // The amount to be shuffled.
             SigningKey sk, // My signing key.
+            Coin.Address myChange, // My change address. (may be null).
             VerificationKey players[] // The keys representing all the players, in order.
     ) throws
             TimeoutError,
@@ -100,26 +99,23 @@ public final class ShuffleMachine {
         // when any other player deliberately breaks the rules.
         try {
 
-        // Phase 0: This phase is not defined in the original paper. Instead, it is described
-        // in phase 1. However, there was a problem with the wording of the original paper which
-        // would have caused the check I have done here to fail. We check here whether each
-        // player has the required funds to perform the shuffle successfully.
-        phase = ShufflePhase.Initiated;
-
-            // Check that each participant has the required amounts.
-            for(VerificationKey player : players) {
-                if (!coin.valueHeld(player.address()).greater(ν)) {
-                    // Enter the blame phase.
-                    throw new BlameException(phase);
-                }
-            }
-
         // Phase 1: Announcement
         // In the announcement phase, participants distribute temporary encryption keys.
         phase = ShufflePhase.Announcement;
 
+            // Check for sufficient funds.
+            // There was a problem with the wording of the original paper which would have meant
+            // that player 1's funds never would have been checked, but we have to do that.
+            BlameMatrix matrix = blameInsufficientFunds(players, ν, vk);
+            if (matrix != null) {
+                return matrix;
+            }
+
             // This will contain the new public keys.
             Map<VerificationKey, EncryptionKey> encryptonKeys = new HashMap<>();
+
+            // This will contain the change addresses.
+            Map<VerificationKey, Coin.Address> change = new HashMap<>();
 
             // Everyone except player 1 creates a new keypair and sends it around to everyone else.
             DecryptionKey dk = null;
@@ -130,12 +126,13 @@ public final class ShuffleMachine {
 
                 // Broadcast the key and store it in the set with everyone else's.
                 encryptonKeys.put(vk, ek);
-                network.broadcast(messages.make().attach(ek), phase, vk);
+                change.put(vk, myChange);
+                network.broadcast(messages.make().attach(ek).attach(myChange), phase, vk);
             }
 
             // Now we wait to receive similar inbox from everyone else.
             Map<VerificationKey, Message> σ1 = network.receiveFromMultiple(network.opponentSet(2, N), phase);
-            encryptonKeys.putAll(readEncryptionKeys(σ1));
+            readAnouncements(σ1, encryptonKeys, change);
 
         // Phase 2: Shuffle
         // In the shuffle phase, we create a sequence of orderings which will b successively
@@ -146,7 +143,7 @@ public final class ShuffleMachine {
 
             // Each participant chooses a new bitcoin address which will be their new outputs.
             SigningKey sk_new = crypto.SigningKey();
-            Coin.CoinAddress addr_new = sk_new.VerificationKey().address();
+            Coin.Address addr_new = sk_new.VerificationKey().address();
 
             // Player one begins the cycle and encrypts its new address with everyone's key, in order.
             // Each subsequent player reorders the cycle and removes one layer of encryption.
@@ -158,7 +155,7 @@ public final class ShuffleMachine {
 
             // Add our own address to the mix. Note that if me == N, ie, the last player, then no
             // encryption is done. That is because we have reached the last layer of encryption.
-            Coin.CoinAddress encrypted = addr_new;
+            Coin.Address encrypted = addr_new;
             for (int i = N; i > me; i--) {
                 // Successively encrypt with the keys of the players who haven't had their turn yet.
                 encrypted = encryptonKeys.get(players[i - 1]).encrypt(encrypted);
@@ -176,7 +173,7 @@ public final class ShuffleMachine {
         // In this phase, the last player just broadcasts the transaction to everyone else.
         phase = ShufflePhase.BroadcastOutput;
 
-            Queue<Coin.CoinAddress> newAddresses;
+            Queue<Coin.Address> newAddresses;
             if (me == N) {
                 // The last player adds his own new address in without encrypting anything and shuffles the result.
                 newAddresses = readNewAddresses(σ2);
@@ -216,15 +213,11 @@ public final class ShuffleMachine {
         // If all signatures check out, then the transaction is sent into the network.
         phase = ShufflePhase.VerificationAndSubmission;
 
-            List<Coin.CoinAddress> inputs = new LinkedList<>();
-            LinkedHashMap<Coin.CoinAddress, Coin.CoinAmount> outputs = new LinkedHashMap<>();
+            List<Coin.Address> inputs = new LinkedList<>();
             for(VerificationKey key : players) {
                 inputs.add(key.address());
             }
-            for(Coin.CoinAddress addr : newAddresses) {
-                outputs.put(addr, ν);
-            }
-            Coin.CoinTransaction t = coin.transaction(inputs, outputs);
+            Coin.Transaction t = coin.shuffleTransaction(ν, inputs, newAddresses, change);
             network.broadcast(messages.make().attach(sk.makeSignature(t)), phase, vk);
 
             Map<VerificationKey, Message> σ5 = network.receiveFromMultiple(network.opponentSet(1, N), phase);
@@ -237,10 +230,9 @@ public final class ShuffleMachine {
             }
 
             // Check that the transaction is still valid.
-            for(Coin.CoinAddress input : inputs) {
-                if (!coin.valueHeld(input).greater(ν)) {
-                    throw new BlameException(phase);
-                }
+            matrix = blameInsufficientFunds(players, ν, vk);
+            if (matrix != null) {
+                return matrix;
             }
 
             // Send the transaction into the network.
@@ -269,24 +261,9 @@ public final class ShuffleMachine {
         return phase;
     }
 
-    // When a player has insufficient funds.
-    private void blameInsufficientFunds() {
-
-    }
-
-    // The equivocation check fails and some player has equivocated.
-    private void blameEquivocation() {
-
-    }
-
-    // Some misbehavior that has occurred during the shuffle phase.
-    private void blameShuffleMisbehavior() {
-
-    }
-
     // The function for public consumption which runs the protocol.
     // TODO Coming soon!! handle all these error states more delicately.
-    public ReturnState run(Coin.CoinAmount ν, SigningKey sk, VerificationKey players[]) throws InvalidImplementationError, InterruptedException {
+    public ReturnState run(Coin.Amount ν, SigningKey sk, Coin.Address change, VerificationKey players[]) throws InvalidImplementationError, InterruptedException {
 
         // Don't let the protocol be run more than once at a time.
         if (phase != ShufflePhase.Uninitiated) {
@@ -302,7 +279,7 @@ public final class ShuffleMachine {
 
         // Here we handle a bunch of lower level errors.
         try {
-            BlameMatrix blame = protocolDefinition(ν, sk, players);
+            BlameMatrix blame = protocolDefinition(ν, sk, change, players);
 
             ShufflePhase endPhase = currentPhase();
             if (endPhase == ShufflePhase.Blame) {
@@ -315,25 +292,32 @@ public final class ShuffleMachine {
                 | BlockchainError
                 | CoinNetworkError
                 | CryptographyError
-                | TimeoutError
                 | FormatException e) {
 
             return new ReturnState(false, τ, currentPhase(), e, null);
+        } catch (TimeoutError e) {
+            // TODO We have to go into "suspect" mode at this point to determine why the timeout occurred.
+            return new ReturnState(false, τ, currentPhase(), e, null);
         }
-
     }
 
-    Map<VerificationKey, EncryptionKey> readEncryptionKeys(Map<VerificationKey, Message> messages) throws FormatException {
-        Map<VerificationKey, EncryptionKey> keys = new HashMap<>();
-        for (Map.Entry<VerificationKey, Message> key : messages.entrySet()) {
-            keys.put(key.getKey(), key.getValue().readEncryptionKey());
-        }
+    void readAnouncements(Map<VerificationKey, Message> messages,
+                          Map<VerificationKey, EncryptionKey> keys,
+                          Map<VerificationKey, Coin.Address> change) throws FormatException {
+        for (Map.Entry<VerificationKey, Message> entry : messages.entrySet()) {
+            VerificationKey key = entry.getKey();
+            Message message = entry.getValue();
 
-        return keys;
+            keys.put(key, message.readEncryptionKey());
+
+            if (!message.isEmpty()) {
+                change.put(key, message.readCoinAddress());
+            }
+        }
     }
 
-    Queue<Coin.CoinAddress> readNewAddresses(Message message) throws FormatException, InvalidImplementationError {
-        Queue<Coin.CoinAddress> queue = new LinkedList<>();
+    Queue<Coin.Address> readNewAddresses(Message message) throws FormatException, InvalidImplementationError {
+        Queue<Coin.Address> queue = new LinkedList<>();
 
         Message copy = messages.copy(message);
         while(!copy.isEmpty()) {
@@ -360,7 +344,7 @@ public final class ShuffleMachine {
         Message shuffled = messages.make();
 
         // Read all elements of the packet and insert them in a Queue.
-        Queue<Coin.CoinAddress> old = new LinkedList<>();
+        Queue<Coin.Address> old = new LinkedList<>();
         int N = 0;
         while(!copy.isEmpty()) {
             old.add(copy.readCoinAddress());
@@ -399,5 +383,75 @@ public final class ShuffleMachine {
         }
 
         return equal;
+    }
+
+    BlameMatrix fillBlameMatrix(BlameMatrix matrix) throws InterruptedException, FormatException, ValueException {
+        List<Packet> responses = network.receiveAllBlame();
+
+        // Determine who is being blamed and by whom.
+        for(Packet response : responses) {
+            VerificationKey from = response.signer;
+            Message message = response.message;
+
+            while (!message.isEmpty()) {
+                BlameMatrix.Blame blame = message.readBlame();
+                // TODO determine what the blame is for and take the appropriate action.
+                // Egad this is getting complicated.
+            }
+        }
+
+        return matrix;
+    }
+
+    // Check for players with insufficient funds. This happens in phase 1 and phase 5.
+    private BlameMatrix blameInsufficientFunds(VerificationKey[] players, Coin.Amount ν, VerificationKey vk) throws InterruptedException, FormatException, ValueException {
+        List<VerificationKey> offenders = new LinkedList<>();
+
+        // Check that each participant has the required amounts.
+        for(VerificationKey player : players) {
+            if (!coin.valueHeld(player.address()).greater(ν)) {
+                // Enter the blame phase.
+                offenders.add(player);
+            }
+        }
+
+        // If they do, return.
+        if (offenders.isEmpty()) {
+            return null;
+        }
+
+        // If not, enter blame phase and find offending transactions.
+        phase = ShufflePhase.Blame;
+        BlameMatrix matrix = new BlameMatrix();
+        Message blameMessage = messages.make();
+        for(VerificationKey offender : offenders) {
+            Coin.Transaction t = coin.getOffendingTransaction(offender.address(), ν);
+
+            if (t == null) {
+                blameMessage.attach(new BlameMatrix.Blame(offender));
+                matrix.add(vk, offender,
+                        new BlameMatrix.BlameEvidence(BlameMatrix.BlameReason.NoFundsAtAll, true));
+            } else {
+                blameMessage.attach(new BlameMatrix.Blame(offender));
+                matrix.add(vk, offender,
+                        new BlameMatrix.BlameEvidence(BlameMatrix.BlameReason.InsufficientFunds, true, t));
+            }
+        }
+
+        // Broadcast offending transactions.
+        network.broadcast(blameMessage, phase, vk);
+
+        // Get all subsequent blame messages.
+        return fillBlameMatrix(matrix);
+    }
+
+    // The equivocation check fails and some player has equivocated.
+    private BlameMatrix blameEquivocation() {
+        return null;
+    }
+
+    // Some misbehavior that has occurred during the shuffle phase.
+    private BlameMatrix blameShuffleMisbehavior() {
+        return null;
     }
 }

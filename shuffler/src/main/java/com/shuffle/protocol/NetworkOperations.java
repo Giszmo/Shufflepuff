@@ -165,4 +165,22 @@ class NetworkOperations {
 
         return broadcasts;
     }
+
+    // When the blame phase it reached, there may be a lot of blame going around. This function
+    // waits to receive all blame messages until a timeout exception is caught, and then returns
+    // the list of blame messages.
+    public List<Packet> receiveAllBlame() throws InterruptedException, FormatException, ValueException {
+        List<Packet> blame = new LinkedList<>();
+
+        while(true) {
+            try {
+                blame.add(receiveNextPacket(ShufflePhase.Blame));
+            } catch (BlameReceivedException e) {
+                // This shouldn't really happen but just in case.
+                blame.add(e.packet);
+            } catch (TimeoutError e) {
+                return blame;
+            }
+        }
+    }
 }
