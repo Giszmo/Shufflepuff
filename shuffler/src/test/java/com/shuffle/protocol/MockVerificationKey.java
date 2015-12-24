@@ -44,4 +44,23 @@ public class MockVerificationKey implements VerificationKey {
     public int hashCode() {
         return index;
     }
+
+    @Override
+    public int compareTo(Object o) {
+        if(!(o instanceof MockVerificationKey)) {
+            return -1;
+        }
+
+        MockVerificationKey key = ((MockVerificationKey)o);
+
+        if (index == key.index) {
+            return 0;
+        }
+
+        if (index < key.index) {
+            return 1;
+        }
+
+        return -1;
+    }
 }

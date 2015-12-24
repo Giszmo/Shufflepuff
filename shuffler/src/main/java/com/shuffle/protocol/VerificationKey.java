@@ -4,7 +4,7 @@ package com.shuffle.protocol;
 /**
  * Created by Daniel Krawisz on 12/3/15.
  */
-public interface VerificationKey {
+public interface VerificationKey extends Comparable {
     boolean verify(Coin.Transaction t, Coin.Signature sig) throws InvalidImplementationError;
     boolean equals(Object vk);
 

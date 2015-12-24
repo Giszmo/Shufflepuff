@@ -6,6 +6,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.SortedSet;
+import java.util.TreeMap;
 
 /**
  *
@@ -67,7 +69,7 @@ public final class ShuffleMachine {
             long amount, // The amount to be shuffled.
             SigningKey sk, // My signing key.
             Coin.Address myChange, // My change address. (may be null).
-            VerificationKey players[] // The keys representing all the players, in order.
+            Map<Integer, VerificationKey> players // The keys representing all the players, in order.
     ) throws
             TimeoutError,
             FormatException,
@@ -81,12 +83,12 @@ public final class ShuffleMachine {
             InterruptedException {
 
         me = -1;
-        int N = players.length;
+        int N = players.size();
         VerificationKey vk = sk.VerificationKey();
 
         // Determine what my index number is.
-        for (int i = 1; i <= N; i ++) {
-            if (players[i - 1].equals(vk)) {
+        for (int i = 1; i <= N; i++ ) {
+            if (players.get(i).equals(vk)) {
                 me = i;
             }
         }
@@ -149,7 +151,7 @@ public final class ShuffleMachine {
             // Each subsequent player reorders the cycle and removes one layer of encryption.
             Message σ2 = messages.make();
             if (me != 1) {
-                σ2.attach(network.receiveFrom(players[me - 2], phase));
+                σ2.attach(network.receiveFrom(players.get(me - 1), phase));
                 σ2 = decryptAll(σ2, dk);
             }
 
@@ -158,7 +160,7 @@ public final class ShuffleMachine {
             Coin.Address encrypted = addr_new;
             for (int i = N; i > me; i--) {
                 // Successively encrypt with the keys of the players who haven't had their turn yet.
-                encrypted = encryptonKeys.get(players[i - 1]).encrypt(encrypted);
+                encrypted = encryptonKeys.get(players.get(i)).encrypt(encrypted);
             }
 
             // Insert new entry and reorder the keys.
@@ -166,7 +168,7 @@ public final class ShuffleMachine {
 
             // Pass it along to the next player.
             if (me != N) {
-                network.send(new Packet(σ2, τ, phase, vk, players[me]));
+                network.send(new Packet(σ2, τ, phase, vk, players.get(me + 1)));
             }
 
         // Phase 3: broadcast outputs.
@@ -179,7 +181,7 @@ public final class ShuffleMachine {
                 newAddresses = readNewAddresses(σ2);
                 network.broadcast(σ2, phase, vk);
             } else {
-                newAddresses = readNewAddresses(network.receiveFrom(players[N - 1], phase));
+                newAddresses = readNewAddresses(network.receiveFrom(players.get(N), phase));
             }
 
             // Everyone else receives the broadcast and checks to make sure their message was included.
@@ -195,7 +197,7 @@ public final class ShuffleMachine {
             // Put all temporary encryption keys into a list and hash the result.
             Message σ4 = messages.make();
             for (int i = 1; i < N; i++) {
-                σ4.attach(encryptonKeys.get(players[i]));
+                σ4.attach(encryptonKeys.get(players.get(i+1)));
             }
 
             σ4 = crypto.hash(σ4);
@@ -214,8 +216,8 @@ public final class ShuffleMachine {
         phase = ShufflePhase.VerificationAndSubmission;
 
             List<Coin.Address> inputs = new LinkedList<>();
-            for(VerificationKey key : players) {
-                inputs.add(key.address());
+            for(int i = 1; i < N; i++) {
+                inputs.add(players.get(i).address());
             }
             Coin.Transaction t = coin.shuffleTransaction(amount, inputs, newAddresses, change);
             network.broadcast(messages.make().attach(sk.makeSignature(t)), phase, vk);
@@ -263,7 +265,7 @@ public final class ShuffleMachine {
 
     // The function for public consumption which runs the protocol.
     // TODO Coming soon!! handle all these error states more delicately.
-    public ReturnState run(long amount, SigningKey sk, Coin.Address change, VerificationKey players[]) throws InvalidImplementationError, InterruptedException {
+    public ReturnState run(long amount, SigningKey sk, Coin.Address change, SortedSet<VerificationKey> players) throws InvalidImplementationError, InterruptedException {
 
         // Don't let the protocol be run more than once at a time.
         if (phase != ShufflePhase.Uninitiated) {
@@ -274,12 +276,20 @@ public final class ShuffleMachine {
             return new ReturnState(false, null, currentPhase(), new NullPointerException(), null);
         }
 
+        // Get the initial ordering of the players.
+        int i = 1;
+        Map<Integer, VerificationKey> numberedPlayers = new TreeMap<>();
+        for (VerificationKey player : players) {
+            numberedPlayers.put(i, player);
+            i ++;
+        }
+
         // Set up interactions with the shuffle network.
-        network = new NetworkOperations(τ, sk, players, connection);
+        network = new NetworkOperations(τ, sk, numberedPlayers, connection);
 
         // Here we handle a bunch of lower level errors.
         try {
-            BlameMatrix blame = protocolDefinition(amount, sk, change, players);
+            BlameMatrix blame = protocolDefinition(amount, sk, change, numberedPlayers);
 
             ShufflePhase endPhase = currentPhase();
             if (endPhase == ShufflePhase.Blame) {
@@ -404,11 +414,11 @@ public final class ShuffleMachine {
     }
 
     // Check for players with insufficient funds. This happens in phase 1 and phase 5.
-    private BlameMatrix blameInsufficientFunds(VerificationKey[] players, long amount, VerificationKey vk) throws InterruptedException, FormatException, ValueException {
+    private BlameMatrix blameInsufficientFunds(Map<Integer, VerificationKey> players, long amount, VerificationKey vk) throws InterruptedException, FormatException, ValueException {
         List<VerificationKey> offenders = new LinkedList<>();
 
         // Check that each participant has the required amounts.
-        for(VerificationKey player : players) {
+        for(VerificationKey player : players.values()) {
             if (coin.valueHeld(player.address()) < amount) {
                 // Enter the blame phase.
                 offenders.add(player);

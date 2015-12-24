@@ -19,17 +19,17 @@ class NetworkOperations {
     Network network; // The connection to the shuffle network.
     SigningKey sk;
     int N; // the number of players.
-    VerificationKey players[]; // The current players.
+    Map<Integer, VerificationKey> players; // The current players.
 
     Queue<Packet> delivered = new LinkedList<>(); // A queue of messages that has been delivered that we aren't ready to look at yet.
     Queue<Packet> seen = new LinkedList<>(); // A queue of messages that have been seen, in the order looked at.
 
-    NetworkOperations(SessionIdentifier τ, SigningKey sk, VerificationKey players[], Network network) {
+    NetworkOperations(SessionIdentifier τ, SigningKey sk, Map<Integer, VerificationKey> players, Network network) {
         this.τ = τ;
         this.network = network;
         this.sk = sk;
         this.players = players;
-        this.N = players.length;
+        this.N = players.size();
     }
 
     // Get the set of players other than myself from i to N.
@@ -43,8 +43,9 @@ class NetworkOperations {
                 return set;
             }
 
-            if (!sk.VerificationKey().equals(players[j - 1])) {
-                set.add(players[j - 1]);
+            VerificationKey player = players.get(j);
+            if (!sk.VerificationKey().equals(player)) {
+                set.add(player);
             }
         }
 

@@ -6,6 +6,9 @@ import org.junit.Test;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 /**
  * Tests for the functions in NetworkOperations
@@ -73,9 +76,9 @@ public class TestNetworkOperations  {
 
         for(opponentSetTestCase test : tests) {
             // make the set of players.
-            VerificationKey players[] = new VerificationKey[test.N];
-            for (int i = 0; i < test.N; i ++) {
-                players[i] = new MockVerificationKey(i + 1);
+            TreeMap<Integer, VerificationKey> players = new TreeMap<Integer, VerificationKey>();
+            for (int i = 1; i <= test.N; i ++) {
+                players.put(i, new MockVerificationKey(i));
             }
 
             // Set up the network operations object.
@@ -127,11 +130,10 @@ public class TestNetworkOperations  {
             MockNetwork network = new MockNetwork();
 
             // make the set of players.
-            VerificationKey players[] = new VerificationKey[test.recipients];
-            for (int i = 0; i < test.recipients; i ++) {
-                players[i] = new MockVerificationKey(i);
+            TreeMap<Integer, VerificationKey> players = new TreeMap<Integer, VerificationKey>();
+            for (int i = 1; i <= test.recipients; i ++) {
+                players.put(i, new MockVerificationKey(i));
             }
-
 
             MockMessageFactory messages = new MockMessageFactory();
             SessionIdentifier τ = new MockSessionIdentifier();
@@ -190,9 +192,9 @@ public class TestNetworkOperations  {
                 MockNetwork network = new MockNetwork();
 
                 // make the set of players.
-                VerificationKey players[] = new VerificationKey[test.players];
-                for (int i = 0; i < test.players; i++) {
-                    players[i] = new MockVerificationKey(i);
+                TreeMap<Integer, VerificationKey> players = new TreeMap<Integer, VerificationKey>();
+                for (int i = 1; i <= test.players; i ++) {
+                    players.put(i, new MockVerificationKey(i));
                 }
 
                 // Set up the shuffle machine (only used to query for the current phase).
@@ -262,9 +264,9 @@ public class TestNetworkOperations  {
                 MockNetwork network = new MockNetwork();
 
                 // make the set of players.
-                VerificationKey players[] = new VerificationKey[test.players.length];
-                for (int i = 0; i < test.players.length; i++) {
-                    players[i] = new MockVerificationKey(test.players[i]);
+                TreeMap<Integer, VerificationKey> players = new TreeMap<Integer, VerificationKey>();
+                for (int i = 1; i <= test.players.length; i ++) {
+                    players.put(i, new MockVerificationKey(test.players[i - 1]));
                 }
 
                 // Set up the shuffle machine (only used to query for the current phase).
@@ -304,9 +306,9 @@ public class TestNetworkOperations  {
             MockNetwork network = new MockNetwork();
 
             // make the set of players.
-            VerificationKey players[] = new VerificationKey[test.players.length];
-            for (int i = 0; i < test.players.length; i++) {
-                players[i] = new MockVerificationKey(test.players[i]);
+            TreeMap<Integer, VerificationKey> players = new TreeMap<Integer, VerificationKey>();
+            for (int i = 1; i <= test.players.length; i ++) {
+                players.put(i, new MockVerificationKey(test.players[i]));
             }
 
             // Set up the shuffle machine (only used to query for the current phase).

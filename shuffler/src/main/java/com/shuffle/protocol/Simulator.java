@@ -5,6 +5,8 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -21,7 +23,7 @@ import java.util.concurrent.TimeUnit;
  */
 public final class Simulator {
     ConcurrentMap<VerificationKey, BlackBox> machines;
-    VerificationKey players[];
+    SortedSet<VerificationKey> players;
     SessionIdentifier τ;
     long amount;
     MessageFactory messages;
@@ -92,10 +94,10 @@ public final class Simulator {
         SessionIdentifier τ;
         long amount;
         SigningKey sk;
-        VerificationKey[] players;
+        SortedSet<VerificationKey> players;
 
         HonestAdversary(SessionIdentifier τ, long amount, SigningKey sk,
-                        VerificationKey[] players) {
+                        SortedSet<VerificationKey> players) {
             this.τ = τ;
             this.amount = amount;
             this.sk = sk;
@@ -251,7 +253,7 @@ public final class Simulator {
         if (τ == null || init == null) throw new NullPointerException();
         this.τ = τ;
         this.amount = amount;
-        this.players = new VerificationKey[init.size()];
+        this.players = new TreeSet<>();
         this.messages = messages;
         this.crypto = crypto;
         this.coin = coin;
@@ -261,7 +263,7 @@ public final class Simulator {
         int i = 0;
         try {
             for (InitialState in : init) {
-                players[i] = in.key.VerificationKey();
+                players.add(in.key.VerificationKey());
                 machines.put(in.key.VerificationKey(),
                         new BlackBox(new HonestAdversary(τ, amount, in.key, players)));
                 i++;
