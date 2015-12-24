@@ -1,33 +1,0 @@
-4running test case 0: successful run with 2 players.
-4running test case 1: successful run with 3 players.
-4running test case 2: successful run with 4 players.
-4running test case 3: successful run with 5 players.
-4running test case 4: successful run with 6 players.
-4running test case 5: successful run with 7 players.
-4running test case 6: successful run with 8 players.
-4running test case 7: successful run with 9 players.
-5running test case 8: successful run with 10 players.
-5running test case 9: successful run with 11 players.
-6running test case 10: successful run with 12 players.
-
-got []; expected []
-
-got [ad[1]]; expected [ad[1]]
-
-,got [ad[2], ad[1]]; expected [ad[2], ad[1]]
-
-,got [ad[1], ad[2]]; expected [ad[1], ad[2]]
-
-:got [ad[3], ad[1], ad[2]]; expected [ad[3], ad[1], ad[2]]
-
-:got [ad[3], ad[2], ad[1]]; expected [ad[3], ad[2], ad[1]]
-
-:got [ad[2], ad[1], ad[3]]; expected [ad[2], ad[1], ad[3]]
-
-:got [ad[1], ad[3], ad[2]]; expected [ad[1], ad[3], ad[2]]
-
-Hgot [ad[2], ad[3], ad[1], ad[4]]; expected [ad[2], ad[3], ad[1], ad[4]]
-
-Vgot [ad[3], ad[2], ad[5], ad[1], ad[4]]; expected [ad[3], ad[2], ad[5], ad[1], ad[4]]
-
-dgot [ad[4], ad[1], ad[2], ad[3], ad[6], ad[5]]; expected [ad[4], ad[1], ad[2], ad[3], ad[6], ad[5]]
