@@ -64,7 +64,7 @@ public final class ShuffleMachine {
     }
 
     BlameMatrix protocolDefinition(
-            Coin.Amount ν, // The amount to be shuffled.
+            long amount, // The amount to be shuffled.
             SigningKey sk, // My signing key.
             Coin.Address myChange, // My change address. (may be null).
             VerificationKey players[] // The keys representing all the players, in order.
@@ -106,7 +106,7 @@ public final class ShuffleMachine {
             // Check for sufficient funds.
             // There was a problem with the wording of the original paper which would have meant
             // that player 1's funds never would have been checked, but we have to do that.
-            BlameMatrix matrix = blameInsufficientFunds(players, ν, vk);
+            BlameMatrix matrix = blameInsufficientFunds(players, amount, vk);
             if (matrix != null) {
                 return matrix;
             }
@@ -217,7 +217,7 @@ public final class ShuffleMachine {
             for(VerificationKey key : players) {
                 inputs.add(key.address());
             }
-            Coin.Transaction t = coin.shuffleTransaction(ν, inputs, newAddresses, change);
+            Coin.Transaction t = coin.shuffleTransaction(amount, inputs, newAddresses, change);
             network.broadcast(messages.make().attach(sk.makeSignature(t)), phase, vk);
 
             Map<VerificationKey, Message> σ5 = network.receiveFromMultiple(network.opponentSet(1, N), phase);
@@ -230,7 +230,7 @@ public final class ShuffleMachine {
             }
 
             // Check that the transaction is still valid.
-            matrix = blameInsufficientFunds(players, ν, vk);
+            matrix = blameInsufficientFunds(players, amount, vk);
             if (matrix != null) {
                 return matrix;
             }
@@ -263,14 +263,14 @@ public final class ShuffleMachine {
 
     // The function for public consumption which runs the protocol.
     // TODO Coming soon!! handle all these error states more delicately.
-    public ReturnState run(Coin.Amount ν, SigningKey sk, Coin.Address change, VerificationKey players[]) throws InvalidImplementationError, InterruptedException {
+    public ReturnState run(long amount, SigningKey sk, Coin.Address change, VerificationKey players[]) throws InvalidImplementationError, InterruptedException {
 
         // Don't let the protocol be run more than once at a time.
         if (phase != ShufflePhase.Uninitiated) {
             return new ReturnState(false, this.τ, currentPhase(), new ProtocolStartedException(), null);
         }
 
-        if (τ == null || ν == null || sk == null || players == null) {
+        if (τ == null || sk == null || players == null) {
             return new ReturnState(false, null, currentPhase(), new NullPointerException(), null);
         }
 
@@ -279,7 +279,7 @@ public final class ShuffleMachine {
 
         // Here we handle a bunch of lower level errors.
         try {
-            BlameMatrix blame = protocolDefinition(ν, sk, change, players);
+            BlameMatrix blame = protocolDefinition(amount, sk, change, players);
 
             ShufflePhase endPhase = currentPhase();
             if (endPhase == ShufflePhase.Blame) {
@@ -404,12 +404,12 @@ public final class ShuffleMachine {
     }
 
     // Check for players with insufficient funds. This happens in phase 1 and phase 5.
-    private BlameMatrix blameInsufficientFunds(VerificationKey[] players, Coin.Amount ν, VerificationKey vk) throws InterruptedException, FormatException, ValueException {
+    private BlameMatrix blameInsufficientFunds(VerificationKey[] players, long amount, VerificationKey vk) throws InterruptedException, FormatException, ValueException {
         List<VerificationKey> offenders = new LinkedList<>();
 
         // Check that each participant has the required amounts.
         for(VerificationKey player : players) {
-            if (!coin.valueHeld(player.address()).greater(ν)) {
+            if (coin.valueHeld(player.address()) < amount) {
                 // Enter the blame phase.
                 offenders.add(player);
             }
@@ -425,7 +425,7 @@ public final class ShuffleMachine {
         BlameMatrix matrix = new BlameMatrix();
         Message blameMessage = messages.make();
         for(VerificationKey offender : offenders) {
-            Coin.Transaction t = coin.getOffendingTransaction(offender.address(), ν);
+            Coin.Transaction t = coin.getOffendingTransaction(offender.address(), amount);
 
             if (t == null) {
                 blameMessage.attach(new BlameMatrix.Blame(offender));

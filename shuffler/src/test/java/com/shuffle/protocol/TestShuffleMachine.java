@@ -27,20 +27,20 @@ public class TestShuffleMachine {
     public class testCase {
         String description = null;
         SessionIdentifier τ;
-        Coin.Amount ν;
+        long amount;
         Coin coin;
         Map<SigningKey, Expected> machines = new HashMap<>();
 
-        testCase(SessionIdentifier τ, Coin.Amount ν, Coin coin, String desc) {
+        testCase(SessionIdentifier τ, long amount, Coin coin, String desc) {
             this.τ = τ;
             this.description = desc;
-            this.ν = ν;
+            this.amount = amount;
             this.coin = coin;
         }
 
-        testCase(SessionIdentifier τ, Coin.Amount ν, Coin coin) {
+        testCase(SessionIdentifier τ, long amount, Coin coin) {
             this.τ = τ;
-            this.ν = ν;
+            this.amount = amount;
             this.coin = coin;
         }
 
@@ -61,11 +61,11 @@ public class TestShuffleMachine {
 
                 SessionIdentifier τ = new MockSessionIdentifier();
                 MockCoin coin = new MockCoin();
-                testCase test = new testCase(τ, new MockAmount(17), coin, "successful run with " + players + " players.");
+                testCase test = new testCase(τ, 17, coin, "successful run with " + players + " players.");
 
                 for (int i = 1; i <= players; i++) {
                     MockSigningKey key = new MockSigningKey(i);
-                    coin.put(key.VerificationKey().address(), new MockCoin.Output(new MockAmount(20), false));
+                    coin.put(key.VerificationKey().address(), new MockCoin.Output(20, false));
                     test.put(new MockSigningKey(i),
                             new Expected(
                                     new Simulator.InitialState(key),
@@ -102,7 +102,7 @@ public class TestShuffleMachine {
             }
             MockCrypto crypto = new MockCrypto(2222).setSigningKeyCounter(test.getValue().machines.size() + 1);
 
-            Simulator sim = new Simulator(test.getValue().τ, test.getValue().ν, init, new MockMessageFactory(), crypto, test.getValue().coin);
+            Simulator sim = new Simulator(test.getValue().τ, test.getValue().amount, init, new MockMessageFactory(), crypto, test.getValue().coin);
 
             Map<SigningKey, ReturnState> errors = sim.runSimulation();
 

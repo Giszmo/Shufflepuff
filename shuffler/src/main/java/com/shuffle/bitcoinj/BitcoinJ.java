@@ -20,7 +20,7 @@ public class BitcoinJ implements Coin {
     BlockChain blockchain;
 
     @Override
-    public Transaction shuffleTransaction(Amount ν, List<Address> inputs, Queue<Address> shuffledOutputs, Map<VerificationKey, Address> changeOutputs) {
+    public Transaction shuffleTransaction(long amount, List<Address> inputs, Queue<Address> shuffledOutputs, Map<VerificationKey, Address> changeOutputs) {
         return null;
     }
 
@@ -30,12 +30,12 @@ public class BitcoinJ implements Coin {
     }
 
     @Override
-    public Amount valueHeld(Address addr) throws BlockchainError, MempoolError {
-        return null;
+    public long valueHeld(Address addr) throws BlockchainError, MempoolError {
+        return 0;
     }
 
     @Override
-    public Transaction getOffendingTransaction(Address addr, Amount ν) {
+    public Transaction getOffendingTransaction(Address addr, long amount) {
         return null;
     }
 }

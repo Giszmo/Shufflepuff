@@ -23,7 +23,7 @@ public final class Simulator {
     ConcurrentMap<VerificationKey, BlackBox> machines;
     VerificationKey players[];
     SessionIdentifier τ;
-    Coin.Amount ν;
+    long amount;
     MessageFactory messages;
     Crypto crypto;
     Coin coin;
@@ -90,14 +90,14 @@ public final class Simulator {
         Network network;
 
         SessionIdentifier τ;
-        Coin.Amount ν;
+        long amount;
         SigningKey sk;
         VerificationKey[] players;
 
-        HonestAdversary(SessionIdentifier τ, Coin.Amount ν, SigningKey sk,
+        HonestAdversary(SessionIdentifier τ, long amount, SigningKey sk,
                         VerificationKey[] players) {
             this.τ = τ;
-            this.ν = ν;
+            this.amount = amount;
             this.sk = sk;
             this.players = players;
             this.network = new Network();
@@ -107,7 +107,7 @@ public final class Simulator {
         @Override
         public ReturnState turnOn() throws InvalidImplementationError {
             try {
-                return machine.run(ν, sk, null, players);
+                return machine.run(amount, sk, null, players);
             } catch (InterruptedException e) {
                 return new ReturnState(false, τ, machine.currentPhase(), e, null);
             }
@@ -247,10 +247,10 @@ public final class Simulator {
         }
     }
 
-    public Simulator(SessionIdentifier τ, Coin.Amount ν, List<InitialState> init, MessageFactory messages, Crypto crypto, Coin coin)  {
-        if (τ == null || ν == null || init == null) throw new NullPointerException();
+    public Simulator(SessionIdentifier τ, long amount, List<InitialState> init, MessageFactory messages, Crypto crypto, Coin coin)  {
+        if (τ == null || init == null) throw new NullPointerException();
         this.τ = τ;
-        this.ν = ν;
+        this.amount = amount;
         this.players = new VerificationKey[init.size()];
         this.messages = messages;
         this.crypto = crypto;
@@ -263,7 +263,7 @@ public final class Simulator {
             for (InitialState in : init) {
                 players[i] = in.key.VerificationKey();
                 machines.put(in.key.VerificationKey(),
-                        new BlackBox(new HonestAdversary(τ, ν, in.key, players)));
+                        new BlackBox(new HonestAdversary(τ, amount, in.key, players)));
                 i++;
             }
         } catch (CryptographyError e) {

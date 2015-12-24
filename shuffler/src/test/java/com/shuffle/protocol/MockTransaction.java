@@ -11,9 +11,9 @@ import java.util.Queue;
  */
 public class MockTransaction implements Coin.Transaction {
     List<Coin.Address> inputs;
-    LinkedHashMap<Coin.Address, Coin.Amount> outputs;
+    LinkedHashMap<Coin.Address, Long> outputs;
 
-    public MockTransaction(List<Coin.Address> inputs, LinkedHashMap<Coin.Address, Coin.Amount> outputs) {
+    public MockTransaction(List<Coin.Address> inputs, LinkedHashMap<Coin.Address, Long> outputs) {
         this.inputs = inputs;
         this.outputs = outputs;
     }
@@ -50,7 +50,7 @@ public class MockTransaction implements Coin.Transaction {
             }
         }
 
-        for (Map.Entry<Coin.Address, Coin.Amount> output : outputs.entrySet()) {
+        for (Map.Entry<Coin.Address, Long> output : outputs.entrySet()) {
             if (!output.getValue().equals(mock.outputs.get(output.getKey()))) {
                 return false;
             }

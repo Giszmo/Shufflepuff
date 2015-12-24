@@ -15,22 +15,15 @@ import java.util.Queue;
  *
  */
 public interface Coin {
-    Transaction shuffleTransaction(Amount ν, List<Address> inputs, Queue<Address> shuffledOutputs, Map<VerificationKey, Address> changeOutputs);
+    Transaction shuffleTransaction(long ν, List<Address> inputs, Queue<Address> shuffledOutputs, Map<VerificationKey, Address> changeOutputs);
     void send(Transaction t) throws CoinNetworkError;
 
-    Amount valueHeld(Address addr) throws BlockchainError, MempoolError;
+    long valueHeld(Address addr) throws BlockchainError, MempoolError;
 
     // Returns either a transaction that sent from the given address that caused it to have .
     // insufficient funds or a transaction that sent to a given address that caused it to have
     // insufficient funds.
-    Transaction getOffendingTransaction(Address addr, Amount ν);
-
-    // Returns the transaction that sent to a given address.
-
-    // Represents an amount of Bitcoin or other cryptocurrency.
-    interface Amount {
-        boolean greater(Amount ν) throws InvalidImplementationError;
-    }
+    Transaction getOffendingTransaction(Address addr, long ν);
 
     interface Address {}
 
