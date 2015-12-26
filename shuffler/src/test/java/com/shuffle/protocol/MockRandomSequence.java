@@ -1,5 +1,7 @@
 package com.shuffle.protocol;
 
+import com.shuffle.cryptocoin.CryptographyError;
+
 /**
  * Created by Daniel Krawisz on 12/6/15.
  */

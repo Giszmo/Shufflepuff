@@ -1,13 +1,16 @@
 package com.shuffle.protocol;
 
+import com.shuffle.cryptocoin.Address;
+import com.shuffle.cryptocoin.EncryptionKey;
+
 /**
  * Created by Daniel Krawisz on 12/19/15.
  */
-public class MockEncryptedAddress implements Coin.Address {
-    public Coin.Address encrypted;
+public class MockEncryptedAddress implements Address {
+    public Address encrypted;
     public EncryptionKey key;
 
-    public MockEncryptedAddress(Coin.Address encrypted, EncryptionKey key) {
+    public MockEncryptedAddress(Address encrypted, EncryptionKey key) {
         this.encrypted = encrypted;
         this.key = key;
     }

@@ -1,5 +1,9 @@
 package com.shuffle.protocol;
 
+import com.shuffle.cryptocoin.Coin;
+import com.shuffle.cryptocoin.CryptographyError;
+import com.shuffle.cryptocoin.SigningKey;
+
 import org.junit.Assert;
 import org.junit.Test;
 

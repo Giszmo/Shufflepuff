@@ -1,14 +1,15 @@
 package com.shuffle.protocol;
 
+import com.shuffle.cryptocoin.CryptographyError;
+import com.shuffle.cryptocoin.VerificationKey;
+
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
-import java.util.SortedSet;
 import java.util.TreeMap;
-import java.util.TreeSet;
 
 /**
  * Tests for the functions in NetworkOperations

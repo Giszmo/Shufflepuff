@@ -1,5 +1,7 @@
 package com.shuffle.protocol;
 
+import com.shuffle.cryptocoin.VerificationKey;
+
 /**
  * Represents a coin shuffle message with context information attached that is necessary to
  * detect low-level errors. The main protocol does not need to worry about that stuff, so

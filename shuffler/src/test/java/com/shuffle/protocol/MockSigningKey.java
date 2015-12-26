@@ -1,5 +1,11 @@
 package com.shuffle.protocol;
 
+import com.shuffle.cryptocoin.CryptographyError;
+import com.shuffle.cryptocoin.Signature;
+import com.shuffle.cryptocoin.SigningKey;
+import com.shuffle.cryptocoin.Transaction;
+import com.shuffle.cryptocoin.VerificationKey;
+
 /**
  * Created by Daniel Krawisz on 12/9/15.
  */
@@ -16,7 +22,7 @@ public class MockSigningKey implements SigningKey {
     }
 
     @Override
-    public Coin.Signature makeSignature(Coin.Transaction t) throws CryptographyError {
+    public Signature makeSignature(Transaction t) throws CryptographyError {
         return new MockSignature(t, new MockVerificationKey(index));
     }
 

@@ -1,5 +1,18 @@
 package com.shuffle.protocol;
 
+import com.shuffle.cryptocoin.Address;
+import com.shuffle.cryptocoin.BlockchainError;
+import com.shuffle.cryptocoin.Coin;
+import com.shuffle.cryptocoin.CoinNetworkError;
+import com.shuffle.cryptocoin.Crypto;
+import com.shuffle.cryptocoin.CryptographyError;
+import com.shuffle.cryptocoin.DecryptionKey;
+import com.shuffle.cryptocoin.EncryptionKey;
+import com.shuffle.cryptocoin.MempoolError;
+import com.shuffle.cryptocoin.SigningKey;
+import com.shuffle.cryptocoin.Transaction;
+import com.shuffle.cryptocoin.VerificationKey;
+
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -69,7 +82,7 @@ public final class ShuffleMachine {
     BlameMatrix protocolDefinition(
             long amount, // The amount to be shuffled.
             SigningKey sk, // My signing key.
-            Coin.Address myChange, // My change address. (may be null).
+            Address myChange, // My change address. (may be null).
             Map<Integer, VerificationKey> players // The keys representing all the players, in order.
     ) throws
             TimeoutError,
@@ -118,7 +131,7 @@ public final class ShuffleMachine {
             Map<VerificationKey, EncryptionKey> encryptonKeys = new HashMap<>();
 
             // This will contain the change addresses.
-            Map<VerificationKey, Coin.Address> change = new HashMap<>();
+            Map<VerificationKey, Address> change = new HashMap<>();
 
             // Everyone except player 1 creates a new keypair and sends it around to everyone else.
             DecryptionKey dk = null;
@@ -146,7 +159,7 @@ public final class ShuffleMachine {
 
             // Each participant chooses a new bitcoin address which will be their new outputs.
             SigningKey sk_new = crypto.SigningKey();
-            Coin.Address addr_new = sk_new.VerificationKey().address();
+            Address addr_new = sk_new.VerificationKey().address();
 
             // Player one begins the cycle and encrypts its new address with everyone's key, in order.
             // Each subsequent player reorders the cycle and removes one layer of encryption.
@@ -157,7 +170,7 @@ public final class ShuffleMachine {
 
             // Add our own address to the mix. Note that if me == N, ie, the last player, then no
             // encryption is done. That is because we have reached the last layer of encryption.
-            Coin.Address encrypted = addr_new;
+            Address encrypted = addr_new;
             for (int i = N; i > me; i--) {
                 // Successively encrypt with the keys of the players who haven't had their turn yet.
                 encrypted = encryptonKeys.get(players.get(i)).encrypt(encrypted);
@@ -175,7 +188,7 @@ public final class ShuffleMachine {
         // In this phase, the last player just broadcasts the transaction to everyone else.
         phase = ShufflePhase.BroadcastOutput;
 
-            Queue<Coin.Address> newAddresses;
+            Queue<Address> newAddresses;
             if (me == N) {
                 // The last player adds his own new address in without encrypting anything and shuffles the result.
                 newAddresses = readNewAddresses(σ2);
@@ -215,11 +228,11 @@ public final class ShuffleMachine {
         // If all signatures check out, then the transaction is sent into the network.
         phase = ShufflePhase.VerificationAndSubmission;
 
-            List<Coin.Address> inputs = new LinkedList<>();
+            List<Address> inputs = new LinkedList<>();
             for(int i = 1; i < N; i++) {
                 inputs.add(players.get(i).address());
             }
-            Coin.Transaction t = coin.shuffleTransaction(amount, inputs, newAddresses, change);
+            Transaction t = coin.shuffleTransaction(amount, inputs, newAddresses, change);
             network.broadcast(messages.make().attach(sk.makeSignature(t)), phase, vk);
 
             Map<VerificationKey, Message> σ5 = network.receiveFromMultiple(network.opponentSet(1, N), phase);
@@ -265,7 +278,7 @@ public final class ShuffleMachine {
 
     // The function for public consumption which runs the protocol.
     // TODO Coming soon!! handle all these error states more delicately.
-    public ReturnState run(long amount, SigningKey sk, Coin.Address change, SortedSet<VerificationKey> players) throws InvalidImplementationError, InterruptedException {
+    public ReturnState run(long amount, SigningKey sk, Address change, SortedSet<VerificationKey> players) throws InvalidImplementationError, InterruptedException {
 
         // Don't let the protocol be run more than once at a time.
         if (phase != ShufflePhase.Uninitiated) {
@@ -313,7 +326,7 @@ public final class ShuffleMachine {
 
     void readAnouncements(Map<VerificationKey, Message> messages,
                           Map<VerificationKey, EncryptionKey> keys,
-                          Map<VerificationKey, Coin.Address> change) throws FormatException {
+                          Map<VerificationKey, Address> change) throws FormatException {
         for (Map.Entry<VerificationKey, Message> entry : messages.entrySet()) {
             VerificationKey key = entry.getKey();
             Message message = entry.getValue();
@@ -326,8 +339,8 @@ public final class ShuffleMachine {
         }
     }
 
-    Queue<Coin.Address> readNewAddresses(Message message) throws FormatException, InvalidImplementationError {
-        Queue<Coin.Address> queue = new LinkedList<>();
+    Queue<Address> readNewAddresses(Message message) throws FormatException, InvalidImplementationError {
+        Queue<Address> queue = new LinkedList<>();
 
         Message copy = messages.copy(message);
         while(!copy.isEmpty()) {
@@ -341,11 +354,11 @@ public final class ShuffleMachine {
         Message decrypted = messages.make();
 
         int count = 1;
-        Set<Coin.Address> addrs = new HashSet<>(); // Used to check that all addresses are different.
+        Set<Address> addrs = new HashSet<>(); // Used to check that all addresses are different.
 
         Message copy = messages.copy(message);
         while(!copy.isEmpty()) {
-            Coin.Address address = copy.readAddress();
+            Address address = copy.readAddress();
             addrs.add(address);
             count ++;
             try {
@@ -368,7 +381,7 @@ public final class ShuffleMachine {
         Message shuffled = messages.make();
 
         // Read all elements of the packet and insert them in a Queue.
-        Queue<Coin.Address> old = new LinkedList<>();
+        Queue<Address> old = new LinkedList<>();
         int N = 0;
         while(!copy.isEmpty()) {
             old.add(copy.readAddress());
@@ -449,7 +462,7 @@ public final class ShuffleMachine {
         BlameMatrix matrix = new BlameMatrix();
         Message blameMessage = messages.make();
         for(VerificationKey offender : offenders) {
-            Coin.Transaction t = coin.getOffendingTransaction(offender.address(), amount);
+            Transaction t = coin.getOffendingTransaction(offender.address(), amount);
 
             if (t == null) {
                 blameMessage.attach(new BlameMatrix.Blame(offender));

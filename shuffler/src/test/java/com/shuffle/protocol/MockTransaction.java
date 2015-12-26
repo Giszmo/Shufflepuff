@@ -1,19 +1,21 @@
 package com.shuffle.protocol;
 
+import com.shuffle.cryptocoin.Address;
+import com.shuffle.cryptocoin.Transaction;
+
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 
 /**
  * Created by Daniel Krawisz on 12/8/15.
  */
-public class MockTransaction implements Coin.Transaction {
-    List<Coin.Address> inputs;
-    LinkedHashMap<Coin.Address, Long> outputs;
+public class MockTransaction implements Transaction {
+    List<Address> inputs;
+    LinkedHashMap<Address, Long> outputs;
 
-    public MockTransaction(List<Coin.Address> inputs, LinkedHashMap<Coin.Address, Long> outputs) {
+    public MockTransaction(List<Address> inputs, LinkedHashMap<Address, Long> outputs) {
         this.inputs = inputs;
         this.outputs = outputs;
     }
@@ -38,19 +40,19 @@ public class MockTransaction implements Coin.Transaction {
             return true;
         }
 
-        Iterator<Coin.Address> i1 = inputs.iterator();
-        Iterator<Coin.Address> i2 = mock.inputs.iterator();
+        Iterator<Address> i1 = inputs.iterator();
+        Iterator<Address> i2 = mock.inputs.iterator();
 
         while(i1.hasNext()) {
-            Coin.Address c1 = i1.next();
-            Coin.Address c2 = i2.next();
+            Address c1 = i1.next();
+            Address c2 = i2.next();
 
             if (!c1.equals(c2)) {
                 return false;
             }
         }
 
-        for (Map.Entry<Coin.Address, Long> output : outputs.entrySet()) {
+        for (Map.Entry<Address, Long> output : outputs.entrySet()) {
             if (!output.getValue().equals(mock.outputs.get(output.getKey()))) {
                 return false;
             }

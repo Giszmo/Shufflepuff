@@ -1,11 +1,10 @@
-package com.shuffle.protocol;
+package com.shuffle.cryptocoin;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 
 /**
- * TO BE IMPLEMENTED BY THE USER
  *
  * This interface provides service to the Bitcoin (or other) network. This includes queries to the block
  * chain as well as to the p2p network. If these services cannot be provided while the protocol
@@ -25,12 +24,4 @@ public interface Coin {
     // insufficient funds.
     Transaction getOffendingTransaction(Address addr, long ν);
 
-    interface Address {}
-
-    // A representation of a Bitcoin or other cryptocurrency transaction.
-    interface Transaction {}
-
-    // Representing a digital signature of a bitcoin transaction.
-    interface Signature {
-    }
 }

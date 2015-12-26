@@ -1,5 +1,10 @@
 package com.shuffle.protocol;
 
+import com.shuffle.cryptocoin.Address;
+import com.shuffle.cryptocoin.EncryptionKey;
+import com.shuffle.cryptocoin.Signature;
+import com.shuffle.cryptocoin.Transaction;
+
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Queue;
@@ -32,17 +37,17 @@ public class MockMessage implements Message {
     }
 
     public static class Atom {
-        public Coin.Address addr = null;
+        public Address addr = null;
         public EncryptionKey ek = null;
-        public Coin.Signature sig = null;
+        public Signature sig = null;
         public Hash hash = null;
         public BlameMatrix.Blame blame;
 
-        public Coin.Transaction t;
+        public Transaction t;
         // Sometimes, we have to send whole packets that we previously received.
         public Packet packet;
 
-        public Atom(Coin.Address addr) {
+        public Atom(Address addr) {
             this.addr = addr;
         }
 
@@ -50,7 +55,7 @@ public class MockMessage implements Message {
             this.ek = ek;
         }
 
-        public Atom(Coin.Signature sig) {
+        public Atom(Signature sig) {
             this.sig = sig;
         }
 
@@ -58,7 +63,7 @@ public class MockMessage implements Message {
             this.hash = hash;
         }
 
-        public Atom(Coin.Transaction t) {
+        public Atom(Transaction t) {
             this.t = t;
         }
 
@@ -173,8 +178,8 @@ public class MockMessage implements Message {
         return this;
     }
 
-    public Message attachAddrs(Queue<Coin.Address> addrs) {
-        for (Coin.Address addr : addrs) {
+    public Message attachAddrs(Queue<Address> addrs) {
+        for (Address addr : addrs) {
             attach(addr);
         }
 
@@ -193,7 +198,7 @@ public class MockMessage implements Message {
     }
 
     @Override
-    public Message attach(Coin.Address addr) {
+    public Message attach(Address addr) {
         if (addr != null) {
             atoms.add(new Atom(addr));
         }
@@ -201,7 +206,7 @@ public class MockMessage implements Message {
     }
 
     @Override
-    public Message attach(Coin.Signature sig) {
+    public Message attach(Signature sig) {
         atoms.add(new Atom(sig));
         return this;
     }
@@ -236,7 +241,7 @@ public class MockMessage implements Message {
     }
 
     @Override
-    public Coin.Address readAddress() throws FormatException {
+    public Address readAddress() throws FormatException {
         Atom atom = atoms.peek();
         if (atom == null || atom.addr == null) {
             throw new FormatException();
@@ -256,7 +261,7 @@ public class MockMessage implements Message {
     }
 
     @Override
-    public Coin.Signature readSignature() throws FormatException {
+    public Signature readSignature() throws FormatException {
         Atom atom = atoms.peek();
         if (atom == null || atom.sig == null) {
             throw new FormatException();

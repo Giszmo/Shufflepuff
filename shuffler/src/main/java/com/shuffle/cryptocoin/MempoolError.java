@@ -1,4 +1,4 @@
-package com.shuffle.protocol;
+package com.shuffle.cryptocoin;
 
 /**
  * To be thrown if there is a problem querying the memory pool.

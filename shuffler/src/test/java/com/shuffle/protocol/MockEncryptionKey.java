@@ -1,5 +1,9 @@
 package com.shuffle.protocol;
 
+import com.shuffle.cryptocoin.Address;
+import com.shuffle.cryptocoin.CryptographyError;
+import com.shuffle.cryptocoin.EncryptionKey;
+
 /**
  *
  * Created by Daniel Krawisz on 12/8/15.
@@ -12,7 +16,7 @@ public class MockEncryptionKey implements EncryptionKey {
     }
 
     @Override
-    public Coin.Address encrypt(Coin.Address m) throws CryptographyError {
+    public Address encrypt(Address m) throws CryptographyError {
         return new MockEncryptedAddress(m, this);
     }
 

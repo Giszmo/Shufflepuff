@@ -40,6 +40,11 @@ public class MockSessionIdentifier implements SessionIdentifier {
     }
 
     @Override
+    public String protocol() {
+        return "test protocol";
+    }
+
+    @Override
     public String version() {
         return version;
     }

@@ -1,6 +1,8 @@
 package com.shuffle.protocol;
 
 
+import com.shuffle.cryptocoin.VerificationKey;
+
 /**
  * To be thrown when a blame message is received from another party.
  *

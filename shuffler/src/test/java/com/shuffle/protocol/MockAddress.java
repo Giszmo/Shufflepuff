@@ -1,9 +1,11 @@
 package com.shuffle.protocol;
 
+import com.shuffle.cryptocoin.Address;
+
 /**
  * Created by Daniel Krawisz on 12/19/15.
  */
-public class MockAddress implements Coin.Address {
+public class MockAddress implements Address {
     int index;
 
     public MockAddress(int index) {

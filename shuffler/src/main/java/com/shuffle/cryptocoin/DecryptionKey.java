@@ -1,4 +1,6 @@
-package com.shuffle.protocol;
+package com.shuffle.cryptocoin;
+
+import com.shuffle.protocol.FormatException;
 
 /**
  * TO BE IMPLEMENTED BY THE USER
@@ -9,5 +11,5 @@ package com.shuffle.protocol;
  */
 public interface DecryptionKey {
     EncryptionKey EncryptionKey();
-    Coin.Address decrypt(Coin.Address m) throws FormatException, CryptographyError;
+    Address decrypt(Address m) throws FormatException, CryptographyError;
 }

@@ -1,5 +1,10 @@
-package com.shuffle.protocol;
+package com.shuffle.cryptocoin;
 
+
+import com.shuffle.cryptocoin.Address;
+import com.shuffle.cryptocoin.Signature;
+import com.shuffle.cryptocoin.Transaction;
+import com.shuffle.protocol.InvalidImplementationError;
 
 /**
  * TO BE IMPLEMENTED BY THE USER
@@ -9,9 +14,9 @@ package com.shuffle.protocol;
  * Created by Daniel Krawisz on 12/3/15.
  */
 public interface VerificationKey extends Comparable {
-    boolean verify(Coin.Transaction t, Coin.Signature sig) throws InvalidImplementationError;
+    boolean verify(Transaction t, Signature sig) throws InvalidImplementationError;
     boolean equals(Object vk);
 
     // Get the cryptocurrency address corresponding to this public key.
-    Coin.Address address();
+    Address address();
 }

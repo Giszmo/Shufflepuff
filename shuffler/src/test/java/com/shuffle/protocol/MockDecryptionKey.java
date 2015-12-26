@@ -1,5 +1,10 @@
 package com.shuffle.protocol;
 
+import com.shuffle.cryptocoin.Address;
+import com.shuffle.cryptocoin.CryptographyError;
+import com.shuffle.cryptocoin.DecryptionKey;
+import com.shuffle.cryptocoin.EncryptionKey;
+
 /**
  * TODO
  *
@@ -22,7 +27,7 @@ public class MockDecryptionKey implements DecryptionKey {
 
     @Override
     // Intended to decrypt a single element.
-    public Coin.Address decrypt(Coin.Address m) throws FormatException, CryptographyError {
+    public Address decrypt(Address m) throws FormatException, CryptographyError {
 
         if (!(m instanceof MockEncryptedAddress)) {
             throw new FormatException();

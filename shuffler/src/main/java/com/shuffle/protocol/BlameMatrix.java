@@ -1,5 +1,8 @@
 package com.shuffle.protocol;
 
+import com.shuffle.cryptocoin.Transaction;
+import com.shuffle.cryptocoin.VerificationKey;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,10 +20,10 @@ public class BlameMatrix {
     public static class Blame {
         VerificationKey accused = null; // Can be null if we don't know who to accuse yet.
         BlameReason reason;
-        Coin.Transaction t = null;
+        Transaction t = null;
         List<Packet> packets;
 
-        public Blame(VerificationKey accused, Coin.Transaction t) {
+        public Blame(VerificationKey accused, Transaction t) {
             this.accused = accused;
             this.t = t;
             reason = BlameReason.InsufficientFunds;
@@ -39,14 +42,14 @@ public class BlameMatrix {
     public static class BlameEvidence {
         BlameReason reason;
         boolean credible; // Do we believe this evidence?
-        Coin.Transaction t = null;
+        Transaction t = null;
 
         public BlameEvidence(BlameReason reason, boolean credible) {
             this.reason = reason;
             this.credible = true;
         }
 
-        public BlameEvidence(BlameReason reason, boolean credible, Coin.Transaction t) {
+        public BlameEvidence(BlameReason reason, boolean credible, Transaction t) {
             this.reason = reason;
             this.credible = true;
             this.t = t;

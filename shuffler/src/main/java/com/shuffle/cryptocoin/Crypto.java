@@ -1,7 +1,9 @@
-package com.shuffle.protocol;
+package com.shuffle.cryptocoin;
+
+import com.shuffle.protocol.InvalidImplementationError;
+import com.shuffle.protocol.Message;
 
 /**
- * TO BE IMPLEMENTED BY THE USER
  *
  * A set of cryptographic functions used in the protocol. According to the original paper,
  * these functions cannot just be anything. Specific functions are required. Refer to the

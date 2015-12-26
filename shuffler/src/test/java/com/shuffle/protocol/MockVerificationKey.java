@@ -1,5 +1,10 @@
 package com.shuffle.protocol;
 
+import com.shuffle.cryptocoin.Address;
+import com.shuffle.cryptocoin.Signature;
+import com.shuffle.cryptocoin.Transaction;
+import com.shuffle.cryptocoin.VerificationKey;
+
 /**
  * TODO
  *
@@ -14,7 +19,7 @@ public class MockVerificationKey implements VerificationKey {
 
     // These functions are not implemented yet.
     @Override
-    public boolean verify(Coin.Transaction t, Coin.Signature sig) throws InvalidImplementationError {
+    public boolean verify(Transaction t, Signature sig) throws InvalidImplementationError {
         if (!(sig instanceof MockSignature)) {
             throw new InvalidImplementationError();
         }
@@ -32,7 +37,7 @@ public class MockVerificationKey implements VerificationKey {
     }
 
     @Override
-    public Coin.Address address() {
+    public Address address() {
         return new MockAddress(index);
     }
 

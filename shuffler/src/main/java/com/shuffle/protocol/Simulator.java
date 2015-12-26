@@ -1,5 +1,11 @@
 package com.shuffle.protocol;
 
+import com.shuffle.cryptocoin.Coin;
+import com.shuffle.cryptocoin.Crypto;
+import com.shuffle.cryptocoin.CryptographyError;
+import com.shuffle.cryptocoin.SigningKey;
+import com.shuffle.cryptocoin.VerificationKey;
+
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;

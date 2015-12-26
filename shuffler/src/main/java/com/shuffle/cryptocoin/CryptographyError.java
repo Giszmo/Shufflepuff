@@ -1,4 +1,4 @@
-package com.shuffle.protocol;
+package com.shuffle.cryptocoin;
 
 /**
  * An exception to be thrown when the cryptography fails.

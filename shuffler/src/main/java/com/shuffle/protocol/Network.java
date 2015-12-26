@@ -1,5 +1,7 @@
 package com.shuffle.protocol;
 
+import com.shuffle.cryptocoin.VerificationKey;
+
 /**
  * A connection to the network of shuffle participants.
  *

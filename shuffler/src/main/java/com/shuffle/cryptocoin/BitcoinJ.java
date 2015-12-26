@@ -1,14 +1,10 @@
-package com.shuffle.bitcoinj;
+package com.shuffle.cryptocoin;
 
-import com.shuffle.protocol.BlockchainError;
-import com.shuffle.protocol.Coin;
-import com.shuffle.protocol.CoinNetworkError;
-import com.shuffle.protocol.MempoolError;
-import com.shuffle.protocol.VerificationKey;
+import com.shuffle.protocol.InvalidImplementationError;
+import com.shuffle.protocol.Message;
 
 import org.bitcoinj.core.BlockChain;
 
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
@@ -16,7 +12,7 @@ import java.util.Queue;
 /**
  * Created by Daniel Krawisz on 12/21/15.
  */
-public class BitcoinJ implements Coin {
+public class BitcoinJ implements Coin, Crypto {
     BlockChain blockchain;
 
     @Override
@@ -36,6 +32,26 @@ public class BitcoinJ implements Coin {
 
     @Override
     public Transaction getOffendingTransaction(Address addr, long amount) {
+        return null;
+    }
+
+    @Override
+    public DecryptionKey DecryptionKey() throws CryptographyError {
+        return null;
+    }
+
+    @Override
+    public SigningKey SigningKey() throws CryptographyError {
+        return null;
+    }
+
+    @Override
+    public int getRandom(int n) throws CryptographyError, InvalidImplementationError {
+        return 0;
+    }
+
+    @Override
+    public Message hash(Message m) throws CryptographyError, InvalidImplementationError {
         return null;
     }
 }
