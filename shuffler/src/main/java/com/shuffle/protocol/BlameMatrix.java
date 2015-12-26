@@ -1,6 +1,7 @@
 package com.shuffle.protocol;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -9,13 +10,15 @@ import java.util.Map;
 public class BlameMatrix {
     public enum BlameReason {
         InsufficientFunds,
-        NoFundsAtAll
+        NoFundsAtAll,
+        EquivocationFailure
     }
 
     public static class Blame {
         VerificationKey accused = null; // Can be null if we don't know who to accuse yet.
         BlameReason reason;
         Coin.Transaction t = null;
+        List<Packet> packets;
 
         public Blame(VerificationKey accused, Coin.Transaction t) {
             this.accused = accused;
@@ -26,6 +29,10 @@ public class BlameMatrix {
         public Blame(VerificationKey accused) {
             this.accused = accused;
             this.reason = BlameReason.NoFundsAtAll;
+        }
+
+        public Blame(List<Packet> packets) {
+            this.packets = packets;
         }
     }
 

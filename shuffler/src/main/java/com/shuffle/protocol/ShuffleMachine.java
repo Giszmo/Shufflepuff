@@ -1,11 +1,12 @@
 package com.shuffle.protocol;
 
 import java.util.HashMap;
-import java.util.LinkedHashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeMap;
 
@@ -151,8 +152,7 @@ public final class ShuffleMachine {
             // Each subsequent player reorders the cycle and removes one layer of encryption.
             Message σ2 = messages.make();
             if (me != 1) {
-                σ2.attach(network.receiveFrom(players.get(me - 1), phase));
-                σ2 = decryptAll(σ2, dk);
+                σ2 = decryptAll(σ2.attach(network.receiveFrom(players.get(me - 1), phase)), dk, me - 1);
             }
 
             // Add our own address to the mix. Note that if me == N, ie, the last player, then no
@@ -226,7 +226,7 @@ public final class ShuffleMachine {
 
             // Verify the signatures.
             for(Map.Entry<VerificationKey, Message> sig : σ5.entrySet()) {
-                if (!sig.getKey().verify(t, sig.getValue().readCoinSignature())) {
+                if (!sig.getKey().verify(t, sig.getValue().readSignature())) {
                     throw new BlameException(phase);
                 }
             }
@@ -321,7 +321,7 @@ public final class ShuffleMachine {
             keys.put(key, message.readEncryptionKey());
 
             if (!message.isEmpty()) {
-                change.put(key, message.readCoinAddress());
+                change.put(key, message.readAddress());
             }
         }
     }
@@ -331,18 +331,32 @@ public final class ShuffleMachine {
 
         Message copy = messages.copy(message);
         while(!copy.isEmpty()) {
-            queue.add(copy.readCoinAddress());
+            queue.add(copy.readAddress());
         }
 
         return queue;
     }
 
-    Message decryptAll(Message message, DecryptionKey key) throws InvalidImplementationError, CryptographyError, FormatException {
+    Message decryptAll(Message message, DecryptionKey key, int expected) throws InvalidImplementationError, FormatException {
         Message decrypted = messages.make();
+
+        int count = 1;
+        Set<Coin.Address> addrs = new HashSet<>(); // Used to check that all addresses are different.
 
         Message copy = messages.copy(message);
         while(!copy.isEmpty()) {
-            decrypted.attach(key.decrypt(copy.readCoinAddress()));
+            Coin.Address address = copy.readAddress();
+            addrs.add(address);
+            count ++;
+            try {
+                decrypted.attach(key.decrypt(address));
+            } catch (CryptographyError e) {
+                // Enter blame phase.
+            }
+        }
+
+        if (addrs.size() != count) {
+            // enter blame phase.
         }
 
         return decrypted;
@@ -357,7 +371,7 @@ public final class ShuffleMachine {
         Queue<Coin.Address> old = new LinkedList<>();
         int N = 0;
         while(!copy.isEmpty()) {
-            old.add(copy.readCoinAddress());
+            old.add(copy.readAddress());
             N++;
         }
 
@@ -456,7 +470,24 @@ public final class ShuffleMachine {
     }
 
     // The equivocation check fails and some player has equivocated.
-    private BlameMatrix blameEquivocation() {
+    private BlameMatrix blameEquivocation(VerificationKey vk) throws InterruptedException, FormatException, ValueException {
+        // TODO what if a player receives these messages without detecting anything wrong?
+        // Collect all packets from phase 1 and 3.
+        phase = ShufflePhase.Blame;
+        Message blameMessage = messages.make();
+        List<Packet> evidence = network.getPacketsByPhase(ShufflePhase.Announcement);
+        evidence.addAll(network.getPacketsByPhase(ShufflePhase.BroadcastOutput));
+        blameMessage.attach(new BlameMatrix.Blame(evidence));
+        network.broadcast(blameMessage, ShufflePhase.Blame, vk);
+
+        List<Packet> blame = network.receiveAllBlame();
+        // TODO figure out who to blame from this information.
+
+        // Separate the packets by player.
+
+        // Go through and figure out who cheated.
+
+
         return null;
     }
 

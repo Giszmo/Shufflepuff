@@ -236,7 +236,7 @@ public class MockMessage implements Message {
     }
 
     @Override
-    public Coin.Address readCoinAddress() throws FormatException {
+    public Coin.Address readAddress() throws FormatException {
         Atom atom = atoms.peek();
         if (atom == null || atom.addr == null) {
             throw new FormatException();
@@ -256,7 +256,7 @@ public class MockMessage implements Message {
     }
 
     @Override
-    public Coin.Signature readCoinSignature() throws FormatException {
+    public Coin.Signature readSignature() throws FormatException {
         Atom atom = atoms.peek();
         if (atom == null || atom.sig == null) {
             throw new FormatException();

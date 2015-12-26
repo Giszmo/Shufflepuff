@@ -23,6 +23,7 @@ class NetworkOperations {
 
     Queue<Packet> delivered = new LinkedList<>(); // A queue of messages that has been delivered that we aren't ready to look at yet.
     Queue<Packet> seen = new LinkedList<>(); // A queue of messages that have been seen, in the order looked at.
+    Queue<Packet> sent = new LinkedList<>(); // All messages that have been sent.
 
     NetworkOperations(SessionIdentifier τ, SigningKey sk, Map<Integer, VerificationKey> players, Network network) {
         this.τ = τ;
@@ -60,12 +61,13 @@ class NetworkOperations {
         Set<VerificationKey> keys = opponentSet();
 
         for (VerificationKey to : keys) {
-            network.sendTo(to, new Packet(message, τ, phase, from, to));
+            send(new Packet(message, τ, phase, from, to));
         }
     }
 
     public void send(Packet packet) throws TimeoutError, CryptographyError, InvalidImplementationError {
         network.sendTo(packet.recipient, packet);
+        sent.add(packet);
     }
 
     // This method should only be called by receiveNextPacket
@@ -123,10 +125,23 @@ class NetworkOperations {
         return packet;
     }
 
-    List<Packet> getPacketsByPhase(ShufflePhase phase) {
+    // Get all packets sent or received by phase. Used during blame phase.
+    public List<Packet> getPacketsByPhase(ShufflePhase phase) {
         List<Packet> selection = new LinkedList<>();
 
         for (Packet packet : seen) {
+            if (packet.phase == phase) {
+                selection.add(packet);
+            }
+        }
+
+        for (Packet packet : delivered) {
+            if (packet.phase == phase) {
+                selection.add(packet);
+            }
+        }
+
+        for (Packet packet : sent) {
             if (packet.phase == phase) {
                 selection.add(packet);
             }

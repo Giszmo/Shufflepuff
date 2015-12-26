@@ -14,7 +14,7 @@ public interface Message {
     Message attach(Message message) throws InvalidImplementationError;
 
     EncryptionKey readEncryptionKey() throws FormatException;
-    Coin.Signature readCoinSignature() throws FormatException;
-    Coin.Address readCoinAddress() throws FormatException;
+    Coin.Signature readSignature() throws FormatException;
+    Coin.Address readAddress() throws FormatException;
     BlameMatrix.Blame readBlame() throws FormatException;
 }
