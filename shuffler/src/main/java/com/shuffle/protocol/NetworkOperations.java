@@ -188,19 +188,32 @@ class NetworkOperations {
 
     // When the blame phase it reached, there may be a lot of blame going around. This function
     // waits to receive all blame messages until a timeout exception is caught, and then returns
-    // the list of blame messages.
-    public List<Packet> receiveAllBlame() throws InterruptedException, FormatException, ValueException {
-        List<Packet> blame = new LinkedList<>();
+    // the list of blame messages, organized by player.
+    public Map<VerificationKey, List<Packet>> receiveAllBlame() throws InterruptedException, FormatException, ValueException {
+        Map<VerificationKey, List<Packet>> blame = new HashMap<>();
+        for (VerificationKey player : players.values()) {
+            blame.put(player, new LinkedList<>());
+        }
 
         while(true) {
             try {
-                blame.add(receiveNextPacket(ShufflePhase.Blame));
+                Packet next = receiveNextPacket(ShufflePhase.Blame);
+                blame.get(next.signer).add(next);
             } catch (BlameReceivedException e) {
                 // This shouldn't really happen but just in case.
-                blame.add(e.packet);
+                blame.get(e.packet.signer).add(e.packet);
             } catch (TimeoutError e) {
-                return blame;
+                break;
             }
         }
+
+        // Get the blame messages we sent too. Just get everything!
+        for (Packet packet : sent) {
+            if (packet.phase == ShufflePhase.Blame) {
+                blame.get(sk.VerificationKey()).add(packet);
+            }
+        }
+
+        return blame;
     }
 }

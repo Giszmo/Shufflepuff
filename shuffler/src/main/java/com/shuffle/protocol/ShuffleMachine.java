@@ -207,20 +207,9 @@ public final class ShuffleMachine {
         // encryption keys to different players.
         phase = ShufflePhase.EquivocationCheck;
 
-            // Put all temporary encryption keys into a list and hash the result.
-            Message σ4 = messages.make();
-            for (int i = 1; i < N; i++) {
-                σ4.attach(encryptonKeys.get(players.get(i+1)));
-            }
-
-            σ4 = crypto.hash(σ4);
-            network.broadcast(σ4, phase, vk);
-
-            // Wait for a similar message from everyone else and check that the result is the name.
-            Map<VerificationKey, Message> hashes = network.receiveFromMultiple(network.opponentSet(1, N), phase);
-            hashes.put(vk, σ4);
-            if (!areEqual(hashes)) {
-                throw new BlameException(phase);
+            matrix = equivocationCheck(players, encryptonKeys, vk);
+            if (matrix != null) {
+                return matrix;
             }
 
         // Phase 5: verification and submission.
@@ -375,6 +364,39 @@ public final class ShuffleMachine {
         return decrypted;
     }
 
+    // There is an error case in which we have to do an equivocation check, so this phase is in a separate function.
+    BlameMatrix equivocationCheck(
+            Map<Integer, VerificationKey> players,
+            Map<VerificationKey, EncryptionKey> encryptonKeys,
+            VerificationKey vk) throws InterruptedException, BlameReceivedException, ValueException, FormatException {
+        // Put all temporary encryption keys into a list and hash the result.
+        Message σ4 = messages.make();
+        for (int i = 2; i <= players.size(); i++) {
+            σ4.attach(encryptonKeys.get(players.get(i+1)));
+        }
+
+        σ4 = crypto.hash(σ4);
+        network.broadcast(σ4, phase, vk);
+
+        // Wait for a similar message from everyone else and check that the result is the name.
+        Map<VerificationKey, Message> hashes = network.receiveFromMultiple(network.opponentSet(1, players.size()), phase);
+        hashes.put(vk, σ4);
+        if (areEqual(hashes)) {
+            return null;
+        }
+
+        // If the hashes are not equal, enter the blame phase.
+        // Collect all packets from phase 1 and 3.
+        phase = ShufflePhase.Blame;
+        Message blameMessage = messages.make();
+        List<Packet> evidence = network.getPacketsByPhase(ShufflePhase.Announcement);
+        evidence.addAll(network.getPacketsByPhase(ShufflePhase.BroadcastOutput));
+        blameMessage.attach(new BlameMatrix.Blame(evidence));
+        network.broadcast(blameMessage, ShufflePhase.Blame, vk);
+
+        return fillBlameMatrix(new BlameMatrix());
+    }
+
     // Algorithm to randomly shuffle a linked list.
     Message shuffle(Message σ) throws CryptographyError, InvalidImplementationError, FormatException {
         Message copy = messages.copy(σ);
@@ -423,17 +445,20 @@ public final class ShuffleMachine {
     }
 
     BlameMatrix fillBlameMatrix(BlameMatrix matrix) throws InterruptedException, FormatException, ValueException {
-        List<Packet> responses = network.receiveAllBlame();
+        Map<VerificationKey, List<Packet>> blameMessages = network.receiveAllBlame();
 
         // Determine who is being blamed and by whom.
-        for(Packet response : responses) {
-            VerificationKey from = response.signer;
-            Message message = response.message;
+        for (Map.Entry<VerificationKey, List<Packet>> entry : blameMessages.entrySet()) {
+            VerificationKey from = entry.getKey();
+            List<Packet> responses = entry.getValue();
+            for (Packet response : responses) {
+                Message message = response.message;
 
-            while (!message.isEmpty()) {
-                BlameMatrix.Blame blame = message.readBlame();
-                // TODO determine what the blame is for and take the appropriate action.
-                // Egad this is getting complicated.
+                while (!message.isEmpty()) {
+                    BlameMatrix.Blame blame = message.readBlame();
+                    // TODO determine what the blame is for and take the appropriate action.
+                    // Egad this is getting complicated.
+                }
             }
         }
 
@@ -482,30 +507,9 @@ public final class ShuffleMachine {
         return fillBlameMatrix(matrix);
     }
 
-    // The equivocation check fails and some player has equivocated.
-    private BlameMatrix blameEquivocation(VerificationKey vk) throws InterruptedException, FormatException, ValueException {
-        // TODO what if a player receives these messages without detecting anything wrong?
-        // Collect all packets from phase 1 and 3.
-        phase = ShufflePhase.Blame;
-        Message blameMessage = messages.make();
-        List<Packet> evidence = network.getPacketsByPhase(ShufflePhase.Announcement);
-        evidence.addAll(network.getPacketsByPhase(ShufflePhase.BroadcastOutput));
-        blameMessage.attach(new BlameMatrix.Blame(evidence));
-        network.broadcast(blameMessage, ShufflePhase.Blame, vk);
-
-        List<Packet> blame = network.receiveAllBlame();
-        // TODO figure out who to blame from this information.
-
-        // Separate the packets by player.
-
-        // Go through and figure out who cheated.
-
-
-        return null;
-    }
-
     // Some misbehavior that has occurred during the shuffle phase.
     private BlameMatrix blameShuffleMisbehavior() {
         return null;
+
     }
 }
