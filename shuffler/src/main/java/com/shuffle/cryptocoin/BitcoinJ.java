@@ -36,6 +36,11 @@ public class BitcoinJ implements Coin, Crypto {
     }
 
     @Override
+    public boolean isOffendingTransaction(Address addr, Transaction t) {
+        return false;
+    }
+
+    @Override
     public DecryptionKey DecryptionKey() throws CryptographyError {
         return null;
     }

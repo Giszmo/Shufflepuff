@@ -5,7 +5,6 @@ package com.shuffle.protocol;
  */
 public enum ShufflePhase {
     Uninitiated,
-    Initiated,
     Announcement, // Everone generates new encryption keys and distributes them to one another.
     Shuffling, // In turn, each of the players adds his own new address and reshufles the result.
     BroadcastOutput, // The final output order is broadcast to everyone.
@@ -13,4 +12,5 @@ public enum ShufflePhase {
     VerificationAndSubmission, // Generate transaction, distribute signatures, and send it off.
     Completed,
     Blame, // Someone has attempted to cheat.
+    Malicious // Used for the simulated malicious player.
 }

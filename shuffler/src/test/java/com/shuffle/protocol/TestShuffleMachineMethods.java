@@ -204,7 +204,7 @@ public class TestShuffleMachineMethods {
 
         for(areEqualTestCase testCase : tests) {
             try {
-                Assert.assertEquals(testCase.expected, ShuffleMachine.areEqual(mockPacketMap(testCase.input)));
+                Assert.assertEquals(testCase.expected, ShuffleMachine.areEqual(mockPacketMap(testCase.input).values()));
             } catch (InvalidImplementationError e) {
                 Assert.fail("Tests have failed due to error in test class.");
             } catch (CryptographyError e) {

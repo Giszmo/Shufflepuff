@@ -167,18 +167,32 @@ public class MockMessage implements Message {
         this.atoms = atoms;
     }
 
+    @Override
+    public boolean isEmpty() {
+        return atoms.size() == 0;
+    }
+
 
     public Message attach(Atom atom) {
+        if (atom == null) {
+            throw new NullPointerException();
+        }
         atoms.add(atom);
         return this;
     }
 
     public Message attach(Queue<Atom> atoms) {
-        atoms.addAll(atoms);
+        if (atoms == null) {
+            throw new NullPointerException();
+        }
+        this.atoms.addAll(atoms);
         return this;
     }
 
     public Message attachAddrs(Queue<Address> addrs) {
+        if (addrs== null) {
+            throw new NullPointerException();
+        }
         for (Address addr : addrs) {
             attach(addr);
         }
@@ -187,40 +201,45 @@ public class MockMessage implements Message {
     }
 
     @Override
-    public boolean isEmpty() {
-        return atoms.size() == 0;
-    }
-
-    @Override
     public Message attach(EncryptionKey ek) {
+        if (ek == null) {
+            throw new NullPointerException();
+        }
         atoms.add(new Atom(ek));
         return this;
     }
 
     @Override
     public Message attach(Address addr) {
-        if (addr != null) {
-            atoms.add(new Atom(addr));
+        if (addr == null) {
+            throw new NullPointerException();
         }
+        atoms.add(new Atom(addr));
         return this;
     }
 
     @Override
     public Message attach(Signature sig) {
+        if (sig == null) {
+            throw new NullPointerException();
+        }
         atoms.add(new Atom(sig));
         return this;
     }
 
     @Override
     public Message attach(BlameMatrix.Blame blame) {
-        if (blame != null) {
-            atoms.add(new Atom(blame));
+        if (blame == null) {
+            throw new NullPointerException();
         }
         return this;
     }
 
     @Override
     public Message attach(Message message) throws InvalidImplementationError {
+        if (message == null) {
+            throw new NullPointerException();
+        }
         if (!(message instanceof MockMessage)) {
             throw new InvalidImplementationError();
         }

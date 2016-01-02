@@ -6,6 +6,7 @@ import com.shuffle.cryptocoin.VerificationKey;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
@@ -17,65 +18,70 @@ import java.util.TreeMap;
  * Created by Daniel Krawisz on 12/7/15.
  */
 public class TestNetworkOperations  {
-    static class opponentSetTestCase {
+    static class playerSetTestCase {
         int i; // Minimum number to take.
         int n; // Maximum number to take.
         int N; // Number of players.
         int player; // Which player is us.
         int[] expected; // Which keys should have been returned.
 
-        opponentSetTestCase(int i, int n, int N, int player, int[] expected) {
+        playerSetTestCase(int i, int n, int N, int player, int[] expected) {
             this.i = i;
             this.n = n;
             this.N = N;
             this.player = player;
             this.expected = expected;
         }
+        
+        @Override
+        public String toString() {
+            return "player set test case {" + i + ", " + n + ", " + N + ", " + player + ", " + Arrays.toString(expected) + "}";
+        }
     }
 
     @Test
-    public void testOpponentSet() {
-        opponentSetTestCase tests[] =
-                new opponentSetTestCase[]{
-                        new opponentSetTestCase(
+    public void testPlayerSet() {
+        playerSetTestCase tests[] =
+                new playerSetTestCase[]{
+                        new playerSetTestCase(
                                 1,5,0,1,
                                 new int[]{}
                         ),
-                        new opponentSetTestCase(
+                        new playerSetTestCase(
                                 1,5,1,1,
-                                new int[]{}
+                                new int[]{1}
                         ),
-                        new opponentSetTestCase(
+                        new playerSetTestCase(
                                 1,5,1,2,
                                 new int[]{1}
                         ),
-                        new opponentSetTestCase(
+                        new playerSetTestCase(
                                 1,5,5,1,
-                                new int[]{2,3,4,5}
+                                new int[]{1,2,3,4,5}
                         ),
-                        new opponentSetTestCase(
+                        new playerSetTestCase(
                                 1,3,5,1,
-                                new int[]{2,3}
+                                new int[]{1,2,3}
                         ),
-                        new opponentSetTestCase(
+                        new playerSetTestCase(
                                 1,5,5,-1,
                                 new int[]{1,2,3,4,5}
                         ),
-                        new opponentSetTestCase(
+                        new playerSetTestCase(
                                 2,4,5,3,
-                                new int[]{2,4}
+                                new int[]{2,3,4}
                         ),
-                        new opponentSetTestCase(
+                        new playerSetTestCase(
                                 -1,7,5,3,
-                                new int[]{1,2,4,5}
+                                new int[]{1,2,3,4,5}
                         ),
-                        new opponentSetTestCase(
+                        new playerSetTestCase(
                                 4,7,5,1,
                                 new int[]{4,5}
                         )
                 };
 
-        for(opponentSetTestCase test : tests) {
+        for(playerSetTestCase test : tests) {
             // make the set of players.
             TreeMap<Integer, VerificationKey> players = new TreeMap<Integer, VerificationKey>();
             for (int i = 1; i <= test.N; i ++) {
@@ -87,7 +93,7 @@ public class TestNetworkOperations  {
 
             Set<VerificationKey> result = null;
             try {
-                result = netop.opponentSet(test.i, test.n);
+                result = netop.playerSet(test.i, test.n);
             } catch (CryptographyError e) {
                 Assert.fail("Unexpected CryptographyException.");
             } catch (InvalidImplementationError e) {
@@ -277,7 +283,7 @@ public class TestNetworkOperations  {
                 NetworkOperations netop = new NetworkOperations(τ, sk, players, network);
 
                 netop.receiveFrom(new MockVerificationKey(test.requested), test.phase);
-            } catch (TimeoutError | CryptographyError | FormatException | BlameReceivedException
+            } catch (TimeoutError | CryptographyError | FormatException | BlameException
                     | ValueException | InterruptedException | InvalidImplementationError e) {
                 if (test.e != null) {
                     if (!test.e.getClass().equals(e.getClass())) {

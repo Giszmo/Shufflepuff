@@ -24,4 +24,6 @@ public interface Coin {
     // insufficient funds.
     Transaction getOffendingTransaction(Address addr, long ν);
 
+    // Whether the given transaction spends the funds in the given address.
+    boolean isOffendingTransaction(Address addr, Transaction t);
 }

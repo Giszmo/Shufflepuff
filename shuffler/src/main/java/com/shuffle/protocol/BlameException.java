@@ -1,14 +1,19 @@
 package com.shuffle.protocol;
 
+import com.shuffle.cryptocoin.VerificationKey;
+
 /**
  * Created by Daniel Krawisz on 12/4/15.
  *
  * This exception is thrown when malicious behavior is detected on the part of another player.
  */
 final class BlameException extends Exception {
-    ShufflePhase phase;
+    VerificationKey sender;
+    Packet packet;
 
-    BlameException(ShufflePhase phase) {
-        this.phase = phase;
+    // A blame message sent from another party.
+    BlameException(VerificationKey sender, Packet packet) {
+        this.sender = sender;
+        this.packet = packet;
     }
 }

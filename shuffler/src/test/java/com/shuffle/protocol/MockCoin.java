@@ -83,4 +83,9 @@ public class MockCoin implements Coin {
     public Transaction getOffendingTransaction(Address addr, long ν) {
         return null; // TODO
     }
+
+    @Override
+    public boolean isOffendingTransaction(Address addr, Transaction t) {
+        return false; // TODO
+    }
 }

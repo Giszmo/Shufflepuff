@@ -1,9 +1,11 @@
 package com.shuffle.protocol;
 
+import com.shuffle.cryptocoin.DecryptionKey;
 import com.shuffle.cryptocoin.Transaction;
 import com.shuffle.cryptocoin.VerificationKey;
 
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -14,14 +16,16 @@ public class BlameMatrix {
     public enum BlameReason {
         InsufficientFunds,
         NoFundsAtAll,
-        EquivocationFailure
+        EquivocationFailure,
+        ShuffleFailure,
     }
 
     public static class Blame {
         VerificationKey accused = null; // Can be null if we don't know who to accuse yet.
         BlameReason reason;
         Transaction t = null;
-        List<Packet> packets;
+        List<Packet> packets = null;
+        DecryptionKey privateKey = null;
 
         public Blame(VerificationKey accused, Transaction t) {
             this.accused = accused;
@@ -36,6 +40,13 @@ public class BlameMatrix {
 
         public Blame(List<Packet> packets) {
             this.packets = packets;
+            this.reason = BlameReason.EquivocationFailure;
+        }
+
+        public Blame(DecryptionKey privateKey, List<Packet> packets) {
+            this.privateKey = privateKey;
+            this.packets = packets;
+            this.reason = BlameReason.ShuffleFailure;
         }
     }
 
@@ -57,16 +68,46 @@ public class BlameMatrix {
     }
 
     // Who blames who?
-    Map<VerificationKey, Map<VerificationKey, BlameEvidence>> blame = new HashMap<>();
+    Map<VerificationKey, Map<VerificationKey, List<BlameEvidence>>> blame = new HashMap<>();
 
     public void add(VerificationKey accuser, VerificationKey accused, BlameEvidence evidence) {
-        Map<VerificationKey, BlameEvidence> blames = blame.get(accuser);
+        Map<VerificationKey, List<BlameEvidence>> blames = blame.get(accuser);
 
         if (blames == null) {
             blames = new HashMap<>();
             blame.put(accuser, blames);
         }
 
-        blames.put(accused, evidence);
+        List<BlameEvidence> offenses = blames.get(accused);
+
+        if (offenses == null) {
+            offenses = new LinkedList<>();
+            blames.put(accused, offenses);
+        }
+
+        offenses.add(evidence);
+    }
+
+    // Check whether one player already blamed another for a given offense.
+    public boolean blameExists(VerificationKey accuser, VerificationKey accused, BlameReason reason) {
+        Map<VerificationKey, List<BlameEvidence>> blames = blame.get(accuser);
+
+        if (blames == null) {
+            return false;
+        }
+
+        List<BlameEvidence> offenses = blames.get(accused);
+
+        if (offenses == null) {
+            return false;
+        }
+
+        for (BlameEvidence evidence : offenses) {
+            if (evidence.reason == reason) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

@@ -3,6 +3,7 @@ package com.shuffle.protocol;
 import com.shuffle.cryptocoin.Coin;
 import com.shuffle.cryptocoin.CryptographyError;
 import com.shuffle.cryptocoin.SigningKey;
+import com.shuffle.cryptocoin.VerificationKey;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -18,17 +19,21 @@ import java.util.Map;
  * Created by Daniel Krawisz on 12/10/15.
  */
 public class TestShuffleMachine {
+
     public class Expected {
+        SigningKey identity;
         com.shuffle.protocol.Simulator.InitialState input;
         ReturnState output;
 
-        Expected(Simulator.InitialState input, ReturnState output) {
+        public Expected(SigningKey identity, Simulator.InitialState input, ReturnState output) {
+            this.identity = identity;
             this.input = input;
             this.output = output;
         }
     }
 
     public class testCase {
+
         String description = null;
         SessionIdentifier τ;
         long amount;
@@ -70,8 +75,8 @@ public class TestShuffleMachine {
                 for (int i = 1; i <= players; i++) {
                     MockSigningKey key = new MockSigningKey(i);
                     coin.put(key.VerificationKey().address(), new MockCoin.Output(20, false));
-                    test.put(new MockSigningKey(i),
-                            new Expected(
+                    test.put(key,
+                            new Expected(key,
                                     new Simulator.InitialState(key),
                                     new ReturnState(true, τ, ShufflePhase.Completed, null, null)
                             ));
@@ -83,8 +88,9 @@ public class TestShuffleMachine {
             }
         }
 
-        // Error test cases:
+        // Error test cases that I need to make:
         // Player has insufficient funds.
+        // Multiple players have insufficient funds.
         // A player spends his funds while the protocol is going on.
         // A player lies about another having insufficient funds.
         // A player sends different encryption keys to different players.
@@ -93,6 +99,7 @@ public class TestShuffleMachine {
         // A player drops an address during phase 2.
         // A player drops an address and adds another one.
         // A player drops an address and adds a duplicate.
+        // A player disconnects at the wrong time.
         // Different combinations of these at the same time.
 
         // Run the tests.
