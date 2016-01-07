@@ -73,18 +73,13 @@ public class MockNetwork implements Network {
 
     @Override
     public void sendTo(VerificationKey to, Packet packet) throws InvalidImplementationError {
-        if (!(packet instanceof Packet)) {
-            throw new InvalidImplementationError();
-        }
-
         if (!(to instanceof MockVerificationKey)) {
             throw new InvalidImplementationError();
         }
 
         final MockVerificationKey mockTo = (MockVerificationKey)to;
-        final Packet mockPacket = (Packet) packet;
 
-        responses.add(new SentMessage(mockPacket, mockTo));
+        responses.add(new SentMessage(packet, mockTo));
     }
 
     @Override

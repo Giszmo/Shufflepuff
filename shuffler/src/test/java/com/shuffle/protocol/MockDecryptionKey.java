@@ -26,7 +26,7 @@ public class MockDecryptionKey implements DecryptionKey {
 
 
     @Override
-    // Intended to decrypt a single element.
+    // Intended blockchain decrypt a single element.
     public Address decrypt(Address m) throws FormatException, CryptographyError {
 
         if (!(m instanceof MockEncryptedAddress)) {

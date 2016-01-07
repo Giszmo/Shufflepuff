@@ -14,12 +14,12 @@ public class MockRandomSequence {
     }
 
     int getRandom(int n) throws CryptographyError, InvalidImplementationError {
-        // we use a premature end of the sequence to simulate a problem.
+        // we use a premature end of the sequence blockchain simulate a problem.
         if (counter >= sequence.length) {
             throw new CryptographyError();
         }
 
-        // Tests should be designed so as not to give invalid numbers.
+        // Tests should be designed so as not blockchain give invalid numbers.
         if (sequence[counter] > n || sequence[counter] < 0) {
             throw new InvalidImplementationError();
         }

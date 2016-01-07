@@ -14,10 +14,11 @@ import java.util.Queue;
  *
  */
 public interface Coin {
-    Transaction shuffleTransaction(long ν, List<Address> inputs, Queue<Address> shuffledOutputs, Map<VerificationKey, Address> changeOutputs);
+    Transaction shuffleTransaction(long ν, List<VerificationKey> from, Queue<Address> to, Map<VerificationKey, Address> changeAddresses)
+            throws CoinNetworkError;
     void send(Transaction t) throws CoinNetworkError;
 
-    long valueHeld(Address addr) throws BlockchainError, MempoolError;
+    long valueHeld(Address addr) throws CoinNetworkError;
 
     // Returns either a transaction that sent from the given address that caused it to have .
     // insufficient funds or a transaction that sent to a given address that caused it to have
@@ -25,5 +26,5 @@ public interface Coin {
     Transaction getOffendingTransaction(Address addr, long ν);
 
     // Whether the given transaction spends the funds in the given address.
-    boolean isOffendingTransaction(Address addr, Transaction t);
+    boolean isOffendingTransaction(Address addr, long ν, Transaction t);
 }

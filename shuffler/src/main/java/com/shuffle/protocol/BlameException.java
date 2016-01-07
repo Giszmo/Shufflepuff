@@ -11,7 +11,7 @@ final class BlameException extends Exception {
     VerificationKey sender;
     Packet packet;
 
-    // A blame message sent from another party.
+    // A blame message history from another party.
     BlameException(VerificationKey sender, Packet packet) {
         this.sender = sender;
         this.packet = packet;

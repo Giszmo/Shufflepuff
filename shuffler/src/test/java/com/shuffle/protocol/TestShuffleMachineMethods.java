@@ -13,6 +13,8 @@ import org.junit.Test;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Queue;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 /**
  * Tests the methods in the shuffle machine other than the main ones.
@@ -32,8 +34,8 @@ public class TestShuffleMachineMethods {
         }
     }
 
-    private ShuffleMachine shuffleTestInitialization(SessionIdentifier τ, int rand[]) {
-        return new ShuffleMachine(τ,
+    private CoinShuffle shuffleTestInitialization(int rand[]) {
+        return new CoinShuffle(
                 new MockMessageFactory(),
                 new MockCrypto(
                         new MockRandomSequence(rand)),
@@ -113,10 +115,7 @@ public class TestShuffleMachineMethods {
             try {
                 key = crypto.SigningKey();
             } catch (CryptographyError e) {}
-            SessionIdentifier τ = new MockSessionIdentifier();
-            ShuffleMachine machine = shuffleTestInitialization(τ, test.randomSequence);
-
-            ShufflePhase phase = ShufflePhase.Shuffling;
+            CoinShuffle machine = shuffleTestInitialization(test.randomSequence);
 
             Message input = new MockMessage();
             for (int i : test.input) {
@@ -204,21 +203,23 @@ public class TestShuffleMachineMethods {
 
         for(areEqualTestCase testCase : tests) {
             try {
-                Assert.assertEquals(testCase.expected, ShuffleMachine.areEqual(mockPacketMap(testCase.input).values()));
+                Assert.assertEquals(testCase.expected, CoinShuffle.areEqual(mockPacketMap(testCase.input).values()));
             } catch (InvalidImplementationError e) {
-                Assert.fail("Tests have failed due to error in test class.");
+                Assert.fail("Tests have failed due blockchain error in test class.");
             } catch (CryptographyError e) {
                 Assert.fail("Unexpected CryptographyExcption.");
             }
         }
     }
 
-    private ShuffleMachine standardTestInitialization(SessionIdentifier τ, Crypto crypto) {
-        return new ShuffleMachine(τ,
+    private CoinShuffle.ShuffleMachine standardTestInitialization(
+            SessionIdentifier τ, SigningKey sk, SortedSet<VerificationKey> players, Crypto crypto) {
+        return new CoinShuffle(
                 new MockMessageFactory(),
                 crypto,
                 new MockCoin(),
-                new MockNetwork());
+                new MockNetwork()).new ShuffleMachine(
+                    τ, 20l, sk, players, null, 0, 2);
     }
 
     @Test
@@ -232,45 +233,58 @@ public class TestShuffleMachineMethods {
                 Message input = messages.make();
                 Message output = messages.make();
                 DecryptionKey dk = crypto.DecryptionKey();
+                SortedSet<VerificationKey> playerSet = new TreeSet<>();
+                Map<Integer, VerificationKey> players = new HashMap<>();
 
                 for (int j = 0; j <= i; j ++) {
-                    Address addr = crypto.SigningKey().VerificationKey().address();
+                    VerificationKey key = new MockSigningKey(j + 1).VerificationKey();
+                    playerSet.add(key);
+                    players.put(j + 1, key);
+                    Address addr = key.address();
 
                     output.attach(addr);
                     input.attach(new MockEncryptedAddress(addr, dk.EncryptionKey()));
                 }
 
                 SessionIdentifier τ = new MockSessionIdentifier();
-                ShuffleMachine machine = standardTestInitialization(τ, crypto);
+                SigningKey sk = new MockSigningKey(1);
+                CoinShuffle.ShuffleMachine.Round round =
+                        standardTestInitialization(τ, sk, playerSet, crypto).new Round(players, null);
 
-                SigningKey sk = crypto.SigningKey();
-                ShufflePhase phase = ShufflePhase.Shuffling;
-                Message result = machine.decryptAll(new MockMessage().attach(input), dk, i);
+
+                Message result = round.decryptAll(new MockMessage().attach(input), dk, i);
 
                 Assert.assertTrue(result.equals(output));
             }
         } catch (CryptographyError e) {
-            Assert.fail("Unexpected CryptographyException:");
+            Assert.fail("Unexpected CryptographyError:");
         } catch (FormatException e) {
             e.printStackTrace();
             Assert.fail("Unexpected FormatException:");
         } catch (InvalidImplementationError e) {
-            Assert.fail("Unexpected InvalidImplementationException:");
+            Assert.fail("Unexpected InvalidImplementationError:");
+        } catch (InvalidParticipantSetException e) {
+            Assert.fail("Unexpected InvalidParticipantSetException");
         }
 
         // Fail cases.
-        // TODO: include fail cases that lead to blame cases.
+        // TODO: include fail cases that lead blockchain blame cases.
         try {
             for(int i = 0; i <= 5; i++) {
                 MockSessionIdentifier τ = new MockSessionIdentifier();
                 Message input = new MockMessage();
-                DecryptionKey key = null;
+                DecryptionKey dk = null;
+                SortedSet<VerificationKey> playerSet = new TreeSet<>();
+                Map<Integer, VerificationKey> players = new HashMap<>();
                 try {
-                    key = crypto.DecryptionKey();
+                    dk = crypto.DecryptionKey();
 
                     for (int j = 0; j <= i; j++) {
+                        VerificationKey vk = new MockSigningKey(j + 1).VerificationKey();
+                        playerSet.add(vk);
+                        players.put(j + 1, vk);
 
-                        input.attach(new MockEncryptedAddress(crypto.SigningKey().VerificationKey().address(), key.EncryptionKey()));
+                        input.attach(new MockEncryptedAddress(vk.address(), dk.EncryptionKey()));
                     }
 
                     input.attach(crypto.SigningKey().VerificationKey().address());
@@ -278,16 +292,20 @@ public class TestShuffleMachineMethods {
                     Assert.fail();
                 }
 
-                ShuffleMachine machine = standardTestInitialization(τ, crypto);
+                SigningKey sk = new MockSigningKey(1);
+                CoinShuffle.ShuffleMachine.Round round =
+                        standardTestInitialization(τ, sk, playerSet, crypto).new Round(players, null);
 
                 try {
-                    machine.decryptAll(new MockMessage().attach(input), key, i);
+                    round.decryptAll(new MockMessage().attach(input), dk, i);
                     Assert.fail("Exception should have been thrown.");
                 } catch (FormatException | CryptographyError e) {
                 }
             }
         } catch (InvalidImplementationError e) {
             e.printStackTrace();
+            Assert.fail();
+        } catch (InvalidParticipantSetException e) {
             Assert.fail();
         }
     }
@@ -301,22 +319,30 @@ public class TestShuffleMachineMethods {
             for (int i = 0; i <= 5; i++) {
                 Message expected = new MockMessage();
                 Message input = new MockMessage();
+                SortedSet<VerificationKey> playerSet = new TreeSet<>();
+                Map<Integer, VerificationKey> players = new HashMap<>();
 
                 for (int j = 0; j <= i; j ++) {
-                    Address addr = crypto.SigningKey().VerificationKey().address();
+                    VerificationKey vk = new MockSigningKey(j + 1).VerificationKey();
+                    playerSet.add(vk);
+                    players.put(j + 1, vk);
+                    Address addr = vk.address();
 
                     expected.attach(addr);
                     input.attach(addr);
                 }
 
                 SessionIdentifier τ = new MockSessionIdentifier();
-                ShuffleMachine machine = standardTestInitialization(τ, crypto);
+                SigningKey sk = new MockSigningKey(1);
+                CoinShuffle.ShuffleMachine.Round round =
+                        standardTestInitialization(τ, sk, playerSet, crypto).new Round(players, null);
 
-                Queue<Address> result = machine.readNewAddresses(new MockMessage().attach(input));
+                Queue<Address> result = round.readNewAddresses(new MockMessage().attach(input));
 
                 Assert.assertTrue(expected.equals(new MockMessage().attachAddrs(result)));
             }
-        } catch (CryptographyError | FormatException | InvalidImplementationError e) {
+        } catch (CryptographyError | FormatException | InvalidImplementationError | InvalidParticipantSetException e) {
+            e.printStackTrace();
             Assert.fail();
         }
 
@@ -324,22 +350,29 @@ public class TestShuffleMachineMethods {
         try {
             for (int i = 0; i <= 5; i++) {
                 Message input = new MockMessage();
+                SortedSet<VerificationKey> playerSet = new TreeSet<>();
+                Map<Integer, VerificationKey> players = new HashMap<>();
 
                 for (int j = 0; j <= i; j++) {
-                    input.attach(crypto.SigningKey().VerificationKey().address());
+                    VerificationKey vk = new MockSigningKey(j + 1).VerificationKey();
+                    playerSet.add(vk);
+                    players.put(j + 1, vk);
+                    input.attach(vk.address());
                 }
 
                 input.attach(new MockEncryptionKey(14));
                 SessionIdentifier τ = new MockSessionIdentifier();
-                ShuffleMachine machine = standardTestInitialization(τ, crypto);
+                SigningKey sk = new MockSigningKey(1);
+                CoinShuffle.ShuffleMachine.Round round =
+                        standardTestInitialization(τ, sk, playerSet, crypto).new Round(players, null);
 
                 try {
-                    machine.readNewAddresses(new MockMessage().attach(input));
+                    round.readNewAddresses(new MockMessage().attach(input));
                     Assert.fail();
                 } catch (FormatException e) {
                 }
             }
-        } catch (CryptographyError | InvalidImplementationError e) {
+        } catch (CryptographyError | InvalidParticipantSetException | InvalidImplementationError e) {
             Assert.fail();
         }
     }

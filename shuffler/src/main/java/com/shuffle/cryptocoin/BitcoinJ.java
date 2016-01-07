@@ -16,7 +16,7 @@ public class BitcoinJ implements Coin, Crypto {
     BlockChain blockchain;
 
     @Override
-    public Transaction shuffleTransaction(long amount, List<Address> inputs, Queue<Address> shuffledOutputs, Map<VerificationKey, Address> changeOutputs) {
+    public Transaction shuffleTransaction(long amount, List<VerificationKey> inputs, Queue<Address> shuffledOutputs, Map<VerificationKey, Address> changeOutputs) {
         return null;
     }
 
@@ -26,7 +26,7 @@ public class BitcoinJ implements Coin, Crypto {
     }
 
     @Override
-    public long valueHeld(Address addr) throws BlockchainError, MempoolError {
+    public long valueHeld(Address addr) throws CoinNetworkError {
         return 0;
     }
 
@@ -36,7 +36,7 @@ public class BitcoinJ implements Coin, Crypto {
     }
 
     @Override
-    public boolean isOffendingTransaction(Address addr, Transaction t) {
+    public boolean isOffendingTransaction(Address addr, long amount, Transaction t) {
         return false;
     }
 

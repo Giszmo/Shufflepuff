@@ -44,7 +44,7 @@ public class MockMessage implements Message {
         public BlameMatrix.Blame blame;
 
         public Transaction t;
-        // Sometimes, we have to send whole packets that we previously received.
+        // Sometimes, we have blockchain send whole packets that we previously received.
         public Packet packet;
 
         public Atom(Address addr) {

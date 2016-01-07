@@ -1,5 +1,6 @@
 package com.shuffle.protocol;
 
+import com.shuffle.cryptocoin.Crypto;
 import com.shuffle.cryptocoin.CryptographyError;
 import com.shuffle.cryptocoin.VerificationKey;
 
@@ -10,17 +11,37 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.SortedSet;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 /**
- * Tests for the functions in NetworkOperations
+ * Tests for certain functions pertaining to network interactions.
  *
  * Created by Daniel Krawisz on 12/7/15.
  */
 public class TestNetworkOperations  {
+
+    public CoinShuffle.ShuffleMachine.Round net(
+            int seed,
+            MockSessionIdentifier τ,
+            MockSigningKey sk,
+            Map<Integer, VerificationKey> players,
+            ShufflePhase phase,
+            MockMessageFactory messages,
+            Network network) throws InvalidParticipantSetException {
+        SortedSet<VerificationKey> playerSet = new TreeSet<>();
+        playerSet.addAll(players.values());
+        CoinShuffle.ShuffleMachine machine =
+                new CoinShuffle(messages, new MockCrypto(seed), new MockCoin(), network).new
+                    ShuffleMachine(τ, 20l, sk, playerSet, null, 1, 2);
+        machine.phase = phase;
+        return machine.new Round(players, null);
+    }
+
     static class playerSetTestCase {
-        int i; // Minimum number to take.
-        int n; // Maximum number to take.
+        int i; // Minimum number blockchain take.
+        int n; // Maximum number blockchain take.
         int N; // Number of players.
         int player; // Which player is us.
         int[] expected; // Which keys should have been returned.
@@ -32,7 +53,7 @@ public class TestNetworkOperations  {
             this.player = player;
             this.expected = expected;
         }
-        
+
         @Override
         public String toString() {
             return "player set test case {" + i + ", " + n + ", " + N + ", " + player + ", " + Arrays.toString(expected) + "}";
@@ -44,15 +65,7 @@ public class TestNetworkOperations  {
         playerSetTestCase tests[] =
                 new playerSetTestCase[]{
                         new playerSetTestCase(
-                                1,5,0,1,
-                                new int[]{}
-                        ),
-                        new playerSetTestCase(
                                 1,5,1,1,
-                                new int[]{1}
-                        ),
-                        new playerSetTestCase(
-                                1,5,1,2,
                                 new int[]{1}
                         ),
                         new playerSetTestCase(
@@ -62,10 +75,6 @@ public class TestNetworkOperations  {
                         new playerSetTestCase(
                                 1,3,5,1,
                                 new int[]{1,2,3}
-                        ),
-                        new playerSetTestCase(
-                                1,5,5,-1,
-                                new int[]{1,2,3,4,5}
                         ),
                         new playerSetTestCase(
                                 2,4,5,3,
@@ -88,16 +97,22 @@ public class TestNetworkOperations  {
                 players.put(i, new MockVerificationKey(i));
             }
 
-            // Set up the network operations object.
-            NetworkOperations netop = new NetworkOperations(new MockSessionIdentifier(), new MockSigningKey(test.player), players, null);
-
             Set<VerificationKey> result = null;
             try {
+                // Set up the network operations object.
+                CoinShuffle.ShuffleMachine.Round netop =
+                    net(234, new MockSessionIdentifier(), new MockSigningKey(test.player), players,
+                        ShufflePhase.Shuffling, new MockMessageFactory(), new MockNetwork());
                 result = netop.playerSet(test.i, test.n);
             } catch (CryptographyError e) {
                 Assert.fail("Unexpected CryptographyException.");
             } catch (InvalidImplementationError e) {
                 Assert.fail("Unexpected InvalidImplementationException.");
+            } catch (InvalidParticipantSetException e) {
+                e.printStackTrace();
+                Assert.fail("Unexpected InvalidParticipationSetException");
+            } catch (NullPointerException e) {
+                Assert.fail();
             }
 
             for (int expect : test.expected) {
@@ -122,16 +137,14 @@ public class TestNetworkOperations  {
     public void testBroadcast() {
         broadcastTestCase tests[] =
                 new broadcastTestCase[]{
-                        new broadcastTestCase(0, 2),
-                        new broadcastTestCase(1, 2),
+                        new broadcastTestCase(1, 1),
+                        new broadcastTestCase(2, 1),
                         new broadcastTestCase(2, 2),
                         new broadcastTestCase(3, 2),
                         new broadcastTestCase(4, 2),
                 };
 
         for (broadcastTestCase test : tests) {
-            // The player sending and inbox.
-            MockSigningKey sk = new MockSigningKey(0);
 
             // Create mock network object.
             MockNetwork network = new MockNetwork();
@@ -143,17 +156,13 @@ public class TestNetworkOperations  {
             }
 
             MockMessageFactory messages = new MockMessageFactory();
-            SessionIdentifier τ = new MockSessionIdentifier();
-
-            // Set up the shuffle machine (only used to query for the current phase).
-            ShuffleMachine machine = new ShuffleMachine(τ, messages, new MockCrypto(577), new MockCoin(), network);
-            machine.phase = ShufflePhase.Shuffling;
 
             // Set up the network operations object.
-            NetworkOperations netop = new NetworkOperations(τ, sk, players, network);
-
             try {
-                netop.broadcast(messages.make(), ShufflePhase.Shuffling, sk.VerificationKey());
+                CoinShuffle.ShuffleMachine.Round netop =
+                        net(577, new MockSessionIdentifier(), new MockSigningKey(1), players,
+                            ShufflePhase.Shuffling, messages, network);
+                netop.broadcast(messages.make());
             } catch (TimeoutError e) {
                 Assert.fail("Unexpected exception.");
             } catch (CryptographyError e) {
@@ -161,6 +170,9 @@ public class TestNetworkOperations  {
                 Assert.fail("Unexpected CryptograhyException.");
             } catch (InvalidImplementationError e) {
                 Assert.fail("Unexpected InvalidImplementationException.");
+            } catch (InvalidParticipantSetException e) {
+                e.printStackTrace();
+                Assert.fail("Unexpected InvalidParticipantSetException.");
             }
         }
     }
@@ -183,8 +195,6 @@ public class TestNetworkOperations  {
     public void testSend() {
         sendToTestCase tests[] = new sendToTestCase[]{
                 // Case where recipient does not exist.
-                new sendToTestCase(1, 2, 0, false),
-                new sendToTestCase(1, 2, 1, false),
                 new sendToTestCase(1, 2, 2, true),
                 // Cannot send to myself.
                 new sendToTestCase(1, 1, 2, false)
@@ -193,7 +203,7 @@ public class TestNetworkOperations  {
         for (sendToTestCase test : tests) {
             try {
                 // The player sending and inbox.
-                MockSigningKey sk = new MockSigningKey(0);
+                MockSigningKey sk = new MockSigningKey(1);
 
                 // Create mock network object.
                 MockNetwork network = new MockNetwork();
@@ -204,18 +214,17 @@ public class TestNetworkOperations  {
                     players.put(i, new MockVerificationKey(i));
                 }
 
-                // Set up the shuffle machine (only used to query for the current phase).
+                // Set up the shuffle machine (only used blockchain query for the current phase).
                 MockMessageFactory message = new MockMessageFactory();
-                SessionIdentifier τ = new MockSessionIdentifier();
-                ShuffleMachine machine = new ShuffleMachine(τ, message, new MockCrypto(8989), new MockCoin(), network);
-                machine.phase = ShufflePhase.Shuffling;
+                MockSessionIdentifier τ = new MockSessionIdentifier();
 
                 // Set up the network operations object.
-                NetworkOperations netop = new NetworkOperations(τ, sk, players, network);
+                CoinShuffle.ShuffleMachine.Round netop =
+                        net(8989, τ, sk, players,
+                                ShufflePhase.Shuffling, message, network);
 
                 netop.send(new Packet(
-                        new MockMessage(),
-                        new MockSessionIdentifier(),
+                        new MockMessage(), τ,
                         ShufflePhase.Shuffling,
                         sk.VerificationKey(),
                         new MockVerificationKey(test.recipient)));
@@ -233,6 +242,8 @@ public class TestNetworkOperations  {
                 Assert.fail("Unexpected CryptographyException");
             } catch (TimeoutError e) {
                 Assert.fail("Unexpected TimeoutException");
+            } catch (InvalidParticipantSetException e) {
+                Assert.fail("Unexpected InvalidParticipationSetException");
             }
         }
     }
@@ -265,7 +276,7 @@ public class TestNetworkOperations  {
         for (receiveFromTestCase test : tests) {
             try {
                 // The player sending and inbox.
-                MockSigningKey sk = new MockSigningKey(0);
+                MockSigningKey sk = new MockSigningKey(1);
 
                 // Create mock network object.
                 MockNetwork network = new MockNetwork();
@@ -276,11 +287,12 @@ public class TestNetworkOperations  {
                     players.put(i, new MockVerificationKey(test.players[i - 1]));
                 }
 
-                // Set up the shuffle machine (only used to query for the current phase).
-                SessionIdentifier τ = new MockSessionIdentifier();
+                MockSessionIdentifier τ = new MockSessionIdentifier();
 
                 // Set up the network operations object.
-                NetworkOperations netop = new NetworkOperations(τ, sk, players, network);
+                CoinShuffle.ShuffleMachine.Round netop =
+                        net(9341, τ, sk, players,
+                                ShufflePhase.Shuffling, new MockMessageFactory(), network);
 
                 netop.receiveFrom(new MockVerificationKey(test.requested), test.phase);
             } catch (TimeoutError | CryptographyError | FormatException | BlameException
@@ -292,6 +304,8 @@ public class TestNetworkOperations  {
                 } else {
                     Assert.fail("Unexpected exception encountered.");
                 }
+            } catch (InvalidParticipantSetException e) {
+                Assert.fail();
             }
         }
     }
@@ -318,13 +332,16 @@ public class TestNetworkOperations  {
                 players.put(i, new MockVerificationKey(test.players[i]));
             }
 
-            // Set up the shuffle machine (only used to query for the current phase).
-            SessionIdentifier τ = new MockSessionIdentifier();
-            ShuffleMachine machine = new ShuffleMachine(τ, new MockMessageFactory(), new MockCrypto(475), new MockCoin(), network);
-            machine.phase = ShufflePhase.Shuffling;
+            MockSessionIdentifier τ = new MockSessionIdentifier();
 
             // Set up the network operations object.
-            NetworkOperations netop = new NetworkOperations(τ, sk, players, network);
+            try {
+                CoinShuffle.ShuffleMachine.Round netop =
+                        net(475, τ, sk, players,
+                                ShufflePhase.Shuffling, new MockMessageFactory(), network);
+            } catch (InvalidParticipantSetException e) {
+                Assert.fail();
+            }
 
         }
     }

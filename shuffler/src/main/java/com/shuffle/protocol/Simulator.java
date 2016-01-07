@@ -4,6 +4,7 @@ import com.shuffle.cryptocoin.Coin;
 import com.shuffle.cryptocoin.Crypto;
 import com.shuffle.cryptocoin.CryptographyError;
 import com.shuffle.cryptocoin.SigningKey;
+import com.shuffle.cryptocoin.Transaction;
 import com.shuffle.cryptocoin.VerificationKey;
 
 import java.util.HashMap;
@@ -28,24 +29,37 @@ import java.util.concurrent.TimeUnit;
  * Created by Daniel Krawisz on 12/6/15.
  */
 public final class Simulator {
-    ConcurrentMap<VerificationKey, BlackBox> machines;
-    SortedSet<VerificationKey> players;
-    SessionIdentifier τ;
-    long amount;
-    MessageFactory messages;
-    Crypto crypto;
-    Coin coin;
+    final ConcurrentMap<VerificationKey, BlackBox> machines;
+    final SortedSet<VerificationKey> players;
+    final SessionIdentifier τ;
+    final long amount;
+    final MessageFactory messages;
+    final Crypto crypto;
+    final Coin coin;
 
     // This implementation of Network connects each shuffle machine to the simulator.
     private class Network implements com.shuffle.protocol.Network {
-        BlockingQueue<Packet> inbox;
+        final BlockingQueue<Packet> inbox = new LinkedBlockingQueue<>();
+        final Map<ShufflePhase, Map<VerificationKey, Packet>> malicious = new HashMap<>(); // Replacement messages to simulate malicious players.
 
         Network() {
-            this.inbox = new LinkedBlockingQueue<>();
+        }
+
+        Network(Map<ShufflePhase, Map<VerificationKey, Packet>> malicious) {
+            malicious.putAll(malicious);
         }
 
         @Override
         public void sendTo(VerificationKey to, Packet packet) throws InvalidImplementationError, TimeoutError {
+            // Replace with malicious packet if necessary.
+            Map<VerificationKey, Packet> replacements = malicious.get(packet.phase);
+            if (replacements != null) {
+                Packet maliciousPacket = replacements.get(to);
+                if (maliciousPacket != null) {
+                    packet = maliciousPacket;
+                }
+            }
+
             try {
                 Simulator.this.sendTo(to, new Packet(messages.copy(packet.message), packet.τ, packet.phase, packet.signer, packet.recipient));
             } catch (InterruptedException e) {
@@ -94,28 +108,21 @@ public final class Simulator {
 
     // A wraper for the regular version of the protocol.
     private class HonestAdversary implements Adversary {
-        ShuffleMachine machine;
+        CoinShuffle.ShuffleMachine machine;
         Network network;
-
-        SessionIdentifier τ;
-        long amount;
         SigningKey sk;
-        SortedSet<VerificationKey> players;
 
         HonestAdversary(SessionIdentifier τ, long amount, SigningKey sk,
                         SortedSet<VerificationKey> players) {
-            this.τ = τ;
-            this.amount = amount;
             this.sk = sk;
-            this.players = players;
             this.network = new Network();
-            this.machine = new ShuffleMachine(τ, messages, crypto, coin, network);
+            this.machine = new CoinShuffle(messages, crypto, coin, network).new ShuffleMachine(τ, amount, sk, players, null, 1, 2);
         }
 
         @Override
         public ReturnState turnOn() throws InvalidImplementationError {
             try {
-                return machine.run(amount, sk, null, players);
+                return machine.run();
             } catch (InterruptedException e) {
                 return new ReturnState(false, τ, machine.currentPhase(), e, null);
             }
@@ -137,27 +144,58 @@ public final class Simulator {
         }
     }
 
-    // TODO!!! (Actually there might need to be several of these.)
+    // The malicious adversary can be made to send malicious messages or to spend bitcoins at
+    // inappropriate times.
     private class MaliciousAdversary implements Adversary{
+        final CoinShuffle.ShuffleMachine machine;
+        final Network network;
+        final SigningKey sk;
+
+        final Transaction t;
+        boolean transactionSent = false;
+
+        MaliciousAdversary(SessionIdentifier τ, long amount, SigningKey sk,
+                        SortedSet<VerificationKey> players, final Map<ShufflePhase, Map<VerificationKey, Packet>> lies,
+                        Transaction t) {
+            this.sk = sk;
+            if (lies == null) {
+                this.network = new Network();
+            } else {
+                this.network = new Network(lies);
+            }
+            this.t = t;
+            this.machine = new CoinShuffle(messages, crypto, coin, network).new ShuffleMachine(τ, amount, sk, players, null, 1, 2);
+        }
 
         @Override
         public ReturnState turnOn() throws InvalidImplementationError {
-            return null;
+            try {
+                machine.run();
+                // Malicious players don't need to return any information since they are not being tested.
+                return new ReturnState(false, τ, ShufflePhase.Malicious, null, null);
+            } catch (InterruptedException e) {
+                return new ReturnState(false, τ, machine.currentPhase(), e, null);
+            }
         }
 
         @Override
         public ShufflePhase currentPhase() {
-            return null;
+            return machine.currentPhase();
         }
 
         @Override
-        public void deliver(Packet packet) {
-
+        public void deliver(Packet packet) throws InterruptedException {
+            // Part way through the protocol, send the malicious bitcoin transaction. 
+            if (packet.phase == ShufflePhase.BroadcastOutput && !transactionSent) {
+                coin.send(t);
+                transactionSent = true;
+            }
+            network.deliver(packet);
         }
 
         @Override
         public SigningKey identity() {
-            return null;
+            return sk;
         }
     }
 

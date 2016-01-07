@@ -1,5 +1,6 @@
 package com.shuffle.protocol;
 
+import com.shuffle.cryptocoin.Address;
 import com.shuffle.cryptocoin.Coin;
 import com.shuffle.cryptocoin.CryptographyError;
 import com.shuffle.cryptocoin.SigningKey;
@@ -59,6 +60,44 @@ public class TestShuffleMachine {
         }
     }
 
+    public class InsufficientFunds {
+        final int players; // Number of players.
+        final int[] deadbeats; // The players who just don't have enough funds.
+        final int[] spenders; // The players who have spent their funds.
+
+        InsufficientFunds(int players, int[] deadbeats, int[] spenders) {
+            this.players = players;
+            this.deadbeats = deadbeats;
+            this.spenders = spenders;
+        }
+
+        BlameMatrix getExpectedBlameMatrix() {
+            return null;
+        }
+
+        Coin getBlockchain() {
+            return null;
+        }
+    }
+
+    public class DoubleSpending {
+        final int[] views; // The views of the crypto coin network for different players.
+        final int[] doubleSpenders; // The players who spend while the protocol is happening.
+
+        DoubleSpending(int[] views, int[] doubleSpenders) {
+            this.views = views;
+            this.doubleSpenders = doubleSpenders;
+        }
+
+        BlameMatrix getExpectedBlameMatrix() {
+            return null;
+        }
+
+        Coin getBlockchain() {
+            return null;
+        }
+    }
+
     @Test
     public void testShuffleMachine() {
         Map<Integer, testCase> tests = new HashMap<>();
@@ -74,7 +113,8 @@ public class TestShuffleMachine {
 
                 for (int i = 1; i <= players; i++) {
                     MockSigningKey key = new MockSigningKey(i);
-                    coin.put(key.VerificationKey().address(), new MockCoin.Output(20, false));
+                    Address address = key.VerificationKey().address();
+                    coin.put(address, 20);
                     test.put(key,
                             new Expected(key,
                                     new Simulator.InitialState(key),
@@ -88,17 +128,48 @@ public class TestShuffleMachine {
             }
         }
 
-        // Error test cases that I need to make:
-        // Player has insufficient funds.
-        // Multiple players have insufficient funds.
-        // A player spends his funds while the protocol is going on.
-        // A player lies about another having insufficient funds.
-        // A player sends different encryption keys to different players.
-        // A player sends different output vectors to different players.
+        // Tests for players who initially have insufficient funds.
+        InsufficientFunds[] insufficientFundsCases = new InsufficientFunds[]{
+                new InsufficientFunds(10, new int[]{3}, new int[]{}),
+                new InsufficientFunds(10, new int[]{}, new int[]{4}),
+                new InsufficientFunds(10, new int[]{5, 10}, new int[]{}),
+                new InsufficientFunds(10, new int[]{2}, new int[]{8}),
+                new InsufficientFunds(10, new int[]{}, new int[]{2, 10}),
+                new InsufficientFunds(10, new int[]{1, 2, 9}, new int[]{}),
+                new InsufficientFunds(10, new int[]{1, 2}, new int[]{7}),
+                new InsufficientFunds(10, new int[]{}, new int[]{1, 3, 6}),
+                new InsufficientFunds(10, new int[]{4, 6, 7, 8}, new int[]{}),
+                new InsufficientFunds(10, new int[]{4, 8}, new int[]{6, 7}),
+                new InsufficientFunds(10, new int[]{}, new int[]{4, 6, 7, 8})
+        };
+
+        // Tests for players who initially have insufficient funds.
+        DoubleSpending[] doubleSpendCases = new DoubleSpending[]{
+                new DoubleSpending(new int[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1}, new int[]{6}),
+                new DoubleSpending(new int[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1}, new int[]{3, 10}),
+                new DoubleSpending(new int[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1}, new int[]{1, 7, 8}),
+                new DoubleSpending(new int[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1}, new int[]{4, 6, 7, 8})
+        };
+
+        // Set up tests for players with insufficient funds.
+        for (InsufficientFunds maliciousCase : insufficientFundsCases) {
+
+        }
+
+        // Set up tests for players who double spend.
+        for (DoubleSpending maliciousCase : doubleSpendCases) {
+
+        }
+
+        // Error test cases that I need blockchain make:
+        // A player sends different encryption keys blockchain different players.
+        // A player sends different output vectors blockchain different players.
         // A player lies about the equivocation check.
         // A player drops an address during phase 2.
-        // A player drops an address and adds another one.
-        // A player drops an address and adds a duplicate.
+        // A player drops an address and adds another one in phase 2.
+        // A player drops an address and adds a duplicate in phase 2.
+        // A player claims something went wrong in phase 2 when it didn't.
+        // Player lies about what another player said (invalid signature).
         // A player disconnects at the wrong time.
         // Different combinations of these at the same time.
 
