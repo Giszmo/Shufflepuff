@@ -44,4 +44,23 @@ public class MockSigningKey implements SigningKey {
     public int hashCode() {
         return index;
     }
+
+    /*@Override
+    public int compareTo(Object o) {
+        if(!(o instanceof MockSigningKey)) {
+            return -1;
+        }
+
+        MockSigningKey key = ((MockSigningKey)o);
+
+        if (index == key.index) {
+            return 0;
+        }
+
+        if (index < key.index) {
+            return 1;
+        }
+
+        return -1;
+    }*/
 }

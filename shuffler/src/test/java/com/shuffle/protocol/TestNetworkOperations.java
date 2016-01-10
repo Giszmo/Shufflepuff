@@ -1,6 +1,5 @@
 package com.shuffle.protocol;
 
-import com.shuffle.cryptocoin.Crypto;
 import com.shuffle.cryptocoin.CryptographyError;
 import com.shuffle.cryptocoin.VerificationKey;
 
@@ -27,7 +26,7 @@ public class TestNetworkOperations  {
             MockSessionIdentifier τ,
             MockSigningKey sk,
             Map<Integer, VerificationKey> players,
-            ShufflePhase phase,
+            Phase phase,
             MockMessageFactory messages,
             Network network) throws InvalidParticipantSetException {
         SortedSet<VerificationKey> playerSet = new TreeSet<>();
@@ -102,7 +101,7 @@ public class TestNetworkOperations  {
                 // Set up the network operations object.
                 CoinShuffle.ShuffleMachine.Round netop =
                     net(234, new MockSessionIdentifier(), new MockSigningKey(test.player), players,
-                        ShufflePhase.Shuffling, new MockMessageFactory(), new MockNetwork());
+                        Phase.Shuffling, new MockMessageFactory(), new MockNetwork());
                 result = netop.playerSet(test.i, test.n);
             } catch (CryptographyError e) {
                 Assert.fail("Unexpected CryptographyException.");
@@ -161,7 +160,7 @@ public class TestNetworkOperations  {
             try {
                 CoinShuffle.ShuffleMachine.Round netop =
                         net(577, new MockSessionIdentifier(), new MockSigningKey(1), players,
-                            ShufflePhase.Shuffling, messages, network);
+                            Phase.Shuffling, messages, network);
                 netop.broadcast(messages.make());
             } catch (TimeoutError e) {
                 Assert.fail("Unexpected exception.");
@@ -221,11 +220,11 @@ public class TestNetworkOperations  {
                 // Set up the network operations object.
                 CoinShuffle.ShuffleMachine.Round netop =
                         net(8989, τ, sk, players,
-                                ShufflePhase.Shuffling, message, network);
+                                Phase.Shuffling, message, network);
 
                 netop.send(new Packet(
                         new MockMessage(), τ,
-                        ShufflePhase.Shuffling,
+                        Phase.Shuffling,
                         sk.VerificationKey(),
                         new MockVerificationKey(test.recipient)));
 
@@ -251,11 +250,11 @@ public class TestNetworkOperations  {
     static class receiveFromTestCase {
         int[] players;
         int requested; // The player that the message was expected from.
-        ShufflePhase phase; // The expected phase.
+        Phase phase; // The expected phase.
         Packet packet;
         Error e; // If an exception is expected.
 
-        public receiveFromTestCase(int[] players, int requested, ShufflePhase phase,Packet packet, Error e) {
+        public receiveFromTestCase(int[] players, int requested, Phase phase,Packet packet, Error e) {
             this.players = players;
             this.requested = requested;
             this.packet = packet;
@@ -268,7 +267,7 @@ public class TestNetworkOperations  {
     public void testReceiveFrom() {
         receiveFromTestCase tests[] = new receiveFromTestCase[]{
                 // time out exception test case.
-                new receiveFromTestCase(new int []{1,2,3}, 2, ShufflePhase.Shuffling, null, new TimeoutError()),
+                new receiveFromTestCase(new int []{1,2,3}, 2, Phase.Shuffling, null, new TimeoutError()),
                 // Various malformed inbox.
                 // TODO
         };
@@ -292,7 +291,7 @@ public class TestNetworkOperations  {
                 // Set up the network operations object.
                 CoinShuffle.ShuffleMachine.Round netop =
                         net(9341, τ, sk, players,
-                                ShufflePhase.Shuffling, new MockMessageFactory(), network);
+                                Phase.Shuffling, new MockMessageFactory(), network);
 
                 netop.receiveFrom(new MockVerificationKey(test.requested), test.phase);
             } catch (TimeoutError | CryptographyError | FormatException | BlameException
@@ -338,7 +337,7 @@ public class TestNetworkOperations  {
             try {
                 CoinShuffle.ShuffleMachine.Round netop =
                         net(475, τ, sk, players,
-                                ShufflePhase.Shuffling, new MockMessageFactory(), network);
+                                Phase.Shuffling, new MockMessageFactory(), network);
             } catch (InvalidParticipantSetException e) {
                 Assert.fail();
             }

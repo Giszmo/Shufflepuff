@@ -23,6 +23,7 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  *
@@ -46,7 +47,7 @@ final class CoinShuffle {
     final Network network;
 
     public class ShuffleMachine {
-        ShufflePhase phase;
+        Phase phase;
 
         final SessionIdentifier τ;
 
@@ -66,7 +67,7 @@ final class CoinShuffle {
 
         // the phase can be accessed concurrently in case we want to update
         // the user on how the protocol is going.
-        public ShufflePhase currentPhase() {
+        public Phase currentPhase() {
             return phase;
         }
 
@@ -95,9 +96,13 @@ final class CoinShuffle {
                     CoinNetworkError,
                     InterruptedException, ProtocolException {
 
+                if (amount <= 0) {
+                    throw new IllegalArgumentException();
+                }
+
                 // Phase 1: Announcement
                 // In the announcement phase, participants distribute temporary encryption keys.
-                phase = ShufflePhase.Announcement;
+                phase = Phase.Announcement;
 
                 // Check for sufficient funds.
                 // There was a problem with the wording of the original paper which would have meant
@@ -140,7 +145,7 @@ final class CoinShuffle {
                 // applied by each particpant. Everyone has the incentive to insert their own address
                 // at a random location, which is sufficient to ensure randomness of the whole thing
                 // to all participants.
-                phase = ShufflePhase.Shuffling;
+                phase = Phase.Shuffling;
 
                 // The set of new addresses into which the coins will be deposited.
                 Queue<Address> newAddresses = null;
@@ -176,7 +181,7 @@ final class CoinShuffle {
 
                     // Phase 3: broadcast outputs.
                     // In this phase, the last player just broadcasts the transaction to everyone else.
-                    phase = ShufflePhase.BroadcastOutput;
+                    phase = Phase.BroadcastOutput;
 
                     if (me == N) {
                         // The last player adds his own new address in without encrypting anything and shuffles the result.
@@ -194,7 +199,7 @@ final class CoinShuffle {
                     // Phase 4: equivocation check.
                     // In this phase, participants check whether any player has history different
                     // encryption keys to different players.
-                    phase = ShufflePhase.EquivocationCheck;
+                    phase = Phase.EquivocationCheck;
 
                     matrix = equivocationCheck(encryptionKeys, vk);
                     if (matrix != null) {
@@ -207,7 +212,7 @@ final class CoinShuffle {
                 // Phase 5: verification and submission.
                 // Everyone creates a Bitcoin transaction and signs it, then broadcasts the signature.
                 // If all signatures check out, then the transaction is history into the net.
-                phase = ShufflePhase.VerificationAndSubmission;
+                phase = Phase.VerificationAndSubmission;
 
                 List<VerificationKey> inputs = new LinkedList<>();
                 for (int i = 1; i <= N; i++) {
@@ -231,10 +236,11 @@ final class CoinShuffle {
 
                 // Send the transaction into the net.
                 // TODO blame someone if a double spend is detected.
+                System.out.println("Player " + me + " is about to send transaction " + t);
                 coin.send(t);
 
                 // The protocol has completed successfully.
-                phase = ShufflePhase.Completed;
+                phase = Phase.Completed;
 
                 return null;
             }
@@ -311,10 +317,10 @@ final class CoinShuffle {
 
                 // If the hashes are not equal, enter the blame phase.
                 // Collect all packets from phase 1 and 3.
-                phase = ShufflePhase.Blame;
+                phase = Phase.Blame;
                 Message blameMessage = messages.make();
-                List<Packet> evidence = getPacketsByPhase(ShufflePhase.Announcement);
-                evidence.addAll(getPacketsByPhase(ShufflePhase.BroadcastOutput));
+                List<Packet> evidence = getPacketsByPhase(Phase.Announcement);
+                evidence.addAll(getPacketsByPhase(Phase.BroadcastOutput));
                 blameMessage.attach(new BlameMatrix.Blame(evidence));
                 broadcast(blameMessage);
 
@@ -324,6 +330,8 @@ final class CoinShuffle {
             // Check for players with insufficient funds. This happens in phase 1 and phase 5.
             private BlameMatrix blameInsufficientFunds() throws InterruptedException, FormatException, ValueException {
                 List<VerificationKey> offenders = new LinkedList<>();
+
+                System.out.println("player " + me + " about to try insufficient funds thinky. ");
 
                 // Check that each participant has the required amounts.
                 for (VerificationKey player : players.values()) {
@@ -337,9 +345,10 @@ final class CoinShuffle {
                 if (offenders.isEmpty()) {
                     return null;
                 }
+                System.out.println("player " + me + " finds offenders " + offenders.toString());
 
                 // If not, enter blame phase and find offending transactions.
-                phase = ShufflePhase.Blame;
+                phase = Phase.Blame;
                 BlameMatrix matrix = new BlameMatrix();
                 Message blameMessage = messages.make();
                 for (VerificationKey offender : offenders) {
@@ -350,7 +359,7 @@ final class CoinShuffle {
                         matrix.add(vk, offender,
                                 new BlameMatrix.BlameEvidence(BlameMatrix.BlameReason.NoFundsAtAll, true));
                     } else {
-                        blameMessage.attach(new BlameMatrix.Blame(offender, t));
+                        blameMessage.attach(new BlameMatrix.Blame(offender, t, BlameMatrix.BlameReason.InsufficientFunds));
                         matrix.add(vk, offender,
                                 new BlameMatrix.BlameEvidence(BlameMatrix.BlameReason.InsufficientFunds, true, t));
                     }
@@ -366,7 +375,7 @@ final class CoinShuffle {
             // Some misbehavior that has occurred during the shuffle phase.
             private BlameMatrix blameShuffleMisbehavior(DecryptionKey dk) throws InterruptedException, FormatException, ValueException, ProtocolException, BlameException {
                 // First skip to phase 4 and do an equivocation check.
-                phase = ShufflePhase.EquivocationCheck;
+                phase = Phase.EquivocationCheck;
                 BlameMatrix matrix = equivocationCheck(encryptionKeys, vk);
 
                 // If we get a blame matrix back, that means that the culprit was found.
@@ -375,12 +384,12 @@ final class CoinShuffle {
                 }
 
                 // Otherwise, there are some more things we have to check.
-                phase = ShufflePhase.Blame;
+                phase = Phase.Blame;
 
                 // Collect all packets from phase 2 and 3.
                 Message blameMessage = messages.make();
-                List<Packet> evidence = getPacketsByPhase(ShufflePhase.Shuffling);
-                evidence.addAll(getPacketsByPhase(ShufflePhase.BroadcastOutput));
+                List<Packet> evidence = getPacketsByPhase(Phase.Shuffling);
+                evidence.addAll(getPacketsByPhase(Phase.BroadcastOutput));
 
                 // Send them all with the decryption key.
                 blameMessage.attach(new BlameMatrix.Blame(dk, evidence));
@@ -395,7 +404,7 @@ final class CoinShuffle {
                 Map<VerificationKey, List<Packet>> blameMessages = receiveAllBlame();
 
                 // Get all hashes received in phase 4 so that we can check that they were reported correctly.
-                List<Packet> hashMessages = getPacketsByPhase(ShufflePhase.EquivocationCheck);
+                List<Packet> hashMessages = getPacketsByPhase(Phase.EquivocationCheck);
                 Map<VerificationKey, Message> hashes = new HashMap<>();
                 for (Packet packet : hashMessages) {
                     hashes.put(packet.signer, packet.message);
@@ -652,7 +661,7 @@ final class CoinShuffle {
             }
 
             // This method should only be called by receiveNextPacket
-            private Packet findPacket(ShufflePhase expectedPhase) throws InterruptedException, ValueException {
+            private Packet findPacket(Phase expectedPhase) throws InterruptedException, ValueException {
                 // Go through the queue of received messages if any are there.
                 if (delivered.size() > 0) {
                     Iterator<Packet> i = delivered.iterator();
@@ -670,7 +679,7 @@ final class CoinShuffle {
                 // Now we wait for the right message from the network, since we haven't already received it.
                 while (true) {
                     Packet packet = network.receive();
-                    ShufflePhase phase = packet.phase;
+                    Phase phase = packet.phase;
 
                     // Check that this is someone in the same session of this protocol as us.
                     if (!τ.equals(packet.τ)) {
@@ -682,7 +691,7 @@ final class CoinShuffle {
                         throw new ValueException(ValueException.Values.recipient, sk.VerificationKey().toString(), packet.recipient.toString());
                     }
 
-                    if (expectedPhase == phase || phase == ShufflePhase.Blame) {
+                    if (expectedPhase == phase || phase == Phase.Blame) {
                         return packet;
                     }
 
@@ -692,20 +701,20 @@ final class CoinShuffle {
 
             // Get the next message from the phase we're in. It's possible for other players to get
             // ahead under some circumstances, so we have to keep their messages to look at later.
-            Packet receiveNextPacket(ShufflePhase expectedPhase)
+            Packet receiveNextPacket(Phase expectedPhase)
                     throws FormatException, CryptographyError,
                     InterruptedException, TimeoutError, InvalidImplementationError, ValueException, BlameException {
 
                 Packet packet = findPacket(expectedPhase);
                 history.add(packet);
-                if (packet.phase == ShufflePhase.Blame) {
+                if (packet.phase == Phase.Blame) {
                     throw new BlameException(packet.signer, packet);
                 }
                 return packet;
             }
 
             // Get all packets history or received by phase. Used during blame phase.
-            public List<Packet> getPacketsByPhase(ShufflePhase phase) {
+            public List<Packet> getPacketsByPhase(Phase phase) {
                 List<Packet> selection = new LinkedList<>();
 
                 for (Packet packet : history) {
@@ -723,7 +732,7 @@ final class CoinShuffle {
                 return selection;
             }
 
-            public Message receiveFrom(VerificationKey from, ShufflePhase expectedPhase)
+            public Message receiveFrom(VerificationKey from, Phase expectedPhase)
                     throws TimeoutError, CryptographyError, FormatException, ValueException,
                     InvalidImplementationError, InterruptedException, BlameException {
 
@@ -737,7 +746,7 @@ final class CoinShuffle {
                 return packet.message;
             }
 
-            public Map<VerificationKey, Message> receiveFromMultiple(Set<VerificationKey> from, ShufflePhase expectedPhase)
+            public Map<VerificationKey, Message> receiveFromMultiple(Set<VerificationKey> from, Phase expectedPhase)
                     throws TimeoutError, CryptographyError, FormatException,
                     InvalidImplementationError, ValueException, InterruptedException, ProtocolException, BlameException {
 
@@ -772,7 +781,7 @@ final class CoinShuffle {
 
                 while(true) {
                     try {
-                        Packet next = receiveNextPacket(ShufflePhase.Blame);
+                        Packet next = receiveNextPacket(Phase.Blame);
                         blame.get(next.signer).add(next);
                     } catch (BlameException e) {
                         // This shouldn't really happen but just in case.
@@ -784,7 +793,7 @@ final class CoinShuffle {
 
                 // Get the blame messages we history too. Just get everything!
                 for (Packet packet : history) {
-                    if (packet.phase == ShufflePhase.Blame) {
+                    if (packet.phase == Phase.Blame) {
                         blame.get(sk.VerificationKey()).add(packet);
                     }
                 }
@@ -819,7 +828,7 @@ final class CoinShuffle {
         ReturnState run() throws InvalidImplementationError, InterruptedException {
 
             // Don't let the protocol be run more than once at a time.
-            if (phase != ShufflePhase.Uninitiated) {
+            if (phase != Phase.Uninitiated) {
                 return new ReturnState(false, τ, currentPhase(), new ProtocolStartedException(), null);
             }
 
@@ -859,9 +868,9 @@ final class CoinShuffle {
                         return new ReturnState(false, τ, currentPhase(), e, null);
                     }
 
-                    ShufflePhase endPhase = currentPhase();
+                    Phase endPhase = currentPhase();
 
-                    if (endPhase != ShufflePhase.Blame) {
+                    if (endPhase != Phase.Blame) {
                         // The protocol was successful, so return.
                         return new ReturnState(true, τ, endPhase, null, null);
                     }
@@ -873,8 +882,9 @@ final class CoinShuffle {
                     }
 
                     // Eliminate malicious players if possible and try again.
-                    phase = ShufflePhase.Uninitiated;
+                    phase = Phase.Uninitiated;
 
+                    break; // TODO remove this line.
                     // TODO
                     // Determine if the protocol can be restarted with some players eliminated.
 
@@ -892,7 +902,7 @@ final class CoinShuffle {
 
                 }
 
-                return new ReturnState(false, τ, ShufflePhase.Blame, null, blame);
+                return new ReturnState(false, τ, Phase.Blame, null, blame);
             } catch (InvalidParticipantSetException
                     | ProtocolException
                     | ValueException
@@ -918,6 +928,10 @@ final class CoinShuffle {
                 throw new NullPointerException();
             }
 
+            if (amount <= 0) {
+                throw new IllegalArgumentException();
+            }
+
             this.τ = τ;
             this.amount = amount;
             this.sk = sk;
@@ -926,7 +940,7 @@ final class CoinShuffle {
             this.change = change;
             this.maxRetries = maxRetries;
             this.minPlayers = minPlayers;
-            this.phase = ShufflePhase.Uninitiated;
+            this.phase = Phase.Uninitiated;
         }
     }
 
@@ -986,9 +1000,19 @@ final class CoinShuffle {
             SortedSet<VerificationKey> players, // The set of players, sorted alphabetically by address.
             Address change, // Change address. (can be null)
             int maxRetries, // maximum number of rounds this protocol can go through.,
-            int minPlayers // Minimum number of players allowed for the protocol to continue.
+            int minPlayers, // Minimum number of players allowed for the protocol to continue.
+            // If this is not null, the machine is put in this queue so that another thread can
+            // query the phase as it runs.
+            LinkedBlockingQueue<ShuffleMachine> queue
     ) throws InvalidImplementationError, InterruptedException {
-        return new ShuffleMachine(τ, amount, sk, players, change, maxRetries, minPlayers).run();
+        if (amount <= 0) {
+            throw new IllegalArgumentException();
+        }
+        ShuffleMachine machine = new ShuffleMachine(τ, amount, sk, players, change, maxRetries, minPlayers);
+        if (queue != null) {
+            queue.add(machine);
+        }
+        return machine.run();
     }
 
     public CoinShuffle(
@@ -997,7 +1021,9 @@ final class CoinShuffle {
             Coin coin, // Connects us to the Bitcoin or other cryptocurrency netork.
             Network network // Connects us to the other shuffle players.
     ) {
-
+        if (crypto == null || coin == null || messages == null || network == null) {
+            throw new NullPointerException();
+        }
         this.crypto = crypto;
         this.coin = coin;
         this.messages = messages;

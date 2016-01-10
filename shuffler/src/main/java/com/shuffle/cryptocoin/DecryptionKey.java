@@ -3,7 +3,6 @@ package com.shuffle.cryptocoin;
 import com.shuffle.protocol.FormatException;
 
 /**
- * TO BE IMPLEMENTED BY THE USER
  *
  * A private key used for decryption.
  *

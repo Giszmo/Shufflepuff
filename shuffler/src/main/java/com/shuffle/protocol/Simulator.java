@@ -13,7 +13,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -29,36 +28,20 @@ import java.util.concurrent.TimeUnit;
  * Created by Daniel Krawisz on 12/6/15.
  */
 public final class Simulator {
-    final ConcurrentMap<VerificationKey, BlackBox> machines;
-    final SortedSet<VerificationKey> players;
-    final SessionIdentifier τ;
-    final long amount;
+    ConcurrentMap<VerificationKey, BlackBox> machines;
+    //long amount;
     final MessageFactory messages;
     final Crypto crypto;
-    final Coin coin;
 
     // This implementation of Network connects each shuffle machine to the simulator.
     private class Network implements com.shuffle.protocol.Network {
         final BlockingQueue<Packet> inbox = new LinkedBlockingQueue<>();
-        final Map<ShufflePhase, Map<VerificationKey, Packet>> malicious = new HashMap<>(); // Replacement messages to simulate malicious players.
 
         Network() {
         }
 
-        Network(Map<ShufflePhase, Map<VerificationKey, Packet>> malicious) {
-            malicious.putAll(malicious);
-        }
-
         @Override
         public void sendTo(VerificationKey to, Packet packet) throws InvalidImplementationError, TimeoutError {
-            // Replace with malicious packet if necessary.
-            Map<VerificationKey, Packet> replacements = malicious.get(packet.phase);
-            if (replacements != null) {
-                Packet maliciousPacket = replacements.get(to);
-                if (maliciousPacket != null) {
-                    packet = maliciousPacket;
-                }
-            }
 
             try {
                 Simulator.this.sendTo(to, new Packet(messages.copy(packet.message), packet.τ, packet.phase, packet.signer, packet.recipient));
@@ -83,40 +66,36 @@ public final class Simulator {
         }
     }
 
-    // Simulations can have a pretty complicated initial state. This class is
-    // for initializing a single machine in the simulation.
-    public static class InitialState {
-        public SigningKey key;
-
-        public InitialState(SigningKey key) {
-            this.key = key;
-        }
-
-        @Override
-        public String toString() {
-            return "initial[" + key.toString() + "]";
-        }
-    }
-
     // Could be a real or a malicious player.
-    private interface Adversary {
+    public interface Adversary {
+        SessionIdentifier τ();
         ReturnState turnOn() throws InvalidImplementationError;
-        ShufflePhase currentPhase();
+        Phase currentPhase();
         void deliver(Packet packet) throws InterruptedException;
         SigningKey identity();
     }
 
     // A wraper for the regular version of the protocol.
-    private class HonestAdversary implements Adversary {
-        CoinShuffle.ShuffleMachine machine;
-        Network network;
-        SigningKey sk;
+    public class HonestAdversary implements Adversary {
+        final CoinShuffle.ShuffleMachine machine;
+        final Network network;
+        final SigningKey sk;
+        final SessionIdentifier τ;
 
-        HonestAdversary(SessionIdentifier τ, long amount, SigningKey sk,
-                        SortedSet<VerificationKey> players) {
+        HonestAdversary(SessionIdentifier τ,
+                        long amount,
+                        SigningKey sk,
+                        SortedSet<VerificationKey> players,
+                        Coin coin) {
+            this.τ = τ;
             this.sk = sk;
             this.network = new Network();
             this.machine = new CoinShuffle(messages, crypto, coin, network).new ShuffleMachine(τ, amount, sk, players, null, 1, 2);
+        }
+
+        @Override
+        public SessionIdentifier τ() {
+            return τ;
         }
 
         @Override
@@ -129,7 +108,7 @@ public final class Simulator {
         }
 
         @Override
-        public ShufflePhase currentPhase() {
+        public Phase currentPhase() {
             return machine.currentPhase();
         }
 
@@ -146,25 +125,63 @@ public final class Simulator {
 
     // The malicious adversary can be made to send malicious messages or to spend bitcoins at
     // inappropriate times.
-    private class MaliciousAdversary implements Adversary{
+    public class MaliciousAdversary implements Adversary{
+        // This implementation of Network connects each shuffle machine to the simulator.
+        private class MaliciousNetwork extends Network {
+            final Map<Phase, Map<VerificationKey, Packet>> malicious = new HashMap<>(); // Replacement messages to simulate malicious players.
+
+            MaliciousNetwork(Map<Phase, Map<VerificationKey, Packet>> malicious) {
+                malicious.putAll(malicious);
+            }
+
+            @Override
+            public void sendTo(VerificationKey to, Packet packet) throws InvalidImplementationError, TimeoutError {
+                // Replace with malicious packet if necessary.
+                Map<VerificationKey, Packet> replacements = malicious.get(packet.phase);
+                if (replacements != null) {
+                    Packet maliciousPacket = replacements.get(to);
+                    if (maliciousPacket != null) {
+                        packet = maliciousPacket;
+                    }
+                }
+
+                super.sendTo(to, packet);
+            }
+        }
+
+        final SessionIdentifier τ;
         final CoinShuffle.ShuffleMachine machine;
         final Network network;
         final SigningKey sk;
 
         final Transaction t;
+        final Coin coin;
         boolean transactionSent = false;
 
-        MaliciousAdversary(SessionIdentifier τ, long amount, SigningKey sk,
-                        SortedSet<VerificationKey> players, final Map<ShufflePhase, Map<VerificationKey, Packet>> lies,
-                        Transaction t) {
+        MaliciousAdversary(
+                SessionIdentifier τ,
+                long amount,
+                SigningKey sk,
+                SortedSet<VerificationKey> players,
+                Coin coin,
+                Crypto crypto,
+                final Map<Phase, Map<VerificationKey, Packet>> lies,
+                Transaction t) {
+            this.τ = τ;
             this.sk = sk;
+            this.coin = coin;
             if (lies == null) {
                 this.network = new Network();
             } else {
-                this.network = new Network(lies);
+                this.network = new MaliciousNetwork(lies);
             }
             this.t = t;
             this.machine = new CoinShuffle(messages, crypto, coin, network).new ShuffleMachine(τ, amount, sk, players, null, 1, 2);
+        }
+
+        @Override
+        public SessionIdentifier τ() {
+            return τ;
         }
 
         @Override
@@ -172,21 +189,21 @@ public final class Simulator {
             try {
                 machine.run();
                 // Malicious players don't need to return any information since they are not being tested.
-                return new ReturnState(false, τ, ShufflePhase.Malicious, null, null);
+                return new ReturnState(false, τ, Phase.Malicious, null, null);
             } catch (InterruptedException e) {
                 return new ReturnState(false, τ, machine.currentPhase(), e, null);
             }
         }
 
         @Override
-        public ShufflePhase currentPhase() {
+        public Phase currentPhase() {
             return machine.currentPhase();
         }
 
         @Override
         public void deliver(Packet packet) throws InterruptedException {
             // Part way through the protocol, send the malicious bitcoin transaction. 
-            if (packet.phase == ShufflePhase.BroadcastOutput && !transactionSent) {
+            if (packet.phase == Phase.BroadcastOutput && !transactionSent) {
                 coin.send(t);
                 transactionSent = true;
             }
@@ -288,37 +305,34 @@ public final class Simulator {
             try {
                 q.add(machine.turnOn());
             } catch (InvalidImplementationError e) {
-                q.add(new ReturnState(false, τ, machine.currentPhase(), e, null));
+                q.add(new ReturnState(false, machine.τ(), machine.currentPhase(), e, null));
             }
         }
     }
 
-    public Simulator(SessionIdentifier τ, long amount, List<InitialState> init, MessageFactory messages, Crypto crypto, Coin coin)  {
-        if (τ == null || init == null) throw new NullPointerException();
-        this.τ = τ;
-        this.amount = amount;
-        this.players = new TreeSet<>();
+    public Simulator(MessageFactory messages, Crypto crypto)  {
         this.messages = messages;
         this.crypto = crypto;
-        this.coin = coin;
+    }
+
+    public Map<SigningKey, ReturnState> runSimulation(
+            long amount,
+            List<Adversary> init)  {
+        if (init == null ) throw new NullPointerException();
 
         machines = new ConcurrentHashMap<>();
 
         int i = 0;
         try {
-            for (InitialState in : init) {
-                players.add(in.key.VerificationKey());
-                machines.put(in.key.VerificationKey(),
-                        new BlackBox(new HonestAdversary(τ, amount, in.key, players)));
+            for (Adversary in : init) {
+                machines.put(in.identity().VerificationKey(),
+                        new BlackBox(in));
                 i++;
             }
         } catch (CryptographyError e) {
             e.printStackTrace();
         }
 
-    }
-
-    public Map<SigningKey, ReturnState> runSimulation() {
         //Timer timer = new Timer();
         List<Future<Map.Entry<SigningKey, ReturnState>>> wait = new LinkedList<>();
         Map<SigningKey, ReturnState> results = new HashMap<>();
@@ -330,11 +344,13 @@ public final class Simulator {
             wait.add(future);
         }
 
+        System.out.println("Simulation running. " + wait.size() + " futures.");
+
         // TODO Allow for timeouts.
         while (wait.size() != 0) {
-            Iterator<Future<Map.Entry<SigningKey, ReturnState>>> i = wait.iterator();
-            while (i.hasNext()) {
-                Future<Map.Entry<SigningKey, ReturnState>> future = i.next();
+            Iterator<Future<Map.Entry<SigningKey, ReturnState>>> I = wait.iterator();
+            while (I.hasNext()) {
+                Future<Map.Entry<SigningKey, ReturnState>> future = I.next();
                 if (future.isDone()) {
                     try {
                         Map.Entry<SigningKey, ReturnState> sim = future.get();
@@ -343,7 +359,7 @@ public final class Simulator {
                         e.printStackTrace();
                     }
 
-                    i.remove();
+                    I.remove();
                 }
             }
         }
@@ -355,5 +371,6 @@ public final class Simulator {
     public void sendTo(VerificationKey to, Packet packet) throws InvalidImplementationError, InterruptedException {
         machines.get(to).deliver(packet);
     }
+
 
 }

@@ -1,20 +1,18 @@
 package com.shuffle.protocol;
 
-import java.util.Set;
-
 /**
  * An error state that the protocol returns if the it fails.
  *
  * Created by Daniel Krawisz on 12/6/15.
  */
-public final class ReturnState {
+public class ReturnState {
     boolean success;
     SessionIdentifier τ;
-    ShufflePhase phase;
+    Phase phase;
     Throwable error = null;
     BlameMatrix blame = null;
 
-    public ReturnState(boolean success, SessionIdentifier τ, ShufflePhase phase, Throwable error, BlameMatrix blame) {
+    public ReturnState(boolean success, SessionIdentifier τ, Phase phase, Throwable error, BlameMatrix blame) {
         this.success = success;
         this.τ = τ;
         this.phase = phase;
@@ -44,6 +42,10 @@ public final class ReturnState {
 
         if (error != null) {
             return "Unsuccessful run" + session + "; threw " + error.toString() + " in phase " + phase.toString();
+        }
+
+        if (blame != null) {
+            return "Unsuccessful run" + session + " failed in phase " + phase.toString() + "; blame = " + blame.toString();
         }
 
         return "Unsuccessful run" + session + " failed in phase " + phase.toString();

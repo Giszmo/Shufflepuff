@@ -13,11 +13,11 @@ public class Packet {
 
     Message message;
     SessionIdentifier τ;
-    ShufflePhase phase;
+    Phase phase;
     VerificationKey signer;
     VerificationKey recipient;
 
-    public Packet(Message message, SessionIdentifier τ, ShufflePhase phase, VerificationKey signer, VerificationKey recipient) {
+    public Packet(Message message, SessionIdentifier τ, Phase phase, VerificationKey signer, VerificationKey recipient) {
         if (τ == null || phase == null || signer == null) {
             throw new NullPointerException();
         }

@@ -6,6 +6,9 @@ import com.shuffle.cryptocoin.Transaction;
 import com.shuffle.cryptocoin.VerificationKey;
 
 /**
+ *
+ * Should be comparable according to the lexicographic order of the address corresponding to the keys.
+ *
  * Created by Daniel Krawisz on 12/3/15.
  */
 public interface SigningKey {

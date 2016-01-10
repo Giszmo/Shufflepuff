@@ -54,12 +54,18 @@ public class MockCoin implements Coin {
      * Created by Daniel Krawisz on 12/8/15.
      */
     public static class MockTransaction implements Transaction {
-        List<Output> inputs;
-        List<Output> outputs;
+        final List<Output> inputs = new LinkedList<>();
+        final List<Output> outputs = new LinkedList<>();
 
         public MockTransaction(List<Output> inputs, List<Output> outputs) {
-            this.inputs = inputs;
-            this.outputs = outputs;
+            for (Output output : inputs) {
+                if (output == null) throw new NullPointerException();
+            }
+            for (Output output : outputs) {
+                if (output == null) throw new NullPointerException();
+            }
+            this.inputs.addAll(inputs);
+            this.outputs.addAll(outputs);
         }
 
         @Override
@@ -93,6 +99,10 @@ public class MockCoin implements Coin {
                 Output c1 = i1.next();
                 Output c2 = i2.next();
 
+                if (c2 == null) {
+                    return false;
+                }
+
                 if (!c1.equals(c2)) {
                     return false;
                 }
@@ -124,8 +134,27 @@ public class MockCoin implements Coin {
         blockchain.put(addr, entry);
     }
 
+    public synchronized MockTransaction spend(Address from, Address to, int amount) {
+        Output output = blockchain.get(from);
+
+        if (output == null) {
+            return null;
+        }
+
+        List<Output> in = new LinkedList<>();
+        List<Output> out = new LinkedList<>();
+        in.add(output);
+        out.add(new Output(to, output.amountHeld));
+
+        MockTransaction t = new MockTransaction(in, out);
+        send(t);
+        return t;
+    }
+
     @Override
     public synchronized void send(Transaction t) {
+        if (t == null) throw new NullPointerException();
+
         if (!(t instanceof MockTransaction)) {
             throw new InvalidImplementationError();
         }
@@ -149,6 +178,7 @@ public class MockCoin implements Coin {
         // Does the transaction spend from valid outputs?
         for (Output input : mt.inputs) {
             if (!blockchain.get(input.address).equals(input)) {
+
                 throw new CoinNetworkError();
             }
         }
@@ -181,6 +211,9 @@ public class MockCoin implements Coin {
     @Override
     public synchronized long valueHeld(Address addr) {
         Output entry = blockchain.get(addr);
+        if (entry == null) {
+            return 0;
+        }
         if (spend.get(entry) != null) {
             return 0;
         }
@@ -190,19 +223,26 @@ public class MockCoin implements Coin {
 
     @Override
     // TODO transaction fees.
-    public Transaction shuffleTransaction(long amount, List<VerificationKey> from, Queue<Address> to, Map<VerificationKey, Address> changeAddresses) {
+    public Transaction shuffleTransaction(final long amount, List<VerificationKey> from, Queue<Address> to, Map<VerificationKey, Address> changeAddresses) {
+        if (amount == 0) {
+            throw new IllegalArgumentException();
+        }
         List<Output> inputs = new LinkedList<>();
         List<Output> outputs = new LinkedList<>();
 
         // Are there inputs big enough blockchain make this transaction?
         for (VerificationKey key : from) {
-            Address address = key.address();
-            long value = valueHeld(address);
+            final Address address = key.address();
+            final long value = valueHeld(address);
             if (value < amount) {
                 throw new CoinNetworkError();
             }
 
-            inputs.add(blockchain.get(address));
+            Output input = blockchain.get(address);
+            if (input == null) {
+                throw new CoinNetworkError();
+            }
+            inputs.add(input);
 
             // If a change address has been provided, add that.
             Address change = changeAddresses.get(address);
@@ -224,6 +264,11 @@ public class MockCoin implements Coin {
         }
 
         Output output = blockchain.get(addr);
+
+        if (output == null) {
+            return null;
+        }
+
         Transaction t = spend.get(output);
 
         if (t != null) {

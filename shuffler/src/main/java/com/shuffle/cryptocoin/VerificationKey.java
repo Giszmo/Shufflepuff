@@ -7,7 +7,6 @@ import com.shuffle.cryptocoin.Transaction;
 import com.shuffle.protocol.InvalidImplementationError;
 
 /**
- * TO BE IMPLEMENTED BY THE USER
  *
  * Should be comparable according to the lexicographic order of the address corresponding to the keys.
  *
