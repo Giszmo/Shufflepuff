@@ -36,7 +36,7 @@ public class MockSessionIdentifier implements SessionIdentifier {
 
     @Override
     public String toString() {
-        return "τ[" + id + "]";
+        return "session[" + id + "]";
     }
 
     @Override

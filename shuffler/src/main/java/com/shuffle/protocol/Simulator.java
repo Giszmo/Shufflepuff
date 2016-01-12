@@ -44,7 +44,7 @@ public final class Simulator {
         public void sendTo(VerificationKey to, Packet packet) throws InvalidImplementationError, TimeoutError {
 
             try {
-                Simulator.this.sendTo(to, new Packet(messages.copy(packet.message), packet.τ, packet.phase, packet.signer, packet.recipient));
+                Simulator.this.sendTo(to, new Packet(messages.copy(packet.message), packet.session, packet.phase, packet.signer, packet.recipient));
             } catch (InterruptedException e) {
                 // This means that the thread running the machine we are delivering to has been interrupted.
                 // This would look like a timeout if this were happening over a real network.
@@ -68,7 +68,7 @@ public final class Simulator {
 
     // Could be a real or a malicious player.
     public interface Adversary {
-        SessionIdentifier τ();
+        SessionIdentifier session();
         ReturnState turnOn() throws InvalidImplementationError;
         Phase currentPhase();
         void deliver(Packet packet) throws InterruptedException;
@@ -80,22 +80,22 @@ public final class Simulator {
         final CoinShuffle.ShuffleMachine machine;
         final Network network;
         final SigningKey sk;
-        final SessionIdentifier τ;
+        final SessionIdentifier session;
 
-        HonestAdversary(SessionIdentifier τ,
+        HonestAdversary(SessionIdentifier session,
                         long amount,
                         SigningKey sk,
                         SortedSet<VerificationKey> players,
                         Coin coin) {
-            this.τ = τ;
+            this.session = session;
             this.sk = sk;
             this.network = new Network();
-            this.machine = new CoinShuffle(messages, crypto, coin, network).new ShuffleMachine(τ, amount, sk, players, null, 1, 2);
+            this.machine = new CoinShuffle(messages, crypto, coin, network).new ShuffleMachine(session, amount, sk, players, null, 1, 2);
         }
 
         @Override
-        public SessionIdentifier τ() {
-            return τ;
+        public SessionIdentifier session() {
+            return session;
         }
 
         @Override
@@ -103,7 +103,7 @@ public final class Simulator {
             try {
                 return machine.run();
             } catch (InterruptedException e) {
-                return new ReturnState(false, τ, machine.currentPhase(), e, null);
+                return new ReturnState(false, session, machine.currentPhase(), e, null);
             }
         }
 
@@ -149,7 +149,7 @@ public final class Simulator {
             }
         }
 
-        final SessionIdentifier τ;
+        final SessionIdentifier session;
         final CoinShuffle.ShuffleMachine machine;
         final Network network;
         final SigningKey sk;
@@ -159,7 +159,7 @@ public final class Simulator {
         boolean transactionSent = false;
 
         MaliciousAdversary(
-                SessionIdentifier τ,
+                SessionIdentifier session,
                 long amount,
                 SigningKey sk,
                 SortedSet<VerificationKey> players,
@@ -167,7 +167,7 @@ public final class Simulator {
                 Crypto crypto,
                 final Map<Phase, Map<VerificationKey, Packet>> lies,
                 Transaction t) {
-            this.τ = τ;
+            this.session = session;
             this.sk = sk;
             this.coin = coin;
             if (lies == null) {
@@ -176,12 +176,12 @@ public final class Simulator {
                 this.network = new MaliciousNetwork(lies);
             }
             this.t = t;
-            this.machine = new CoinShuffle(messages, crypto, coin, network).new ShuffleMachine(τ, amount, sk, players, null, 1, 2);
+            this.machine = new CoinShuffle(messages, crypto, coin, network).new ShuffleMachine(session, amount, sk, players, null, 1, 2);
         }
 
         @Override
-        public SessionIdentifier τ() {
-            return τ;
+        public SessionIdentifier session() {
+            return session;
         }
 
         @Override
@@ -189,9 +189,9 @@ public final class Simulator {
             try {
                 machine.run();
                 // Malicious players don't need to return any information since they are not being tested.
-                return new ReturnState(false, τ, Phase.Malicious, null, null);
+                return new ReturnState(false, session, Phase.Malicious, null, null);
             } catch (InterruptedException e) {
-                return new ReturnState(false, τ, machine.currentPhase(), e, null);
+                return new ReturnState(false, session, machine.currentPhase(), e, null);
             }
         }
 
@@ -305,7 +305,7 @@ public final class Simulator {
             try {
                 q.add(machine.turnOn());
             } catch (InvalidImplementationError e) {
-                q.add(new ReturnState(false, machine.τ(), machine.currentPhase(), e, null));
+                q.add(new ReturnState(false, machine.session(), machine.currentPhase(), e, null));
             }
         }
     }

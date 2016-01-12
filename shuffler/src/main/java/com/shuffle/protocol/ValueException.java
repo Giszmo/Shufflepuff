@@ -4,7 +4,7 @@ package com.shuffle.protocol;
  * Created by Daniel Krawisz on 12/7/15.
  */
 class ValueException extends Exception {
-    public static enum Values{τ, phase, sender, recipient}
+    public static enum Values{session, phase, sender, recipient}
 
     Values value;
     String expected;

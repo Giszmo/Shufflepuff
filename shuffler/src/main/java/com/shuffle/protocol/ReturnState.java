@@ -7,14 +7,14 @@ package com.shuffle.protocol;
  */
 public class ReturnState {
     boolean success;
-    SessionIdentifier τ;
+    SessionIdentifier session;
     Phase phase;
     Throwable error = null;
     BlameMatrix blame = null;
 
-    public ReturnState(boolean success, SessionIdentifier τ, Phase phase, Throwable error, BlameMatrix blame) {
+    public ReturnState(boolean success, SessionIdentifier session, Phase phase, Throwable error, BlameMatrix blame) {
         this.success = success;
-        this.τ = τ;
+        this.session = session;
         this.phase = phase;
         this.error = error;
         this.blame = blame;
@@ -22,7 +22,7 @@ public class ReturnState {
 
     // Whether two return states are equivalent.
     public boolean match(ReturnState m) {
-        return success == m.success && τ == m.τ && phase == m.phase &&
+        return success == m.success && session == m.session && phase == m.phase &&
                 ((error == null && m.error == null) ||
                 (error != null && m.error != null && error.getClass().equals(m.error.getClass())))
                 && ((blame == null && m.blame == null) || (blame != null && m.blame != null && blame.equals(m.blame)));
@@ -30,8 +30,8 @@ public class ReturnState {
 
     public String toString() {
         String session;
-        if (τ != null) {
-            session = " " + τ.toString();
+        if (this.session != null) {
+            session = " " + this.session.toString();
         } else {
             session = "";
         }

@@ -258,8 +258,8 @@ public class MockCoin implements Coin {
     }
 
     @Override
-    public Transaction getOffendingTransaction(Address addr, long ν) {
-        if (valueHeld(addr) >= ν) {
+    public Transaction getOffendingTransaction(Address addr, long amount) {
+        if (valueHeld(addr) >= amount) {
             return null;
         }
 
@@ -279,8 +279,8 @@ public class MockCoin implements Coin {
     }
 
     @Override
-    public boolean isOffendingTransaction(Address addr, long ν, Transaction t) {
-        return t.equals(getOffendingTransaction(addr, ν));
+    public boolean isOffendingTransaction(Address addr, long amount, Transaction t) {
+        return t.equals(getOffendingTransaction(addr, amount));
     }
 
 }

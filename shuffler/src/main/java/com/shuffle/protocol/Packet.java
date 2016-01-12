@@ -12,20 +12,20 @@ import com.shuffle.cryptocoin.VerificationKey;
 public class Packet {
 
     Message message;
-    SessionIdentifier τ;
+    SessionIdentifier session;
     Phase phase;
     VerificationKey signer;
     VerificationKey recipient;
 
-    public Packet(Message message, SessionIdentifier τ, Phase phase, VerificationKey signer, VerificationKey recipient) {
-        if (τ == null || phase == null || signer == null) {
+    public Packet(Message message, SessionIdentifier session, Phase phase, VerificationKey signer, VerificationKey recipient) {
+        if (session == null || phase == null || signer == null) {
             throw new NullPointerException();
         }
 
         this.signer = signer;
         this.recipient = recipient;
         this.phase = phase;
-        this.τ = τ;
+        this.session = session;
         this.message = message;
     }
 
@@ -37,11 +37,11 @@ public class Packet {
 
         Packet packet = ((Packet)o);
 
-        return τ.equals(packet.τ) && phase == packet.phase && signer.equals(packet.signer) && message.equals(packet.message);
+        return session.equals(packet.session) && phase == packet.phase && signer.equals(packet.signer) && message.equals(packet.message);
     }
 
     @Override
     public String toString() {
-        return "{" + message.toString() + ", " + τ.toString() + ", " + phase.toString() + ", " + signer.toString() + "}";
+        return "{" + message.toString() + ", " + session.toString() + ", " + phase.toString() + ", " + signer.toString() + "}";
     }
 }

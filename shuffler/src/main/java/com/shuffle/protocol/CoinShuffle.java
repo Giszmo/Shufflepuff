@@ -49,7 +49,7 @@ final class CoinShuffle {
     public class ShuffleMachine {
         Phase phase;
 
-        final SessionIdentifier τ;
+        final SessionIdentifier session;
 
         final long amount; // The amount to be shuffled.
 
@@ -176,7 +176,7 @@ final class CoinShuffle {
 
                     // Pass it along to the next player.
                     if (me != N) {
-                        send(new Packet(σ2, τ, phase, vk, players.get(me + 1)));
+                        send(new Packet(σ2, session, phase, vk, players.get(me + 1)));
                     }
 
                     // Phase 3: broadcast outputs.
@@ -650,7 +650,7 @@ final class CoinShuffle {
 
                 for (VerificationKey to : keys) {
                     if (!to.equals(sk.VerificationKey())) {
-                        send(new Packet(message, τ, phase, vk, to));
+                        send(new Packet(message, session, phase, vk, to));
                     }
                 }
             }
@@ -682,8 +682,8 @@ final class CoinShuffle {
                     Phase phase = packet.phase;
 
                     // Check that this is someone in the same session of this protocol as us.
-                    if (!τ.equals(packet.τ)) {
-                        throw new ValueException(ValueException.Values.τ, τ.toString(), packet.τ.toString());
+                    if (!session.equals(packet.session)) {
+                        throw new ValueException(ValueException.Values.session, session.toString(), packet.session.toString());
                     }
 
                     // Check that this message is intended for us.
@@ -829,7 +829,7 @@ final class CoinShuffle {
 
             // Don't let the protocol be run more than once at a time.
             if (phase != Phase.Uninitiated) {
-                return new ReturnState(false, τ, currentPhase(), new ProtocolStartedException(), null);
+                return new ReturnState(false, session, currentPhase(), new ProtocolStartedException(), null);
             }
 
             int attempt = 0;
@@ -865,14 +865,14 @@ final class CoinShuffle {
                         blame = new Round(numberedPlayers, change).protocolDefinition();
                     } catch (TimeoutError e) {
                         // TODO We have to go into "suspect" mode at this point to determine why the timeout occurred.
-                        return new ReturnState(false, τ, currentPhase(), e, null);
+                        return new ReturnState(false, session, currentPhase(), e, null);
                     }
 
                     Phase endPhase = currentPhase();
 
                     if (endPhase != Phase.Blame) {
                         // The protocol was successful, so return.
-                        return new ReturnState(true, τ, endPhase, null, null);
+                        return new ReturnState(true, session, endPhase, null, null);
                     }
 
                     attempt++;
@@ -902,7 +902,7 @@ final class CoinShuffle {
 
                 }
 
-                return new ReturnState(false, τ, Phase.Blame, null, blame);
+                return new ReturnState(false, session, Phase.Blame, null, blame);
             } catch (InvalidParticipantSetException
                     | ProtocolException
                     | ValueException
@@ -910,13 +910,13 @@ final class CoinShuffle {
                     | CryptographyError
                     | FormatException e) {
                 // TODO many of these cases could be dealt with instead of just aborting.
-                return new ReturnState(false, τ, currentPhase(), e, null);
+                return new ReturnState(false, session, currentPhase(), e, null);
             }
         }
 
         // The ShuffleMachine cannot be instantiated directly.
         ShuffleMachine(
-                SessionIdentifier τ,
+                SessionIdentifier session,
                 long amount,
                 SigningKey sk,
                 SortedSet<VerificationKey> players,
@@ -924,7 +924,7 @@ final class CoinShuffle {
                 int maxRetries,
                 int minPlayers) {
 
-            if (τ == null || sk == null || players == null) {
+            if (session == null || sk == null || players == null) {
                 throw new NullPointerException();
             }
 
@@ -932,7 +932,7 @@ final class CoinShuffle {
                 throw new IllegalArgumentException();
             }
 
-            this.τ = τ;
+            this.session = session;
             this.amount = amount;
             this.sk = sk;
             this.vk = sk.VerificationKey();
@@ -994,7 +994,7 @@ final class CoinShuffle {
 
     // Run the protocol without creating a new thread.
     public ReturnState run(
-            SessionIdentifier τ, // Unique session identifier.
+            SessionIdentifier session, // Unique session identifier.
             long amount, // The amount to be shuffled per player.
             SigningKey sk, // The signing key of the current player.
             SortedSet<VerificationKey> players, // The set of players, sorted alphabetically by address.
@@ -1008,7 +1008,7 @@ final class CoinShuffle {
         if (amount <= 0) {
             throw new IllegalArgumentException();
         }
-        ShuffleMachine machine = new ShuffleMachine(τ, amount, sk, players, change, maxRetries, minPlayers);
+        ShuffleMachine machine = new ShuffleMachine(session, amount, sk, players, change, maxRetries, minPlayers);
         if (queue != null) {
             queue.add(machine);
         }
