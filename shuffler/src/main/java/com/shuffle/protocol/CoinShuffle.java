@@ -134,8 +134,8 @@ final class CoinShuffle {
 
                 // Now we wait to receive similar inbox from everyone else.
                 try {
-                    Map<VerificationKey, Message> σ1 = receiveFromMultiple(playerSet(2, N), phase);
-                    readAnouncements(σ1, change);
+                    Map<VerificationKey, Message> announcement = receiveFromMultiple(playerSet(2, N), phase);
+                    readAnouncements(announcement, change);
                 } catch (BlameException e) {
                     // TODO : might receive blame messages about insufficient funds.
                 }
@@ -158,9 +158,9 @@ final class CoinShuffle {
 
                     // Player one begins the cycle and encrypts its new address with everyone's privateKey, in order.
                     // Each subsequent player reorders the cycle and removes one layer of encryption.
-                    Message σ2 = messages.make();
+                    Message shuffled = messages.make();
                     if (me != 1) {
-                        σ2 = decryptAll(σ2.attach(receiveFrom(players.get(me - 1), phase)), dk, me - 1);
+                        shuffled = decryptAll(shuffled.attach(receiveFrom(players.get(me - 1), phase)), dk, me - 1);
                     }
 
                     // Add our own address to the mix. Note that if me == N, ie, the last player, then no
@@ -172,11 +172,11 @@ final class CoinShuffle {
                     }
 
                     // Insert new entry and reorder the keys.
-                    σ2 = shuffle(σ2.attach(encrypted));
+                    shuffled = shuffle(shuffled.attach(encrypted));
 
                     // Pass it along to the next player.
                     if (me != N) {
-                        send(new Packet(σ2, session, phase, vk, players.get(me + 1)));
+                        send(new Packet(shuffled, session, phase, vk, players.get(me + 1)));
                     }
 
                     // Phase 3: broadcast outputs.
@@ -185,8 +185,8 @@ final class CoinShuffle {
 
                     if (me == N) {
                         // The last player adds his own new address in without encrypting anything and shuffles the result.
-                        newAddresses = readNewAddresses(σ2);
-                        broadcast(σ2);
+                        newAddresses = readNewAddresses(shuffled);
+                        broadcast(shuffled);
                     } else {
                         newAddresses = readNewAddresses(receiveFrom(players.get(N), phase));
                     }
@@ -222,10 +222,10 @@ final class CoinShuffle {
                 broadcast(messages.make().attach(sk.makeSignature(t)));
 
                 try {
-                    Map<VerificationKey, Message> σ5 = receiveFromMultiple(playerSet(1, N), phase);
+                    Map<VerificationKey, Message> signatures = receiveFromMultiple(playerSet(1, N), phase);
 
                     // Verify the signatures.
-                    for (Map.Entry<VerificationKey, Message> sig : σ5.entrySet()) {
+                    for (Map.Entry<VerificationKey, Message> sig : signatures.entrySet()) {
                         if (!sig.getKey().verify(t, sig.getValue().readSignature())) {
                             // TODO handle this case.
                         }
@@ -300,17 +300,17 @@ final class CoinShuffle {
                     Map<VerificationKey, EncryptionKey> encryptonKeys,
                     VerificationKey vk) throws InterruptedException, ValueException, FormatException, ProtocolException, BlameException {
                 // Put all temporary encryption keys into a list and hash the result.
-                Message σ4 = messages.make();
+                Message equivocationCheck = messages.make();
                 for (int i = 2; i <= players.size(); i++) {
-                    σ4.attach(encryptonKeys.get(players.get(i)));
+                    equivocationCheck.attach(encryptonKeys.get(players.get(i)));
                 }
 
-                σ4 = crypto.hash(σ4);
-                broadcast(σ4);
+                equivocationCheck = crypto.hash(equivocationCheck);
+                broadcast(equivocationCheck);
 
                 // Wait for a similar message from everyone else and check that the result is the name.
                 Map<VerificationKey, Message> hashes = receiveFromMultiple(playerSet(1, players.size()), phase);
-                hashes.put(vk, σ4);
+                hashes.put(vk, equivocationCheck);
                 if (areEqual(hashes.values())) {
                     return null;
                 }
@@ -480,12 +480,12 @@ final class CoinShuffle {
                                     }
 
                                     // Check on whether this player correctly reported the hash.
-                                    Message σ4 = messages.make();
+                                    Message equivocationCheck = messages.make();
                                     for (int i = 2; i <= players.size(); i++) {
-                                        σ4.attach(receivedKeys.get(players.get(i)));
+                                        equivocationCheck.attach(receivedKeys.get(players.get(i)));
                                     }
 
-                                    if (!hashes.get(packet.signer).equals(crypto.hash(σ4))) {
+                                    if (!hashes.get(packet.signer).equals(crypto.hash(equivocationCheck))) {
                                         matrix.add(vk, from, null /* TODO */);
                                     }
 
@@ -945,8 +945,8 @@ final class CoinShuffle {
     }
 
     // Algorithm to randomly shuffle the elements of a message.
-    Message shuffle(Message σ) throws CryptographyError, InvalidImplementationError, FormatException {
-        Message copy = messages.copy(σ);
+    Message shuffle(Message message) throws CryptographyError, InvalidImplementationError, FormatException {
+        Message copy = messages.copy(message);
         Message shuffled = messages.make();
 
         // Read all elements of the packet and insert them in a Queue.
