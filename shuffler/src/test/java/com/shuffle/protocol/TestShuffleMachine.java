@@ -1,7 +1,6 @@
 package com.shuffle.protocol;
 
 import com.shuffle.cryptocoin.Address;
-import com.shuffle.cryptocoin.CryptographyError;
 import com.shuffle.cryptocoin.SigningKey;
 import com.shuffle.cryptocoin.Transaction;
 import com.shuffle.cryptocoin.VerificationKey;
@@ -72,12 +71,12 @@ public class TestShuffleMachine {
     public class TestCase {
 
         String description = null;
-        SessionIdentifier τ;
+        SessionIdentifier session;
         long amount;
         Map<SigningKey, Expected> machines = new HashMap<>();
 
-        TestCase(SessionIdentifier τ, long amount, String desc) {
-            this.τ = τ;
+        TestCase(SessionIdentifier session, long amount, String desc) {
+            this.session = session;
             this.description = desc;
             this.amount = amount;
         }
@@ -90,10 +89,10 @@ public class TestShuffleMachine {
 
     // Create a test case representing a successful run.
     public TestCase SuccessfulRun(int numPlayer, Simulator sim) {
-        SessionIdentifier τ = new MockSessionIdentifier();
+        SessionIdentifier mockSessionIdentifier = new MockSessionIdentifier();
         MockCoin coin = new MockCoin();
         long amount = 17;
-        TestCase test = new TestCase(τ, amount, "successful run with " + numPlayer + " players.");
+        TestCase test = new TestCase(mockSessionIdentifier, amount, "successful run with " + numPlayer + " players.");
 
         SortedSet<VerificationKey> players = new TreeSet<>();
         List<SigningKey> keys = new LinkedList<>();
@@ -109,8 +108,8 @@ public class TestShuffleMachine {
             coin.put(address, 20);
             test.put(key,
                     new Expected(key,
-                            sim.new HonestAdversary(τ, amount, key, players, coin),
-                            new ReturnState(true, τ, Phase.Completed, null, null)
+                            sim.new HonestAdversary(mockSessionIdentifier, amount, key, players, coin),
+                            new ReturnState(true, mockSessionIdentifier, Phase.Completed, null, null)
                     ));
         }
         return test;
@@ -195,9 +194,9 @@ public class TestShuffleMachine {
 
         }
 
-        SessionIdentifier τ = new MockSessionIdentifier();
+        SessionIdentifier mockSessionIdentifier = new MockSessionIdentifier();
         long amount = 17;
-        TestCase test = new TestCase(τ, amount, "Insufficient funds test case.");
+        TestCase test = new TestCase(mockSessionIdentifier, amount, "Insufficient funds test case.");
 
         // Now we finally create the initial state.
         for (SigningKey i : keys) {
@@ -237,8 +236,8 @@ public class TestShuffleMachine {
 
             test.put(i,
                     new Expected(i,
-                            sim.new HonestAdversary(τ, amount, i, players, coin),
-                            new ReturnState(false, τ, Phase.Blame, null, bm)
+                            sim.new HonestAdversary(mockSessionIdentifier, amount, i, players, coin),
+                            new ReturnState(false, mockSessionIdentifier, Phase.Blame, null, bm)
                     ));
         }
         
@@ -297,9 +296,9 @@ public class TestShuffleMachine {
 
         }
 
-        SessionIdentifier τ = new MockSessionIdentifier();
+        SessionIdentifier mockSessionIdentifier = new MockSessionIdentifier();
         long amount = 17;
-        TestCase test = new TestCase(τ, amount, "Insufficient funds test case.");
+        TestCase test = new TestCase(mockSessionIdentifier, amount, "Insufficient funds test case.");
 
         for (SigningKey i : keys) {
 
@@ -307,9 +306,9 @@ public class TestShuffleMachine {
 
                 test.put(i,
                         new Expected(i,
-                                sim.new MaliciousAdversary(τ, amount, i, players, playerToNetwork.get(i), new MockCrypto(2222),
+                                sim.new MaliciousAdversary(mockSessionIdentifier, amount, i, players, playerToNetwork.get(i), new MockCrypto(2222),
                                         new HashMap<Phase, Map<VerificationKey, Packet>>(), doubleSpends.get(i)),
-                                new ReturnState(true, τ, Phase.Blame, null, anyMatrix)
+                                new ReturnState(true, mockSessionIdentifier, Phase.Blame, null, anyMatrix)
                         ));
 
             } else {
@@ -333,8 +332,8 @@ public class TestShuffleMachine {
 
                 test.put(i,
                         new Expected(i,
-                                sim.new HonestAdversary(τ, amount, i, players, playerToNetwork.get(i)),
-                                new ReturnState(true, τ, Phase.Blame, null, bm)
+                                sim.new HonestAdversary(mockSessionIdentifier, amount, i, players, playerToNetwork.get(i)),
+                                new ReturnState(true, mockSessionIdentifier, Phase.Blame, null, bm)
                         ));
             }
 

@@ -213,13 +213,13 @@ public class TestShuffleMachineMethods {
     }
 
     private CoinShuffle.ShuffleMachine standardTestInitialization(
-            SessionIdentifier τ, SigningKey sk, SortedSet<VerificationKey> players, Crypto crypto) {
+            SessionIdentifier session, SigningKey sk, SortedSet<VerificationKey> players, Crypto crypto) {
         return new CoinShuffle(
                 new MockMessageFactory(),
                 crypto,
                 new MockCoin(),
                 new MockNetwork()).new ShuffleMachine(
-                    τ, 20l, sk, players, null, 0, 2);
+                    session, 20l, sk, players, null, 0, 2);
     }
 
     @Test
@@ -246,10 +246,10 @@ public class TestShuffleMachineMethods {
                     input.attach(new MockEncryptedAddress(addr, dk.EncryptionKey()));
                 }
 
-                SessionIdentifier τ = new MockSessionIdentifier();
+                SessionIdentifier mockSessionIdentifier = new MockSessionIdentifier();
                 SigningKey sk = new MockSigningKey(1);
                 CoinShuffle.ShuffleMachine.Round round =
-                        standardTestInitialization(τ, sk, playerSet, crypto).new Round(players, null);
+                        standardTestInitialization(mockSessionIdentifier, sk, playerSet, crypto).new Round(players, null);
 
 
                 Message result = round.decryptAll(new MockMessage().attach(input), dk, i);
@@ -271,7 +271,7 @@ public class TestShuffleMachineMethods {
         // TODO: include fail cases that lead blockchain blame cases.
         try {
             for(int i = 0; i <= 5; i++) {
-                MockSessionIdentifier τ = new MockSessionIdentifier();
+                MockSessionIdentifier mockSessionIdentifier = new MockSessionIdentifier();
                 Message input = new MockMessage();
                 DecryptionKey dk = null;
                 SortedSet<VerificationKey> playerSet = new TreeSet<>();
@@ -294,7 +294,7 @@ public class TestShuffleMachineMethods {
 
                 SigningKey sk = new MockSigningKey(1);
                 CoinShuffle.ShuffleMachine.Round round =
-                        standardTestInitialization(τ, sk, playerSet, crypto).new Round(players, null);
+                        standardTestInitialization(mockSessionIdentifier, sk, playerSet, crypto).new Round(players, null);
 
                 try {
                     round.decryptAll(new MockMessage().attach(input), dk, i);
@@ -332,10 +332,10 @@ public class TestShuffleMachineMethods {
                     input.attach(addr);
                 }
 
-                SessionIdentifier τ = new MockSessionIdentifier();
+                SessionIdentifier mockSessionIdentifier = new MockSessionIdentifier();
                 SigningKey sk = new MockSigningKey(1);
                 CoinShuffle.ShuffleMachine.Round round =
-                        standardTestInitialization(τ, sk, playerSet, crypto).new Round(players, null);
+                        standardTestInitialization(mockSessionIdentifier, sk, playerSet, crypto).new Round(players, null);
 
                 Queue<Address> result = round.readNewAddresses(new MockMessage().attach(input));
 
@@ -361,10 +361,10 @@ public class TestShuffleMachineMethods {
                 }
 
                 input.attach(new MockEncryptionKey(14));
-                SessionIdentifier τ = new MockSessionIdentifier();
+                SessionIdentifier mockSessionIdentifier = new MockSessionIdentifier();
                 SigningKey sk = new MockSigningKey(1);
                 CoinShuffle.ShuffleMachine.Round round =
-                        standardTestInitialization(τ, sk, playerSet, crypto).new Round(players, null);
+                        standardTestInitialization(mockSessionIdentifier, sk, playerSet, crypto).new Round(players, null);
 
                 try {
                     round.readNewAddresses(new MockMessage().attach(input));

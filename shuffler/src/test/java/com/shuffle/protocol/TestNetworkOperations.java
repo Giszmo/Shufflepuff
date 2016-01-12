@@ -23,7 +23,7 @@ public class TestNetworkOperations  {
 
     public CoinShuffle.ShuffleMachine.Round net(
             int seed,
-            MockSessionIdentifier τ,
+            MockSessionIdentifier session,
             MockSigningKey sk,
             Map<Integer, VerificationKey> players,
             Phase phase,
@@ -33,7 +33,7 @@ public class TestNetworkOperations  {
         playerSet.addAll(players.values());
         CoinShuffle.ShuffleMachine machine =
                 new CoinShuffle(messages, new MockCrypto(seed), new MockCoin(), network).new
-                    ShuffleMachine(τ, 20l, sk, playerSet, null, 1, 2);
+                    ShuffleMachine(session, 20l, sk, playerSet, null, 1, 2);
         machine.phase = phase;
         return machine.new Round(players, null);
     }
@@ -215,15 +215,15 @@ public class TestNetworkOperations  {
 
                 // Set up the shuffle machine (only used blockchain query for the current phase).
                 MockMessageFactory message = new MockMessageFactory();
-                MockSessionIdentifier τ = new MockSessionIdentifier();
+                MockSessionIdentifier mockSessionIdentifier = new MockSessionIdentifier();
 
                 // Set up the network operations object.
                 CoinShuffle.ShuffleMachine.Round netop =
-                        net(8989, τ, sk, players,
+                        net(8989, mockSessionIdentifier, sk, players,
                                 Phase.Shuffling, message, network);
 
                 netop.send(new Packet(
-                        new MockMessage(), τ,
+                        new MockMessage(), mockSessionIdentifier,
                         Phase.Shuffling,
                         sk.VerificationKey(),
                         new MockVerificationKey(test.recipient)));
@@ -286,11 +286,11 @@ public class TestNetworkOperations  {
                     players.put(i, new MockVerificationKey(test.players[i - 1]));
                 }
 
-                MockSessionIdentifier τ = new MockSessionIdentifier();
+                MockSessionIdentifier mockSessionIdentifier = new MockSessionIdentifier();
 
                 // Set up the network operations object.
                 CoinShuffle.ShuffleMachine.Round netop =
-                        net(9341, τ, sk, players,
+                        net(9341, mockSessionIdentifier, sk, players,
                                 Phase.Shuffling, new MockMessageFactory(), network);
 
                 netop.receiveFrom(new MockVerificationKey(test.requested), test.phase);
@@ -331,12 +331,12 @@ public class TestNetworkOperations  {
                 players.put(i, new MockVerificationKey(test.players[i]));
             }
 
-            MockSessionIdentifier τ = new MockSessionIdentifier();
+            MockSessionIdentifier mockSessionIdentifier = new MockSessionIdentifier();
 
             // Set up the network operations object.
             try {
                 CoinShuffle.ShuffleMachine.Round netop =
-                        net(475, τ, sk, players,
+                        net(475, mockSessionIdentifier, sk, players,
                                 Phase.Shuffling, new MockMessageFactory(), network);
             } catch (InvalidParticipantSetException e) {
                 Assert.fail();
