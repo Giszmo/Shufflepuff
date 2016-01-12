@@ -17,7 +17,7 @@ public interface Crypto {
     // Generate new decryption key.
     DecryptionKey DecryptionKey() throws CryptographyError;
     // Generate new signing key.
-    SigningKey SigningKey() throws CryptographyError;
+    SigningKey makeSigningKey() throws CryptographyError;
     // Get a random number between 0 and N inclusive.
     int getRandom(int n) throws CryptographyError, InvalidImplementationError;
     // Hash a message.

@@ -46,7 +46,7 @@ public class MockCrypto implements Crypto {
     }
 
     @Override
-    public synchronized SigningKey SigningKey() throws CryptographyError {
+    public synchronized SigningKey makeSigningKey() throws CryptographyError {
         return new MockSigningKey(signingKeyCounter++);
     }
 

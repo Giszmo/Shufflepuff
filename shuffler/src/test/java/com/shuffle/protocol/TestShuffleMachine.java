@@ -1,6 +1,8 @@
 package com.shuffle.protocol;
 
 import com.shuffle.cryptocoin.Address;
+import com.shuffle.cryptocoin.Coin;
+import com.shuffle.cryptocoin.CryptographyError;
 import com.shuffle.cryptocoin.SigningKey;
 import com.shuffle.cryptocoin.Transaction;
 import com.shuffle.cryptocoin.VerificationKey;
@@ -10,6 +12,7 @@ import org.junit.Test;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -23,18 +26,6 @@ import java.util.TreeSet;
  * Created by Daniel Krawisz on 12/10/15.
  */
 public class TestShuffleMachine {
-
-    public static class Expected {
-        SigningKey identity;
-        com.shuffle.protocol.Simulator.Adversary input;
-        ReturnState output;
-
-        public Expected(SigningKey identity, Simulator.Adversary input, ReturnState output) {
-            this.identity = identity;
-            this.input = input;
-            this.output = output;
-        }
-    }
 
     // A blame matrix that matches any matrix given to it.
     // Used for ensuring a test can't fail no matter what value
@@ -73,7 +64,8 @@ public class TestShuffleMachine {
         String description = null;
         SessionIdentifier session;
         long amount;
-        Map<SigningKey, Expected> machines = new HashMap<>();
+        Map<SigningKey, ReturnState> expected = new HashMap<>();
+        Map<SigningKey, ReturnState> results = new HashMap<>();
 
         TestCase(SessionIdentifier session, long amount, String desc) {
             this.session = session;
@@ -81,10 +73,22 @@ public class TestShuffleMachine {
             this.amount = amount;
         }
 
-        TestCase put(SigningKey key, Expected ex) {
-            machines.put(key, ex);
+        TestCase put(SigningKey key, ReturnState ex, ReturnState r) {
+            results.put(key, r);
+            expected.put(key, ex);
             return this;
         }
+
+        public void putSuccessfulPlayer(SigningKey key, ReturnState r) {
+            put(key, new ReturnState(true, session, Phase.Completed, null, null), r);
+        }
+    }
+
+    TestCase successfulExpectation(TestCase test, Map<SigningKey, ReturnState> results) {
+        for (SigningKey key : results.keySet()) {
+            test.putSuccessfulPlayer(key, results.get(key));
+        }
+        return test;
     }
 
     // Create a test case representing a successful run.
@@ -92,27 +96,11 @@ public class TestShuffleMachine {
         SessionIdentifier mockSessionIdentifier = new MockSessionIdentifier();
         MockCoin coin = new MockCoin();
         long amount = 17;
-        TestCase test = new TestCase(mockSessionIdentifier, amount, "successful run with " + numPlayer + " players.");
 
-        SortedSet<VerificationKey> players = new TreeSet<>();
-        List<SigningKey> keys = new LinkedList<>();
-
-        for (int i = 1; i <= numPlayer; i++) {
-            SigningKey key = sim.crypto.SigningKey();
-            players.add(key.VerificationKey());
-            keys.add(key);
-        }
-
-        for (SigningKey key : keys) {
-            Address address = key.VerificationKey().address();
-            coin.put(address, 20);
-            test.put(key,
-                    new Expected(key,
-                            sim.new HonestAdversary(mockSessionIdentifier, amount, key, players, coin),
-                            new ReturnState(true, mockSessionIdentifier, Phase.Completed, null, null)
-                    ));
-        }
-        return test;
+        return successfulExpectation(
+                new TestCase(mockSessionIdentifier, amount, "successful run with " + numPlayer + " players."),
+                sim.successfulRun(mockSessionIdentifier, numPlayer, amount, coin)
+        );
     }
     
     public TestCase InsufficientFunds(
@@ -121,112 +109,56 @@ public class TestShuffleMachine {
             int[] poor,
             int[] spenders,
             Simulator sim) {
-        SortedSet<Integer> deadbeatSet = new TreeSet<>();
-        SortedSet<Integer> spendersSet = new TreeSet<>();
-        SortedSet<Integer> poorSet = new TreeSet<>();
-
-        for(int i = 0; i < deadbeats.length; i++) {
-            deadbeatSet.add(deadbeats[i]);
-        }
-
-        for(int i = 0; i < poor.length; i++) {
-            if(!deadbeatSet.contains(poor[i])) {
-                poorSet.add(poor[i]);
-            }
-        }
-
-        for(int i = 0; i < spenders.length; i++) {
-            if(!deadbeatSet.contains(spenders[i])
-                    && !poorSet.contains(spenders[i])) {
-                spendersSet.add(spenders[i]);
-            }
-        }
-
-        Set<SigningKey> deadbeatKeys = new HashSet<>();
-        Set<SigningKey> spendersKeys = new HashSet<>();
-        Set<SigningKey> poorKeys = new HashSet<>();
-
-        SortedSet<VerificationKey> players = new TreeSet<>();
-        List<SigningKey> keys = new LinkedList<>();
-
-        for (int i = 1; i <= numPlayers; i++) {
-            SigningKey key = sim.crypto.SigningKey();
-            players.add(key.VerificationKey());
-            keys.add(key);
-
-            if (deadbeatSet.contains(i)) {
-                deadbeatKeys.add(key);
-            } else if (poorSet.contains(i)) {
-                poorKeys.add(key);
-            } if (spendersSet.contains(i)) {
-                spendersKeys.add(key);
-            }
-        }
-
-        // The set of transactions in our fake bitcoin network.
-        MockCoin coin = new MockCoin();
-
-        // The transactions that are considered cheating.
-        Map<SigningKey, Transaction> offenders = new HashMap<>();
-
-        for (SigningKey key : keys) {
-            Address previousAddress = sim.crypto.SigningKey().VerificationKey().address();
-
-            // Each player starts with enough money.
-            coin.put(previousAddress, 20);
-
-            Address address = key.VerificationKey().address();
-
-            if (poorKeys.contains(key)) {
-                // Not enough money is in the poor person's address.
-                offenders.put(key, coin.spend(previousAddress, address, 10));
-            } else if (spendersKeys.contains(key)) {
-                // We put enough money in the address.
-                coin.spend(previousAddress, address, 20);
-
-                // Plot twist! We spend it all!
-                offenders.put(key, coin.spend(address, sim.crypto.SigningKey().VerificationKey().address(), 20));
-            } else if (!deadbeatKeys.contains(key)) {
-                // This is a normal, not cheating player. Deadbeat players
-                // don't have anything, so we don't send anything to their address.
-                coin.spend(previousAddress, address, 20);
-            }
-
-        }
-
         SessionIdentifier mockSessionIdentifier = new MockSessionIdentifier();
+        MockCoin coin = new MockCoin();
         long amount = 17;
         TestCase test = new TestCase(mockSessionIdentifier, amount, "Insufficient funds test case.");
 
-        // Now we finally create the initial state.
-        for (SigningKey i : keys) {
+        Map<SigningKey, ReturnState> results =
+                sim.insufficientFundsRun(mockSessionIdentifier, numPlayers, deadbeats, poor, spenders, amount, coin);
 
+        // If no offenders were defined, then this should be a successful run.
+        if (deadbeats.length == 0 && poor.length == 0 && spenders.length == 0) {
+            return successfulExpectation(test, results);
+        }
+
+        // The set of offending transactions.
+        Map<SigningKey, Transaction> offenders = new HashMap<>();
+        Set<SigningKey> deadbeatPlayers = new HashSet<>();
+
+        // Get transactions by key.
+        for (SigningKey key : results.keySet()) {
             BlameMatrix bm = null;
-            boolean db = deadbeatKeys.contains(i), p = false, sp = false;
 
-            if (!db) {
-                p = poorKeys.contains(i);
-                if (!p) {
-                    sp = spendersKeys.contains(i);
-                }
+            Transaction t = coin.getOffendingTransaction(key.VerificationKey().address(), 17);
+
+            if (t != null) {
+                offenders.put(key, t);
             }
 
-            if (db || p || sp) {
-                // malicious players don't have to return anything in particular.
-                bm = anyMatrix;
+            if (coin.valueHeld(key.VerificationKey().address()) == 0) {
+                deadbeatPlayers.add(key);
+            }
+        }
 
+        for (SigningKey i : results.keySet()) {
+            BlameMatrix bm = null;
+
+            if (offenders.containsKey(i) || deadbeatPlayers.contains(i)) {
+                bm = anyMatrix;
             } else {
+
                 bm = new BlameMatrix();
 
-                for (SigningKey j : keys) {
-                    for (SigningKey k : keys) {
-                        if (deadbeatKeys.contains(j) || poorKeys.contains(j) || spendersKeys.contains(j)) {
+                for (SigningKey j : results.keySet()) {
+                    for (SigningKey k : results.keySet()) {
+                        if (offenders.containsKey(i) || deadbeatPlayers.contains(i)) {
                             // We don't care who the malicious players accuse.
                             bm.add(j.VerificationKey(), k.VerificationKey(), anyReason);
-                        } else if(deadbeatKeys.contains(k)) {
+                        } else if(deadbeatPlayers.contains(k)) {
                             bm.add(j.VerificationKey(), k.VerificationKey(),
                                     new BlameMatrix.BlameEvidence(BlameMatrix.BlameReason.NoFundsAtAll, true));
-                        } else if(poorKeys.contains(k) || spendersKeys.contains(k)) {
+                        } else if(offenders.containsKey(k)) {
                             bm.add(j.VerificationKey(), k.VerificationKey(),
                                     new BlameMatrix.BlameEvidence(BlameMatrix.BlameReason.InsufficientFunds, true, offenders.get(k)));
                         }
@@ -235,114 +167,86 @@ public class TestShuffleMachine {
             }
 
             test.put(i,
-                    new Expected(i,
-                            sim.new HonestAdversary(mockSessionIdentifier, amount, i, players, coin),
-                            new ReturnState(false, mockSessionIdentifier, Phase.Blame, null, bm)
-                    ));
+                    new ReturnState(true, mockSessionIdentifier, Phase.Completed, null, bm),
+                    results.get(i));
         }
         
         return test;
     }
     
     public TestCase DoubleSpend(int[] views, int[] doubleSpenders, Simulator sim) {
-        SortedSet<Integer> doubleSpendSet = new TreeSet<>();
-        for(int i = 0; i < doubleSpenders.length; i++) {
-            doubleSpendSet.add(doubleSpenders[i]);
-        }
-
-        Set<SigningKey> doubleSpendKeys = new HashSet<>();
-
-        List<SigningKey> keys = new LinkedList<>();
-        Map<Integer, MockCoin> coinNets = new HashMap<>();
-        Map<SigningKey, MockCoin> playerToNetwork = new HashMap<>();
-        Map<SigningKey, Transaction> doubleSpends = new HashMap<>();
-        SortedSet<VerificationKey> players = new TreeSet<>();
-
-        for(int i = 0; i < views.length; i ++) {
-            // first find out how many networks we need.
-            if (!coinNets.containsKey(i)) {
-                coinNets.put(views[i], new MockCoin());
-            }
-
-            SigningKey key = sim.crypto.SigningKey();
-            keys.add(key);
-            playerToNetwork.put(key, coinNets.get(views[i]));
-
-            if (doubleSpendSet.contains(i)) {
-                doubleSpendKeys.add(key);
-            }
-
-            players.add(key.VerificationKey());
-        }
-
-        // Set up the networks with everyone having the correct initial amounts.
-        for (SigningKey key : keys) {
-            Address previousAddress = sim.crypto.SigningKey().VerificationKey().address();
-            Address address = key.VerificationKey().address();
-
-            for (MockCoin coin : coinNets.values()) {
-                coin.put(previousAddress, 20);
-                coin.spend(previousAddress, address, 20);
-            }
-
-            // Make double spend transaction if applicable.
-            if (doubleSpendKeys.contains(key)) {
-                List<MockCoin.Output> in = new LinkedList<>();
-                List<MockCoin.Output> out = new LinkedList<>();
-                in.add(new MockCoin.Output(address, 20));
-                out.add(new MockCoin.Output(sim.crypto.SigningKey().VerificationKey().address(), 16));
-                MockCoin.MockTransaction t = new MockCoin.MockTransaction(in, out);
-            }
-
-        }
 
         SessionIdentifier mockSessionIdentifier = new MockSessionIdentifier();
         long amount = 17;
-        TestCase test = new TestCase(mockSessionIdentifier, amount, "Insufficient funds test case.");
+        TestCase test = new TestCase(mockSessionIdentifier, amount, "Double spending test case.");
 
-        for (SigningKey i : keys) {
+        Map<Integer, Simulator.MockCoin> coinNets = new HashMap<>();
 
-            if (doubleSpendKeys.contains(i)) {
+        for (int i = 0; i < views.length; i ++) {
+            if (!coinNets.containsKey(i)) {
+                coinNets.put(i, new MockCoin());
+            }
+        }
 
-                test.put(i,
-                        new Expected(i,
-                                sim.new MaliciousAdversary(mockSessionIdentifier, amount, i, players, playerToNetwork.get(i), new MockCrypto(2222),
-                                        new HashMap<Phase, Map<VerificationKey, Packet>>(), doubleSpends.get(i)),
-                                new ReturnState(true, mockSessionIdentifier, Phase.Blame, null, anyMatrix)
-                        ));
+        LinkedHashMap<SigningKey, ReturnState> results =
+                sim.doubleSpendingRun(mockSessionIdentifier, views, coinNets, doubleSpenders, amount);
+
+        // The set of offending transactions.
+        Map<SigningKey, Transaction> offenders = new HashMap<>();
+        Map<SigningKey, Simulator.MockCoin> playerToCoin = new HashMap<>();
+
+        {int i = 0;
+        for (SigningKey key : results.keySet()) {
+
+            BlameMatrix bm = null;
+            Simulator.MockCoin coin = coinNets.get(views[i]);
+            playerToCoin.put(key, coin);
+
+            Transaction t = coin.getOffendingTransaction(key.VerificationKey().address(), 17);
+
+            if (t != null) {
+                offenders.put(key, t);
+            }
+
+            i++;
+        }}
+
+        for (SigningKey i : results.keySet()) {
+            BlameMatrix bm = null;
+
+            if (offenders.containsKey(i)) {
+                bm = anyMatrix;
 
             } else {
-                BlameMatrix bm = new BlameMatrix();
-                for (SigningKey j : keys) {
-                    for (SigningKey k : keys) {
+                bm = new BlameMatrix();
+                for (SigningKey j : results.keySet()) {
+                    for (SigningKey k : results.keySet()) {
 
-                        if (doubleSpendKeys.contains(j)) {
+                        if (offenders.containsKey(j)) {
                             // We don't care who the malicious players accuse.
                             bm.add(j.VerificationKey(), k.VerificationKey(), anyReason);
-                        } else if(doubleSpendKeys.contains(k)) {
-                            if (playerToNetwork.get(j) == playerToNetwork.get(k)) {
+                        } else if(offenders.containsKey(k)) {
+                            if (playerToCoin.get(j) == playerToCoin.get(k)) {
                                 // Only include the transaction if the player has the same view
                                 // of the network as the double spender.
                                 bm.add(j.VerificationKey(),k.VerificationKey(),
-                                        new BlameMatrix.BlameEvidence(BlameMatrix.BlameReason.DoubleSpend, true, doubleSpends.get(k)));
+                                        new BlameMatrix.BlameEvidence(BlameMatrix.BlameReason.DoubleSpend, true, offenders.get(k)));
                             }
                         }
                     }
                 }
-
-                test.put(i,
-                        new Expected(i,
-                                sim.new HonestAdversary(mockSessionIdentifier, amount, i, players, playerToNetwork.get(i)),
-                                new ReturnState(true, mockSessionIdentifier, Phase.Blame, null, bm)
-                        ));
             }
 
+            test.put(i,
+                    new ReturnState(true, mockSessionIdentifier, Phase.Completed, null, bm),
+                    results.get(i));
         }
 
-        return null;
+        return test;
     }
 
     @Test
+    // TODO separate the different kinds of tests into different functions.
     public void testShuffleMachine() {
         Map<Integer, TestCase> tests = new HashMap<>();
         MockCrypto crypto = new MockCrypto(2222);
@@ -350,14 +254,14 @@ public class TestShuffleMachine {
 
         // Tests for successful runs.
         int caseNo = 0;
-        /*for (int numPlayer = 2; numPlayer <= 12; numPlayer ++ ) {
+        for (int numPlayer = 2; numPlayer <= 12; numPlayer ++ ) {
             try {
                 tests.put(caseNo, SuccessfulRun(numPlayer, sim));
                 caseNo++;
             } catch (CryptographyError e) {
                 Assert.fail("could not create test case " + caseNo);
             }
-        }*/
+        }
 
         // Tests for players who initially have insufficient funds.
         TestCase[] insufficientFundsCases = new TestCase[]{
@@ -387,20 +291,21 @@ public class TestShuffleMachine {
         }
 
         // Set up tests for players who double spend.
-        /*for (TestCase maliciousCase : doubleSpendCases) {
+        for (TestCase maliciousCase : doubleSpendCases) {
             tests.put(caseNo, maliciousCase);
             caseNo ++;
-        }*/
+        }
 
         Map<Phase, Map<VerificationKey, Packet>>[] messageReplacements;
 
         // Error test cases that I need to make:
         // A player sends different encryption keys to different players.
         // A player sends different output vectors to different players.
-        // A player lies about the equivocation check.
         // A player drops an address during phase 2.
         // A player drops an address and adds another one in phase 2.
         // A player drops an address and adds a duplicate in phase 2.
+
+        // A player lies about the equivocation check.
         // A player claims something went wrong in phase 2 when it didn't.
         // Player lies about what another player said (invalid signature).
         // A player disconnects at the wrong time.
@@ -412,25 +317,21 @@ public class TestShuffleMachine {
             TestCase test = testEntry.getValue();
             System.out.println("running test case " + testNo  + (test.description != null ? ": " + test.description : ""));
 
-            List<Simulator.Adversary> init = new LinkedList<>();
-            for (Expected  machine : test.machines.values()) {
-                init.add(machine.input);
-            }
-
             if(test.amount == 0){
                 Assert.fail();
             }
-            Map<SigningKey, ReturnState> errors = sim.runSimulation(test.amount, init);
+
+            Map<SigningKey, ReturnState> results = test.results;
 
             // Check that the map of error states returned matches that which was expected.
-            for (Map.Entry<SigningKey, Expected> machine : test.machines.entrySet()) {
+            for (Map.Entry<SigningKey, ReturnState> machine : test.expected.entrySet()) {
                 SigningKey key = machine.getKey();
-                Expected expected = machine.getValue();
-                ReturnState result = errors.get(key);
+                ReturnState result = results.get(key);
+                ReturnState expected = machine.getValue();
 
                 Assert.assertNotNull(result);
 
-                if (expected.output.success && !result.success) {
+                if (expected.success && !result.success) {
                     if (result.error != null) {
                         result.error.printStackTrace();
                     }
@@ -440,14 +341,14 @@ public class TestShuffleMachine {
                 }
 
                 System.out.println("  result " + key.toString() + " : " + result.toString());
-                System.out.println("  expected " + key.toString() + " : " + expected.output.toString());
-                Assert.assertTrue(expected.output.match(result));
+                System.out.println("  expected " + key.toString() + " : " + expected.toString());
+                Assert.assertTrue(expected.match(result));
 
-                errors.remove(key);
+                results.remove(key);
             }
 
             // I don't know why there would be any left, but just to make sure!
-            Assert.assertTrue(errors.isEmpty());
+            Assert.assertTrue(results.isEmpty());
         }
     }
 }

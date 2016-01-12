@@ -21,11 +21,6 @@ public class BitcoinJ implements Coin, Crypto {
     }
 
     @Override
-    public void send(Transaction t) throws CoinNetworkError {
-
-    }
-
-    @Override
     public long valueHeld(Address addr) throws CoinNetworkError {
         return 0;
     }
@@ -46,7 +41,7 @@ public class BitcoinJ implements Coin, Crypto {
     }
 
     @Override
-    public SigningKey SigningKey() throws CryptographyError {
+    public SigningKey makeSigningKey() throws CryptographyError {
         return null;
     }
 

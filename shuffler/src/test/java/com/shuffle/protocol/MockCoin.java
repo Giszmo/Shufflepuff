@@ -18,7 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * Created by Daniel Krawisz on 12/5/15.
  */
-public class MockCoin implements Coin {
+public class MockCoin implements Simulator.MockCoin {
     public static class Output {
         final Address address;
         final long amountHeld;
@@ -53,7 +53,7 @@ public class MockCoin implements Coin {
     /**
      * Created by Daniel Krawisz on 12/8/15.
      */
-    public static class MockTransaction implements Transaction {
+    public class MockTransaction implements Transaction {
         final List<Output> inputs = new LinkedList<>();
         final List<Output> outputs = new LinkedList<>();
 
@@ -115,6 +115,11 @@ public class MockCoin implements Coin {
         public String toString() {
             return "{" + inputs.toString() + " ==> " + outputs.toString() + "}";
         }
+
+        @Override
+        public void send() throws CoinNetworkError {
+            MockCoin.this.send(this);
+        }
     }
 
     final ConcurrentHashMap<Address, Output> blockchain = new ConcurrentHashMap<>();
@@ -129,12 +134,14 @@ public class MockCoin implements Coin {
     public MockCoin() {
     }
 
+    @Override
     public synchronized void put(Address addr, long value) {
         Output entry = new Output(addr, value);
         blockchain.put(addr, entry);
     }
 
-    public synchronized MockTransaction spend(Address from, Address to, int amount) {
+    @Override
+    public synchronized Transaction spend(Address from, Address to, int amount) {
         Output output = blockchain.get(from);
 
         if (output == null) {
@@ -146,12 +153,9 @@ public class MockCoin implements Coin {
         in.add(output);
         out.add(new Output(to, output.amountHeld));
 
-        MockTransaction t = new MockTransaction(in, out);
-        send(t);
-        return t;
+        return new MockTransaction(in, out);
     }
 
-    @Override
     public synchronized void send(Transaction t) {
         if (t == null) throw new NullPointerException();
 

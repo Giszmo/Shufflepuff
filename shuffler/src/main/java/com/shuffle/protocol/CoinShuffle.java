@@ -153,7 +153,7 @@ final class CoinShuffle {
                 try {
 
                     // Each participant chooses a new bitcoin address which will be their new outputs.
-                    SigningKey sk_new = crypto.SigningKey();
+                    SigningKey sk_new = crypto.makeSigningKey();
                     Address addr_new = sk_new.VerificationKey().address();
 
                     // Player one begins the cycle and encrypts its new address with everyone's privateKey, in order.
@@ -237,7 +237,7 @@ final class CoinShuffle {
                 // Send the transaction into the net.
                 // TODO blame someone if a double spend is detected.
                 System.out.println("Player " + me + " is about to send transaction " + t);
-                coin.send(t);
+                t.send();
 
                 // The protocol has completed successfully.
                 phase = Phase.Completed;

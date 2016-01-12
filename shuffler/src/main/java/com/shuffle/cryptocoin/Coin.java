@@ -16,7 +16,6 @@ import java.util.Queue;
 public interface Coin {
     Transaction shuffleTransaction(long amount, List<VerificationKey> from, Queue<Address> to, Map<VerificationKey, Address> changeAddresses)
             throws CoinNetworkError;
-    void send(Transaction t) throws CoinNetworkError;
 
     long valueHeld(Address addr) throws CoinNetworkError;
 

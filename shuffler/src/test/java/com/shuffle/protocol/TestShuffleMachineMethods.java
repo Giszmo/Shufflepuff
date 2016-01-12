@@ -113,7 +113,7 @@ public class TestShuffleMachineMethods {
             MockCrypto crypto = new MockCrypto(90);
             SigningKey key = null;
             try {
-                key = crypto.SigningKey();
+                key = crypto.makeSigningKey();
             } catch (CryptographyError e) {}
             CoinShuffle machine = shuffleTestInitialization(test.randomSequence);
 
@@ -287,7 +287,7 @@ public class TestShuffleMachineMethods {
                         input.attach(new MockEncryptedAddress(vk.address(), dk.EncryptionKey()));
                     }
 
-                    input.attach(crypto.SigningKey().VerificationKey().address());
+                    input.attach(crypto.makeSigningKey().VerificationKey().address());
                 } catch (CryptographyError e) {
                     Assert.fail();
                 }

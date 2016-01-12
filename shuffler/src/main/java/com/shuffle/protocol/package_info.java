@@ -21,7 +21,7 @@
  * Crypto
  * DecryptionKey
  * EncryptionKey
- * SigningKey
+ * makeSigningKey
  * VerificationKey
  *
  * SessionIdentifier
