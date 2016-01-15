@@ -7,10 +7,6 @@ public class MockSessionIdentifier implements SessionIdentifier {
     static String version = "CoinShuffle mock implementation for testing.";
     String id;
 
-    public MockSessionIdentifier() {
-        id = "000";
-    }
-
     public MockSessionIdentifier(String id) {
         this.id = id;
     }

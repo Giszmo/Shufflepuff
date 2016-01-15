@@ -19,6 +19,7 @@ public class BlameMatrix {
         DoubleSpend,
         EquivocationFailure,
         ShuffleFailure,
+        MissingOutput,
     }
 
     public static class Blame {
@@ -28,15 +29,15 @@ public class BlameMatrix {
         List<Packet> packets = null;
         DecryptionKey privateKey = null;
 
+        public Blame(VerificationKey accused, BlameReason reason) {
+            this.accused = accused;
+            this.reason = reason;
+        }
+
         public Blame(VerificationKey accused, Transaction t, BlameReason reason) {
             this.accused = accused;
             this.t = t;
             this.reason = reason;
-        }
-
-        public Blame(VerificationKey accused) {
-            this.accused = accused;
-            this.reason = BlameReason.NoFundsAtAll;
         }
 
         public Blame(List<Packet> packets) {
@@ -49,6 +50,15 @@ public class BlameMatrix {
             this.packets = packets;
             this.reason = BlameReason.ShuffleFailure;
         }
+
+        @Override
+        public String toString() {
+            String str = "Blame[";
+            if (accused != null) {
+                str += (accused.toString() + ", ");
+            }
+            return str + reason.toString() + "]";
+        }
     }
 
     public static class BlameEvidence {
@@ -57,11 +67,18 @@ public class BlameMatrix {
         Transaction t = null;
 
         public BlameEvidence(BlameReason reason, boolean credible) {
+            // A transaction should always be included with InsufficientFunds.
+            if (reason == BlameReason.InsufficientFunds) {
+                throw new NullPointerException();
+            }
             this.reason = reason;
             this.credible = true;
         }
 
         public BlameEvidence(BlameReason reason, boolean credible, Transaction t) {
+            if (t == null) {
+                throw new NullPointerException();
+            }
             this.reason = reason;
             this.credible = true;
             this.t = t;
@@ -89,14 +106,18 @@ public class BlameMatrix {
 
         @Override
         public String toString() {
-            return reason.toString();
+            String str = reason.toString();
+            if (t != null) {
+                str += ":" + t.toString();
+            }
+            return str;
         }
     }
 
     // Who blames who?
     Map<VerificationKey, Map<VerificationKey, BlameEvidence>> blame = new HashMap<>();
 
-    public void add(VerificationKey accuser, VerificationKey accused, BlameEvidence evidence) {
+    public void put(VerificationKey accuser, VerificationKey accused, BlameEvidence evidence) {
         Map<VerificationKey, BlameEvidence> blames = blame.get(accuser);
 
         if (blames == null) {
@@ -105,6 +126,25 @@ public class BlameMatrix {
         }
 
         blames.put(accused, evidence);
+    }
+
+    private static Map<VerificationKey, BlameEvidence> put(Map<VerificationKey, BlameEvidence> to, VerificationKey key, Map<VerificationKey, BlameEvidence> row) {
+        if (to == null) {
+            return row;
+        } else {
+            to.putAll(row);
+            return to;
+        }
+    }
+
+    public static void putAll(
+            Map<VerificationKey, Map<VerificationKey, BlameEvidence>> to,
+            Map<VerificationKey, Map<VerificationKey, BlameEvidence>> bm
+    ) {
+        for (Map.Entry<VerificationKey, Map<VerificationKey, BlameEvidence>> row : bm.entrySet()) {
+            VerificationKey key = row.getKey();
+            to.put(key, put(to.get(key), key, row.getValue()));
+        }
     }
 
     // Check whether one player already blamed another for a given offense.
@@ -156,13 +196,18 @@ public class BlameMatrix {
     }
 
     public boolean match(BlameMatrix bm) {
+        if (bm == null) {
+            bm = new BlameMatrix();
+        }
         Map<VerificationKey, Map<VerificationKey, BlameEvidence>> bml = new HashMap<>();
-        bml.putAll(bm.blame);
+        putAll(bml, bm.blame);
 
         for (VerificationKey accuser : blame.keySet()) {
             Map<VerificationKey, BlameEvidence> us = blame.get(accuser);
             Map<VerificationKey, BlameEvidence> them = new HashMap<>();
-            them.putAll(bml.get(accuser));
+            if (bml.containsKey(accuser)) {
+                them.putAll(bml.get(accuser));
+            }
 
             for (VerificationKey accused : us.keySet()) {
                 if (!us.get(accused).match(them.get(accused))) {

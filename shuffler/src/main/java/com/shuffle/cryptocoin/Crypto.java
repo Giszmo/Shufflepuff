@@ -15,7 +15,7 @@ import com.shuffle.protocol.Message;
  */
 public interface Crypto {
     // Generate new decryption key.
-    DecryptionKey DecryptionKey() throws CryptographyError;
+    DecryptionKey makeDecryptionKey() throws CryptographyError;
     // Generate new signing key.
     SigningKey makeSigningKey() throws CryptographyError;
     // Get a random number between 0 and N inclusive.

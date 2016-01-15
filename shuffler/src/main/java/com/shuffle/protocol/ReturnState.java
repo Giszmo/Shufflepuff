@@ -20,12 +20,15 @@ public class ReturnState {
         this.blame = blame;
     }
 
+    protected ReturnState() {}
+
     // Whether two return states are equivalent.
     public boolean match(ReturnState m) {
-        return success == m.success && session == m.session && phase == m.phase &&
+        return success == m.success && session == m.session &&
+                (phase == null || phase == m.phase) &&
                 ((error == null && m.error == null) ||
                 (error != null && m.error != null && error.getClass().equals(m.error.getClass())))
-                && ((blame == null && m.blame == null) || (blame != null && m.blame != null && blame.equals(m.blame)));
+                && ((blame == null && m.blame == null) || (blame != null && blame.match(m.blame)));
     }
 
     public String toString() {
@@ -40,14 +43,20 @@ public class ReturnState {
             return "Successful run" + session;
         }
 
+        String str = "Unsuccessful run" + session;
+
         if (error != null) {
-            return "Unsuccessful run" + session + "; threw " + error.toString() + " in phase " + phase.toString();
+            str += "; threw " + error.toString();
+        }
+
+        if (phase != null) {
+            str += " failed in phase " + phase.toString();
         }
 
         if (blame != null) {
-            return "Unsuccessful run" + session + " failed in phase " + phase.toString() + "; blame = " + blame.toString();
+            str += "; blame = " + blame.toString();
         }
 
-        return "Unsuccessful run" + session + " failed in phase " + phase.toString();
+        return str;
     }
 }

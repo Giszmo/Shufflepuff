@@ -22,8 +22,8 @@ public interface Coin {
     // Returns either a transaction that sent from the given address that caused it to have .
     // insufficient funds or a transaction that sent to a given address that caused it to have
     // insufficient funds.
-    Transaction getOffendingTransaction(Address addr, long amount);
+    Transaction getConflictingTransaction(Address addr, long amount);
 
     // Whether the given transaction spends the funds in the given address.
-    boolean isOffendingTransaction(Address addr, long amount, Transaction t);
+    boolean spendsFrom(Address addr, long amount, Transaction t);
 }

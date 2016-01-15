@@ -9,6 +9,8 @@ import com.shuffle.cryptocoin.SigningKey;
 import com.shuffle.cryptocoin.Transaction;
 import com.shuffle.cryptocoin.VerificationKey;
 
+import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -74,64 +76,7 @@ public final class Simulator {
 
     public interface MockCoin extends Coin {
         void put(Address addr, long value);
-        Transaction spend(Address from, Address to, int amount);
-    }
-
-    // Could be a real or a malicious player.
-    public interface Adversary {
-        SessionIdentifier session();
-        ReturnState turnOn() throws InvalidImplementationError;
-        Phase currentPhase();
-        void deliver(Packet packet) throws InterruptedException;
-        SigningKey identity();
-    }
-
-    // A wraper for the regular version of the protocol.
-    public class HonestAdversary implements Adversary {
-        final CoinShuffle.ShuffleMachine machine;
-        final Network network;
-        final SigningKey sk;
-        final SessionIdentifier session;
-
-        HonestAdversary(SessionIdentifier session,
-                        long amount,
-                        SigningKey sk,
-                        SortedSet<VerificationKey> players,
-                        Coin coin) {
-            this.session = session;
-            this.sk = sk;
-            this.network = new Network();
-            this.machine = new CoinShuffle(messages, crypto, coin, network).new ShuffleMachine(session, amount, sk, players, null, 1, 2);
-        }
-
-        @Override
-        public SessionIdentifier session() {
-            return session;
-        }
-
-        @Override
-        public ReturnState turnOn() throws InvalidImplementationError {
-            try {
-                return machine.run();
-            } catch (InterruptedException e) {
-                return new ReturnState(false, session, machine.currentPhase(), e, null);
-            }
-        }
-
-        @Override
-        public Phase currentPhase() {
-            return machine.currentPhase();
-        }
-
-        @Override
-        public void deliver(Packet packet) throws InterruptedException {
-            network.deliver(packet);
-        }
-
-        @Override
-        public SigningKey identity() {
-            return sk;
-        }
+        Transaction spend(Address from, Address to, long amount);
     }
 
     public interface MessageReplacement {
@@ -141,7 +86,7 @@ public final class Simulator {
 
     // The malicious adversary can be made to send malicious messages or to spend bitcoins at
     // inappropriate times.
-    public class MaliciousAdversary implements Adversary{
+    private class Adversary {
         // This implementation of Network connects each shuffle machine to the simulator.
         private class MaliciousNetwork extends Network {
             final MessageReplacement malicious;
@@ -170,15 +115,14 @@ public final class Simulator {
         final Coin coin;
         boolean transactionSent = false;
 
-        MaliciousAdversary(
+        Adversary(
                 SessionIdentifier session,
                 long amount,
                 SigningKey sk,
                 SortedSet<VerificationKey> players,
                 Coin coin,
-                Crypto crypto,
-                final MessageReplacement lies,
-                Transaction t) {
+                Transaction t,
+                final MessageReplacement lies) {
             this.session = session;
             this.sk = sk;
             this.coin = coin;
@@ -331,38 +275,31 @@ public final class Simulator {
             }
         }
 
-        @Override
         public SessionIdentifier session() {
             return session;
         }
 
-        @Override
         public ReturnState turnOn() throws InvalidImplementationError {
             try {
-                machine.run();
-                // Malicious players don't need to return any information since they are not being tested.
-                return new ReturnState(false, session, Phase.Malicious, null, null);
+                return machine.run();
             } catch (InterruptedException e) {
                 return new ReturnState(false, session, machine.currentPhase(), e, null);
             }
         }
 
-        @Override
         public Phase currentPhase() {
             return machine.currentPhase();
         }
 
-        @Override
         public void deliver(Packet packet) throws InterruptedException {
             // Part way through the protocol, send the malicious bitcoin transaction. 
-            if (packet.phase == Phase.BroadcastOutput && !transactionSent) {
+            if (packet.phase == Phase.EquivocationCheck && !transactionSent && t != null) {
                 t.send();
                 transactionSent = true;
             }
             network.deliver(packet);
         }
 
-        @Override
         public SigningKey identity() {
             return sk;
         }
@@ -462,7 +399,6 @@ public final class Simulator {
         }
     }
 
-    // TODO allow the simulator to monitor all inbox and do malicious things with them.
     public void sendTo(VerificationKey to, Packet packet) throws InvalidImplementationError, InterruptedException {
         machines.get(to).deliver(packet);
     }
@@ -472,7 +408,7 @@ public final class Simulator {
         this.crypto = crypto;
     }
 
-    public LinkedHashMap<SigningKey, ReturnState> runSimulation(
+    private synchronized LinkedHashMap<SigningKey, ReturnState> runSimulation(
             long amount,
             List<Adversary> init)  {
         if (init == null ) throw new NullPointerException();
@@ -501,8 +437,6 @@ public final class Simulator {
             wait.add(future);
         }
 
-        System.out.println("Simulation running. " + wait.size() + " futures.");
-
         // TODO Allow for timeouts.
         while (wait.size() != 0) {
             Iterator<Future<Map.Entry<SigningKey, ReturnState>>> I = wait.iterator();
@@ -524,6 +458,158 @@ public final class Simulator {
         return results;
     }
 
+    public class InitialState {
+        private final SessionIdentifier session;
+        private final long amount;
+        private final Deque<Player> players = new LinkedList<>();
+        private MockCoin defaultCoin = null;
+
+        private class Player {
+            long initialAmount = 0;
+            long spend = 0;
+            long doubleSpend = 0;
+            MockCoin coin = null;
+            boolean change = false; // Whether to make a change address.
+
+            int[] equivocateAnnouncement = new int[]{};
+            int[] equivocateBroadcast = new int[]{};
+            int drop = 0; // Whether to drop an address in phase 2.
+            int duplicate = 0; // Whether to duplicate another address and replace it with the dropped address.
+            boolean replace = false; // Whether to replace dropped address with a new one.
+
+            Player() {}
+
+        }
+
+        private InitialState(SessionIdentifier session, long amount) {
+
+            this.session = session;
+            this.amount = amount;
+        }
+
+        public InitialState defaultCoin(MockCoin coin) {
+            defaultCoin = coin;
+            return this;
+        }
+
+        public InitialState player() {
+            players.add(new Player());
+            return this;
+        }
+
+        InitialState initialFunds(long amount) {
+            players.getLast().initialAmount = amount;
+            return this;
+        }
+
+        InitialState spend(long amount) {
+            players.getLast().spend = amount;
+            return this;
+        }
+
+        InitialState doubleSpend(long amount) {
+            players.getLast().doubleSpend = amount;
+            return this;
+        }
+
+        InitialState coin(MockCoin coin) {
+            players.getLast().coin = coin;
+            return this;
+        }
+
+        InitialState equivocateAnnouncement(int[] equivocate) {
+            players.getLast().equivocateAnnouncement = equivocate;
+            return this;
+        }
+
+        InitialState equivocateBroadcast(int[] equivocate) {
+            players.getLast().equivocateBroadcast = equivocate;
+            return this;
+        }
+
+        InitialState change() {
+            players.getLast().change = true;
+            return this;
+        }
+
+        InitialState drop(int drop) {
+            players.getLast().drop = drop;
+            players.getLast().duplicate = 0;
+            players.getLast().replace = false;
+            return this;
+        }
+
+        InitialState replace(int drop, int duplicate) {
+            players.getLast().drop = drop;
+            players.getLast().duplicate = duplicate;
+            players.getLast().replace = false;
+            return this;
+        }
+
+        InitialState replace(int drop) {
+            players.getLast().drop = drop;
+            players.getLast().duplicate = 0;
+            players.getLast().replace = true;
+            return this;
+        }
+
+        public LinkedHashMap<SigningKey, ReturnState> run() {
+            List<Adversary> adversaries = new LinkedList<>();
+            Map<Player, SigningKey> keys = new HashMap<>();
+
+            for(Player player : players) {
+                keys.put(player, crypto.makeSigningKey());
+            }
+
+            // Check that all players have a coin network set up, either the default or their own.
+            for(Player player : players) {
+                MockCoin coin;
+                if(player.coin != null) {
+                    coin = player.coin;
+                } else if (defaultCoin != null) {
+                    coin = defaultCoin;
+                } else {
+                    return null;
+                }
+
+                SortedSet<VerificationKey> identities = new TreeSet<>();
+
+                for (SigningKey key : keys.values()) {
+                    identities.add(key.VerificationKey());
+                }
+
+                SigningKey key = keys.get(player);
+                Address address = key.VerificationKey().address();
+                Transaction doubleSpend = null;
+
+                // Set up the player's initial funds.
+                if (player.initialAmount > 0) {
+                    Address previousAddress = crypto.makeSigningKey().VerificationKey().address();
+                    coin.put(previousAddress, player.initialAmount);
+                    coin.spend(previousAddress, address, player.initialAmount).send();
+
+                    // Plot twist! We spend it all!
+                    if (player.spend > 0) {
+                        coin.spend(address, crypto.makeSigningKey().VerificationKey().address(), player.spend).send();
+                    } else if(player.doubleSpend > 0) {
+                        // is he going to double spend? If so, make a new transaction for him.
+                        doubleSpend = player.coin.spend(address, crypto.makeSigningKey().VerificationKey().address(), 16);
+                    }
+                }
+
+                // TODO Message replacements.
+
+                adversaries.add(new Adversary(session, amount, key, identities, coin, doubleSpend, null));
+            }
+
+            return Simulator.this.runSimulation(amount, adversaries);
+        }
+    }
+
+    public InitialState initialize(SessionIdentifier session, long amount) {
+        return new InitialState(session, amount);
+    }
+
     public LinkedHashMap<SigningKey, ReturnState> successfulRun(
             SessionIdentifier session,
             int numPlayers,
@@ -531,24 +617,13 @@ public final class Simulator {
             MockCoin coin
     ) {
 
-        SortedSet<VerificationKey> players = new TreeSet<>();
-        List<SigningKey> keys = new LinkedList<>();
+        InitialState init = initialize(session, amount).defaultCoin(coin);
 
         for (int i = 1; i <= numPlayers; i++) {
-            SigningKey key = crypto.makeSigningKey();
-            players.add(key.VerificationKey());
-            keys.add(key);
+            init.player().initialFunds(20);
         }
 
-        List<Adversary> init = new LinkedList<>();
-
-        for (SigningKey key : keys) {
-            Address address = key.VerificationKey().address();
-            coin.put(address, 20);
-            init.add(new HonestAdversary(session, amount, key, players, coin));
-        }
-
-        return runSimulation(numPlayers, init);
+        return init.run();
     }
 
     public LinkedHashMap<SigningKey, ReturnState> insufficientFundsRun(
@@ -560,131 +635,86 @@ public final class Simulator {
             long amount,
             MockCoin coin
     ) {
+        InitialState init = initialize(session, amount).defaultCoin(coin);
 
-        SortedSet<Integer> deadbeatSet = new TreeSet<>();
-        SortedSet<Integer> spendersSet = new TreeSet<>();
-        SortedSet<Integer> poorSet = new TreeSet<>();
-
-        for(int i = 0; i < deadbeats.length; i++) {
-            deadbeatSet.add(deadbeats[i]);
-        }
-
-        for(int i = 0; i < poor.length; i++) {
-            if(!deadbeatSet.contains(poor[i])) {
-                poorSet.add(poor[i]);
+        for (int i = 1; i <= numPlayers; i++) {
+            init.player().initialFunds(20);
+            for (int j = 0; j < deadbeats.length; j++) {
+                if (deadbeats[j] == i) {
+                    init.initialFunds(0);
+                }
+            }
+            for (int j = 0; j < poor.length; j++) {
+                if (poor[j] == i) {
+                    init.initialFunds(10);
+                }
+            }
+            for (int j = 0; j < spenders.length; j++) {
+                if (spenders[j] == i) {
+                    init.spend(16);
+                }
             }
         }
 
-        for(int i = 0; i < spenders.length; i++) {
-            if(!deadbeatSet.contains(spenders[i])
-                    && !poorSet.contains(spenders[i])) {
-                spendersSet.add(spenders[i]);
+        return init.run();
+    }
+
+    public LinkedHashMap<SigningKey, ReturnState> doubleSpendingRun(
+            SessionIdentifier session,
+            Set<MockCoin> coinNets,
+            List<MockCoin> coinNetList,
+            int[] doubleSpenders,
+            long amount
+    ) {
+        InitialState init = initialize(session, amount);
+
+        int i = 1;
+        for (MockCoin coinNet : coinNetList) {
+            init.player().initialFunds(20).coin(coinNet);
+
+            for (int j = 0; j < doubleSpenders.length; j++) {
+                if (doubleSpenders[j] == i) {
+                    init.spend(16);
+                }
             }
+            i++;
         }
 
-        Set<SigningKey> deadbeatKeys = new HashSet<>();
-        Set<SigningKey> spendersKeys = new HashSet<>();
-        Set<SigningKey> poorKeys = new HashSet<>();
+        return init.run();
+    }
+
+    public LinkedHashMap<SigningKey, ReturnState> runWithReplacements(
+            SessionIdentifier session,
+            int numPlayers,
+            long amount,
+            MockCoin coin,
+            Map<Integer, MessageReplacement> malicious
+    ) {
 
         SortedSet<VerificationKey> players = new TreeSet<>();
         List<SigningKey> keys = new LinkedList<>();
+        Map<SigningKey, MessageReplacement> maliciousPlayers = new HashMap<>();
 
         for (int i = 1; i <= numPlayers; i++) {
             SigningKey key = crypto.makeSigningKey();
             players.add(key.VerificationKey());
             keys.add(key);
 
-            if (deadbeatSet.contains(i)) {
-                deadbeatKeys.add(key);
-            } else if (poorSet.contains(i)) {
-                poorKeys.add(key);
-            } if (spendersSet.contains(i)) {
-                spendersKeys.add(key);
+            if (malicious.containsKey(i)) {
+                maliciousPlayers.put(key, malicious.get(i));
             }
-        }
-
-        for (SigningKey key : keys) {
-            Address previousAddress = crypto.makeSigningKey().VerificationKey().address();
-
-            // Each player starts with enough money.
-            coin.put(previousAddress, 20);
-
-            Address address = key.VerificationKey().address();
-
-            if (poorKeys.contains(key)) {
-                // Not enough money is in the poor person's address.
-                coin.spend(previousAddress, address, 10).send();
-            } else if (spendersKeys.contains(key)) {
-                // We put enough money in the address.
-                coin.spend(previousAddress, address, 20).send();
-
-                // Plot twist! We spend it all!
-                coin.spend(address, crypto.makeSigningKey().VerificationKey().address(), 20).send();
-            } else if (!deadbeatKeys.contains(key)) {
-                // This is a normal, not cheating player. Deadbeat players
-                // don't have anything, so we don't send anything to their address.
-                coin.spend(previousAddress, address, 20).send();
-            }
-
         }
 
         List<Adversary> init = new LinkedList<>();
 
         for (SigningKey key : keys) {
-            init.add(new HonestAdversary(session, amount, key, players, coin));
-        }
-
-        return runSimulation(amount, init);
-    }
-
-    public LinkedHashMap<SigningKey, ReturnState> doubleSpendingRun(
-            SessionIdentifier session,
-            int[] views,
-            Map<Integer, MockCoin> coinNet,
-            int[] doubleSpenders,
-            long amount
-    ) {
-        SortedSet<Integer> doubleSpendSet = new TreeSet<>();
-        for(int i = 0; i < doubleSpenders.length; i++) {
-            doubleSpendSet.add(doubleSpenders[i]);
-        }
-
-        Set<SigningKey> doubleSpendKeys = new HashSet<>();
-
-        List<SigningKey> keys = new LinkedList<>();
-        Map<SigningKey, MockCoin> playerToCoin = new HashMap<>();
-        SortedSet<VerificationKey> players = new TreeSet<>();
-
-        for(int i = 0; i < views.length; i ++) {
-            SigningKey key = crypto.makeSigningKey();
-            keys.add(key);
-            playerToCoin.put(key, coinNet.get(views[i]));
-
-            if (doubleSpendSet.contains(i)) {
-                doubleSpendKeys.add(key);
-            }
-
-            players.add(key.VerificationKey());
-        }
-
-        List<Adversary> init = new LinkedList<>();
-
-        // Set up the networks with everyone having the correct initial amounts.
-        for (SigningKey key : keys) {
-            Address previousAddress = crypto.makeSigningKey().VerificationKey().address();
             Address address = key.VerificationKey().address();
+            coin.put(address, 20);
 
-            for (MockCoin coin : coinNet.values()) {
-                coin.put(previousAddress, 20);
-                coin.spend(previousAddress, address, 20).send();
-            }
-
-            // Make double spend transaction if applicable.
-            if (doubleSpendKeys.contains(key)) {
-                init.add(new MaliciousAdversary(session, amount, key, players, playerToCoin.get(key), crypto, null,
-                        playerToCoin.get(key).spend(address, crypto.makeSigningKey().VerificationKey().address(), 16)));
+            if (maliciousPlayers.containsKey(key)) {
+                init.add(new Adversary(session, amount, key, players, coin, null, maliciousPlayers.get(key)));
             } else {
-                init.add(new HonestAdversary(session, amount, key, players, playerToCoin.get(key)));
+                init.add(new Adversary(session, amount, key, players, coin, null, null));
             }
         }
 

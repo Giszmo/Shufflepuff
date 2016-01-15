@@ -56,6 +56,7 @@ public class MockCoin implements Simulator.MockCoin {
     public class MockTransaction implements Transaction {
         final List<Output> inputs = new LinkedList<>();
         final List<Output> outputs = new LinkedList<>();
+        int z = 1;
 
         public MockTransaction(List<Output> inputs, List<Output> outputs) {
             for (Output output : inputs) {
@@ -82,6 +83,10 @@ public class MockCoin implements Simulator.MockCoin {
 
             if (this == mock) {
                 return true;
+            }
+
+            if (z != this.z) {
+                return false;
             }
 
             if (inputs.size() != mock.inputs.size()) {
@@ -120,11 +125,16 @@ public class MockCoin implements Simulator.MockCoin {
         public void send() throws CoinNetworkError {
             MockCoin.this.send(this);
         }
+
+        public MockTransaction copy() {
+            return new MockTransaction(inputs, outputs);
+        }
     }
 
     final ConcurrentHashMap<Address, Output> blockchain = new ConcurrentHashMap<>();
     // The transaction that spends an output.
     final ConcurrentHashMap<Output, Transaction> spend = new ConcurrentHashMap<>();
+    // The transaction that sends to an input.
     final ConcurrentHashMap<Output, Transaction> sent = new ConcurrentHashMap<>();
 
     public MockCoin(Map<Address, Output> blockchain) {
@@ -141,17 +151,23 @@ public class MockCoin implements Simulator.MockCoin {
     }
 
     @Override
-    public synchronized Transaction spend(Address from, Address to, int amount) {
+    public synchronized Transaction spend(Address from, Address to, long amount) {
         Output output = blockchain.get(from);
 
         if (output == null) {
+            System.out.println("    NULL CASE A: " + from.toString());
+            return null;
+        }
+
+        if (amount > valueHeld(from)) {
+            System.out.println("    NULL CASE B");
             return null;
         }
 
         List<Output> in = new LinkedList<>();
         List<Output> out = new LinkedList<>();
         in.add(output);
-        out.add(new Output(to, output.amountHeld));
+        out.add(new Output(to, amount));
 
         return new MockTransaction(in, out);
     }
@@ -262,7 +278,7 @@ public class MockCoin implements Simulator.MockCoin {
     }
 
     @Override
-    public Transaction getOffendingTransaction(Address addr, long amount) {
+    public Transaction getConflictingTransaction(Address addr, long amount) {
         if (valueHeld(addr) >= amount) {
             return null;
         }
@@ -283,8 +299,12 @@ public class MockCoin implements Simulator.MockCoin {
     }
 
     @Override
-    public boolean isOffendingTransaction(Address addr, long amount, Transaction t) {
-        return t.equals(getOffendingTransaction(addr, amount));
+    public boolean spendsFrom(Address addr, long amount, Transaction t) {
+        return t.equals(getConflictingTransaction(addr, amount));
     }
 
+    @Override
+    public String toString() {
+        return "{" + blockchain.values().toString() + ", " + spend.toString() + "}";
+    }
 }

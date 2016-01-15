@@ -232,6 +232,7 @@ public class MockMessage implements Message {
         if (blame == null) {
             throw new NullPointerException();
         }
+        atoms.add(new Atom(blame));
         return this;
     }
 

@@ -41,7 +41,7 @@ public class MockCrypto implements Crypto {
     }
 
     @Override
-    public synchronized DecryptionKey DecryptionKey() throws CryptographyError {
+    public synchronized DecryptionKey makeDecryptionKey() throws CryptographyError {
         return new MockDecryptionKey(decryptionKeyCounter++);
     }
 

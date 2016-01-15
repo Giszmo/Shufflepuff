@@ -12,5 +12,4 @@ public enum Phase {
     VerificationAndSubmission, // Generate transaction, distribute signatures, and send it off.
     Completed,
     Blame, // Someone has attempted to cheat.
-    Malicious // Used for the simulated malicious player.
 }

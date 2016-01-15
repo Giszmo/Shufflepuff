@@ -89,18 +89,19 @@ public class TestNetworkOperations  {
                         )
                 };
 
+        int i = 0;
         for(playerSetTestCase test : tests) {
             // make the set of players.
             TreeMap<Integer, VerificationKey> players = new TreeMap<Integer, VerificationKey>();
-            for (int i = 1; i <= test.N; i ++) {
-                players.put(i, new MockVerificationKey(i));
+            for (int j = 1; j <= test.N; j ++) {
+                players.put(j, new MockVerificationKey(j));
             }
 
             Set<VerificationKey> result = null;
             try {
                 // Set up the network operations object.
                 CoinShuffle.ShuffleMachine.Round netop =
-                    net(234, new MockSessionIdentifier(), new MockSigningKey(test.player), players,
+                    net(234, new MockSessionIdentifier("testPlayerSet" + i), new MockSigningKey(test.player), players,
                         Phase.Shuffling, new MockMessageFactory(), new MockNetwork());
                 result = netop.playerSet(test.i, test.n);
             } catch (CryptographyError e) {
@@ -119,6 +120,7 @@ public class TestNetworkOperations  {
             }
 
             Assert.assertTrue(result.isEmpty());
+            i++;
         }
     }
 
@@ -159,7 +161,7 @@ public class TestNetworkOperations  {
             // Set up the network operations object.
             try {
                 CoinShuffle.ShuffleMachine.Round netop =
-                        net(577, new MockSessionIdentifier(), new MockSigningKey(1), players,
+                        net(577, new MockSessionIdentifier("broadcastTest" + test.recipients), new MockSigningKey(1), players,
                             Phase.Shuffling, messages, network);
                 netop.broadcast(messages.make());
             } catch (TimeoutError e) {
@@ -199,6 +201,7 @@ public class TestNetworkOperations  {
                 new sendToTestCase(1, 1, 2, false)
         };
 
+        int i = 0;
         for (sendToTestCase test : tests) {
             try {
                 // The player sending and inbox.
@@ -209,13 +212,13 @@ public class TestNetworkOperations  {
 
                 // make the set of players.
                 TreeMap<Integer, VerificationKey> players = new TreeMap<Integer, VerificationKey>();
-                for (int i = 1; i <= test.players; i ++) {
-                    players.put(i, new MockVerificationKey(i));
+                for (int j = 1; j <= test.players; j ++) {
+                    players.put(j, new MockVerificationKey(j));
                 }
 
                 // Set up the shuffle machine (only used blockchain query for the current phase).
                 MockMessageFactory message = new MockMessageFactory();
-                MockSessionIdentifier mockSessionIdentifier = new MockSessionIdentifier();
+                MockSessionIdentifier mockSessionIdentifier = new MockSessionIdentifier("testSend" + i);
 
                 // Set up the network operations object.
                 CoinShuffle.ShuffleMachine.Round netop =
@@ -244,6 +247,7 @@ public class TestNetworkOperations  {
             } catch (InvalidParticipantSetException e) {
                 Assert.fail("Unexpected InvalidParticipationSetException");
             }
+            i++;
         }
     }
 
@@ -268,10 +272,11 @@ public class TestNetworkOperations  {
         receiveFromTestCase tests[] = new receiveFromTestCase[]{
                 // time out exception test case.
                 new receiveFromTestCase(new int []{1,2,3}, 2, Phase.Shuffling, null, new TimeoutError()),
-                // Various malformed inbox.
+                // Various malformed inputs.
                 // TODO
         };
 
+        int i = 0;
         for (receiveFromTestCase test : tests) {
             try {
                 // The player sending and inbox.
@@ -282,11 +287,11 @@ public class TestNetworkOperations  {
 
                 // make the set of players.
                 TreeMap<Integer, VerificationKey> players = new TreeMap<Integer, VerificationKey>();
-                for (int i = 1; i <= test.players.length; i ++) {
-                    players.put(i, new MockVerificationKey(test.players[i - 1]));
+                for (int j = 1; j <= test.players.length; j ++) {
+                    players.put(j, new MockVerificationKey(test.players[j - 1]));
                 }
 
-                MockSessionIdentifier mockSessionIdentifier = new MockSessionIdentifier();
+                MockSessionIdentifier mockSessionIdentifier = new MockSessionIdentifier("receiveFromTest" + i);
 
                 // Set up the network operations object.
                 CoinShuffle.ShuffleMachine.Round netop =
@@ -306,6 +311,7 @@ public class TestNetworkOperations  {
             } catch (InvalidParticipantSetException e) {
                 Assert.fail();
             }
+            i++;
         }
     }
 
@@ -318,6 +324,7 @@ public class TestNetworkOperations  {
         // TODO
         receiveFromMultipleTestCase tests[] = new receiveFromMultipleTestCase[]{};
 
+        int i = 0;
         for (receiveFromMultipleTestCase test : tests) {
             // The player sending and inbox.
             MockSigningKey sk = new MockSigningKey(0);
@@ -327,11 +334,11 @@ public class TestNetworkOperations  {
 
             // make the set of players.
             TreeMap<Integer, VerificationKey> players = new TreeMap<Integer, VerificationKey>();
-            for (int i = 1; i <= test.players.length; i ++) {
-                players.put(i, new MockVerificationKey(test.players[i]));
+            for (int j = 1; j <= test.players.length; j ++) {
+                players.put(j, new MockVerificationKey(test.players[j]));
             }
 
-            MockSessionIdentifier mockSessionIdentifier = new MockSessionIdentifier();
+            MockSessionIdentifier mockSessionIdentifier = new MockSessionIdentifier("receiveFromMultiple" + i);
 
             // Set up the network operations object.
             try {
@@ -341,7 +348,7 @@ public class TestNetworkOperations  {
             } catch (InvalidParticipantSetException e) {
                 Assert.fail();
             }
-
+            i++;
         }
     }
 }
