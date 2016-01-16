@@ -60,7 +60,7 @@ public class TestNetworkOperations  {
     }
 
     @Test
-    public void testPlayerSet() {
+    public void testPlayerSet() throws InvalidParticipantSetException {
         playerSetTestCase tests[] =
                 new playerSetTestCase[]{
                         new playerSetTestCase(
@@ -98,28 +98,17 @@ public class TestNetworkOperations  {
             }
 
             Set<VerificationKey> result = null;
-            try {
                 // Set up the network operations object.
                 CoinShuffle.ShuffleMachine.Round netop =
                     net(234, new MockSessionIdentifier("testPlayerSet" + i), new MockSigningKey(test.player), players,
                         Phase.Shuffling, new MockMessageFactory(), new MockNetwork());
                 result = netop.playerSet(test.i, test.n);
-            } catch (CryptographyError e) {
-                Assert.fail("Unexpected CryptographyException.");
-            } catch (InvalidImplementationError e) {
-                Assert.fail("Unexpected InvalidImplementationException.");
-            } catch (InvalidParticipantSetException e) {
-                e.printStackTrace();
-                Assert.fail("Unexpected InvalidParticipationSetException");
-            } catch (NullPointerException e) {
-                Assert.fail();
-            }
 
             for (int expect : test.expected) {
-                Assert.assertTrue(result.remove(new MockVerificationKey(expect)));
+                Assert.assertTrue(String.format("Unable to remove expected player %d",expect),result.remove(new MockVerificationKey(expect)));
             }
 
-            Assert.assertTrue(result.isEmpty());
+            Assert.assertTrue("Not every expected player was removed.",result.isEmpty());
             i++;
         }
     }
@@ -135,7 +124,7 @@ public class TestNetworkOperations  {
     }
 
     @Test
-    public void testBroadcast() {
+    public void testBroadcast() throws InvalidParticipantSetException {
         broadcastTestCase tests[] =
                 new broadcastTestCase[]{
                         new broadcastTestCase(1, 1),
@@ -159,22 +148,10 @@ public class TestNetworkOperations  {
             MockMessageFactory messages = new MockMessageFactory();
 
             // Set up the network operations object.
-            try {
                 CoinShuffle.ShuffleMachine.Round netop =
                         net(577, new MockSessionIdentifier("broadcastTest" + test.recipients), new MockSigningKey(1), players,
                             Phase.Shuffling, messages, network);
                 netop.broadcast(messages.make());
-            } catch (TimeoutError e) {
-                Assert.fail("Unexpected exception.");
-            } catch (CryptographyError e) {
-                e.printStackTrace();
-                Assert.fail("Unexpected CryptograhyException.");
-            } catch (InvalidImplementationError e) {
-                Assert.fail("Unexpected InvalidImplementationException.");
-            } catch (InvalidParticipantSetException e) {
-                e.printStackTrace();
-                Assert.fail("Unexpected InvalidParticipantSetException.");
-            }
         }
     }
 
@@ -193,7 +170,7 @@ public class TestNetworkOperations  {
     }
 
     @Test
-    public void testSend() {
+    public void testSend() throws InvalidParticipantSetException {
         sendToTestCase tests[] = new sendToTestCase[]{
                 // Case where recipient does not exist.
                 new sendToTestCase(1, 2, 2, true),
@@ -203,7 +180,6 @@ public class TestNetworkOperations  {
 
         int i = 0;
         for (sendToTestCase test : tests) {
-            try {
                 // The player sending and inbox.
                 MockSigningKey sk = new MockSigningKey(1);
 
@@ -232,21 +208,11 @@ public class TestNetworkOperations  {
                         new MockVerificationKey(test.recipient)));
 
                 Queue<Map.Entry<Packet, MockVerificationKey>> responses = network.getResponses();
-                Assert.assertEquals(1, responses.size());
+                Assert.assertEquals(String.format("Recieved %d responses when only expected 1",responses.size()),1, responses.size());
 
                 for (Map.Entry msg : responses) {
-                    Assert.assertTrue(new MockVerificationKey(test.recipient).equals(msg.getValue()));
+                    Assert.assertTrue("Recieved response does not equal expected",new MockVerificationKey(test.recipient).equals(msg.getValue()));
                 }
-
-            } catch (InvalidImplementationError e) {
-                Assert.fail("Unexpected InvalidImplementationException");
-            } catch (CryptographyError e) {
-                Assert.fail("Unexpected CryptographyException");
-            } catch (TimeoutError e) {
-                Assert.fail("Unexpected TimeoutException");
-            } catch (InvalidParticipantSetException e) {
-                Assert.fail("Unexpected InvalidParticipationSetException");
-            }
             i++;
         }
     }
@@ -267,8 +233,8 @@ public class TestNetworkOperations  {
         }
     }
 
-    @Test
-    public void testReceiveFrom() {
+    @Test(expected = TimeoutError.class)
+    public void testReceiveFrom() throws InvalidParticipantSetException, InterruptedException, BlameException, ValueException, FormatException {
         receiveFromTestCase tests[] = new receiveFromTestCase[]{
                 // time out exception test case.
                 new receiveFromTestCase(new int []{1,2,3}, 2, Phase.Shuffling, null, new TimeoutError()),
@@ -278,7 +244,6 @@ public class TestNetworkOperations  {
 
         int i = 0;
         for (receiveFromTestCase test : tests) {
-            try {
                 // The player sending and inbox.
                 MockSigningKey sk = new MockSigningKey(1);
 
@@ -299,18 +264,6 @@ public class TestNetworkOperations  {
                                 Phase.Shuffling, new MockMessageFactory(), network);
 
                 netop.receiveFrom(new MockVerificationKey(test.requested), test.phase);
-            } catch (TimeoutError | CryptographyError | FormatException | BlameException
-                    | ValueException | InterruptedException | InvalidImplementationError e) {
-                if (test.e != null) {
-                    if (!test.e.getClass().equals(e.getClass())) {
-                        Assert.fail("Wrong exception encountered.");
-                    }
-                } else {
-                    Assert.fail("Unexpected exception encountered.");
-                }
-            } catch (InvalidParticipantSetException e) {
-                Assert.fail();
-            }
             i++;
         }
     }
@@ -320,7 +273,7 @@ public class TestNetworkOperations  {
     }
 
     @Test
-    public void testReceiveFromMultiple() {
+    public void testReceiveFromMultiple() throws InvalidParticipantSetException {
         // TODO
         receiveFromMultipleTestCase tests[] = new receiveFromMultipleTestCase[]{};
 
@@ -341,13 +294,9 @@ public class TestNetworkOperations  {
             MockSessionIdentifier mockSessionIdentifier = new MockSessionIdentifier("receiveFromMultiple" + i);
 
             // Set up the network operations object.
-            try {
                 CoinShuffle.ShuffleMachine.Round netop =
                         net(475, mockSessionIdentifier, sk, players,
                                 Phase.Shuffling, new MockMessageFactory(), network);
-            } catch (InvalidParticipantSetException e) {
-                Assert.fail();
-            }
             i++;
         }
     }
