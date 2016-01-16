@@ -1,4 +1,4 @@
-package com.shuffle.cryptocoin;
+package com.shuffle.bitcoin;
 
 /**
  * Created by Daniel Krawisz on 12/6/15.

@@ -1,9 +1,9 @@
 package com.shuffle.protocol;
 
-import com.shuffle.cryptocoin.Crypto;
-import com.shuffle.cryptocoin.CryptographyError;
-import com.shuffle.cryptocoin.DecryptionKey;
-import com.shuffle.cryptocoin.SigningKey;
+import com.shuffle.bitcoin.Crypto;
+import com.shuffle.bitcoin.CryptographyError;
+import com.shuffle.bitcoin.DecryptionKey;
+import com.shuffle.bitcoin.SigningKey;
 
 import java.util.LinkedList;
 import java.util.Queue;

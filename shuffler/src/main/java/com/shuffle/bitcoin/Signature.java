@@ -1,4 +1,4 @@
-package com.shuffle.cryptocoin;
+package com.shuffle.bitcoin;
 
 /**
  * Representing a digital signature of a bitcoin transaction.

@@ -1,7 +1,4 @@
-package com.shuffle.cryptocoin;
-
-import com.shuffle.cryptocoin.Address;
-import com.shuffle.cryptocoin.CryptographyError;
+package com.shuffle.bitcoin;
 
 /**
  *

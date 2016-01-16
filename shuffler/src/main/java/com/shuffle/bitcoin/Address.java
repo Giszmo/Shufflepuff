@@ -1,4 +1,4 @@
-package com.shuffle.cryptocoin;
+package com.shuffle.bitcoin;
 
 /**
  * Represents an address in a cryptocurrency network.

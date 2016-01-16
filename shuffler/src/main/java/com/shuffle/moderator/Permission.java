@@ -1,4 +1,4 @@
-package com.shuffle.server;
+package com.shuffle.moderator;
 
 import java.io.Serializable;
 

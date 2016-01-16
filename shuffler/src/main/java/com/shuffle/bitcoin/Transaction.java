@@ -1,4 +1,4 @@
-package com.shuffle.cryptocoin;
+package com.shuffle.bitcoin;
 
 /**
  * A representation of a Bitcoin or other cryptocurrency transaction.

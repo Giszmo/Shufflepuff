@@ -1,8 +1,8 @@
 package com.shuffle.protocol;
 
-import com.shuffle.cryptocoin.Address;
-import com.shuffle.cryptocoin.EncryptionKey;
-import com.shuffle.cryptocoin.Signature;
+import com.shuffle.bitcoin.Address;
+import com.shuffle.bitcoin.EncryptionKey;
+import com.shuffle.bitcoin.Signature;
 
 /**
  * Created by Daniel Krawisz on 12/19/15.

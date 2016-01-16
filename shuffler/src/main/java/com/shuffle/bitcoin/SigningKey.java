@@ -1,9 +1,4 @@
-package com.shuffle.cryptocoin;
-
-import com.shuffle.cryptocoin.CryptographyError;
-import com.shuffle.cryptocoin.Signature;
-import com.shuffle.cryptocoin.Transaction;
-import com.shuffle.cryptocoin.VerificationKey;
+package com.shuffle.bitcoin;
 
 /**
  *

@@ -1,8 +1,8 @@
 package com.shuffle.protocol;
 
-import com.shuffle.cryptocoin.Address;
-import com.shuffle.cryptocoin.CryptographyError;
-import com.shuffle.cryptocoin.EncryptionKey;
+import com.shuffle.bitcoin.Address;
+import com.shuffle.bitcoin.CryptographyError;
+import com.shuffle.bitcoin.EncryptionKey;
 
 /**
  *

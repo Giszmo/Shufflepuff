@@ -1,4 +1,4 @@
-package com.shuffle.cryptocoin;
+package com.shuffle.bitcoin;
 
 import com.shuffle.protocol.InvalidImplementationError;
 import com.shuffle.protocol.Message;
@@ -12,7 +12,7 @@ import java.util.Queue;
 /**
  * Created by Daniel Krawisz on 12/21/15.
  */
-public class BitcoinJ implements Coin, Crypto {
+public class Bitcoin implements Coin, Crypto {
     BlockChain blockchain;
 
     @Override

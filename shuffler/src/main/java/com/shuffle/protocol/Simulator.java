@@ -1,18 +1,16 @@
 package com.shuffle.protocol;
 
-import com.shuffle.cryptocoin.Address;
-import com.shuffle.cryptocoin.Coin;
-import com.shuffle.cryptocoin.Crypto;
-import com.shuffle.cryptocoin.CryptographyError;
-import com.shuffle.cryptocoin.EncryptionKey;
-import com.shuffle.cryptocoin.SigningKey;
-import com.shuffle.cryptocoin.Transaction;
-import com.shuffle.cryptocoin.VerificationKey;
+import com.shuffle.bitcoin.Address;
+import com.shuffle.bitcoin.Coin;
+import com.shuffle.bitcoin.Crypto;
+import com.shuffle.bitcoin.CryptographyError;
+import com.shuffle.bitcoin.EncryptionKey;
+import com.shuffle.bitcoin.SigningKey;
+import com.shuffle.bitcoin.Transaction;
+import com.shuffle.bitcoin.VerificationKey;
 
-import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;

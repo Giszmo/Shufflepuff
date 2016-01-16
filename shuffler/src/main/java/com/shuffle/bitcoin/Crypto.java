@@ -1,4 +1,4 @@
-package com.shuffle.cryptocoin;
+package com.shuffle.bitcoin;
 
 import com.shuffle.protocol.InvalidImplementationError;
 import com.shuffle.protocol.Message;

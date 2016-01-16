@@ -1,8 +1,8 @@
 package com.shuffle.protocol;
 
-import com.shuffle.cryptocoin.CryptographyError;
-import com.shuffle.cryptocoin.SigningKey;
-import com.shuffle.cryptocoin.Transaction;
+import com.shuffle.bitcoin.CryptographyError;
+import com.shuffle.bitcoin.SigningKey;
+import com.shuffle.bitcoin.Transaction;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -380,7 +380,7 @@ public class TestShuffleMachine {
         DoubleSpend(caseNo++, new int[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1}, new int[]{6}, sim).check();
         DoubleSpend(caseNo++, new int[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1}, new int[]{3, 10}, sim).check();
         DoubleSpend(caseNo++, new int[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1}, new int[]{1, 7, 8}, sim).check();
-        DoubleSpend(caseNo,   new int[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1}, new int[]{4, 6, 7, 8}, sim).check();
+        DoubleSpend(caseNo, new int[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1}, new int[]{4, 6, 7, 8}, sim).check();
 
     }
 
@@ -418,17 +418,17 @@ public class TestShuffleMachine {
                         new Equivocation(4, new int[]{5, 6}),
                         new Equivocation(8, new int[]{9})}, sim).check();
         // A player sends different output vectors to different players.
-        EquivocateOutput(caseNo++, 3, new int[]{1}, sim);
-        EquivocateOutput(caseNo++, 3, new int[]{2}, sim);
-        EquivocateOutput(caseNo++, 4, new int[]{1}, sim);
-        EquivocateOutput(caseNo++, 4, new int[]{1, 2}, sim);
+        EquivocateOutput(caseNo++, 3,  new int[]{1}, sim);
+        EquivocateOutput(caseNo++, 3,  new int[]{2}, sim);
+        EquivocateOutput(caseNo++, 4,  new int[]{1}, sim);
+        EquivocateOutput(caseNo++, 4,  new int[]{1, 2}, sim);
         EquivocateOutput(caseNo  , 10, new int[]{3, 5, 7}, sim);
     }
 
     @Test
     public void testShuffleMalice() {
 
-        // A player drops an address during phase 2.a,
+        // A player drops an address during phase 2.
         // A player drops an address and adds another one in phase 2.
         // A player drops an address and adds a duplicate in phase 2.
     }

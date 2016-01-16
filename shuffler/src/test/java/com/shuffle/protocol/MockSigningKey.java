@@ -1,10 +1,10 @@
 package com.shuffle.protocol;
 
-import com.shuffle.cryptocoin.CryptographyError;
-import com.shuffle.cryptocoin.Signature;
-import com.shuffle.cryptocoin.SigningKey;
-import com.shuffle.cryptocoin.Transaction;
-import com.shuffle.cryptocoin.VerificationKey;
+import com.shuffle.bitcoin.CryptographyError;
+import com.shuffle.bitcoin.Signature;
+import com.shuffle.bitcoin.SigningKey;
+import com.shuffle.bitcoin.Transaction;
+import com.shuffle.bitcoin.VerificationKey;
 
 /**
  * Created by Daniel Krawisz on 12/9/15.

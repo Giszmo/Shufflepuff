@@ -1,15 +1,15 @@
 package com.shuffle.protocol;
 
-import com.shuffle.cryptocoin.Address;
-import com.shuffle.cryptocoin.Coin;
-import com.shuffle.cryptocoin.CoinNetworkError;
-import com.shuffle.cryptocoin.Crypto;
-import com.shuffle.cryptocoin.CryptographyError;
-import com.shuffle.cryptocoin.DecryptionKey;
-import com.shuffle.cryptocoin.EncryptionKey;
-import com.shuffle.cryptocoin.SigningKey;
-import com.shuffle.cryptocoin.Transaction;
-import com.shuffle.cryptocoin.VerificationKey;
+import com.shuffle.bitcoin.Address;
+import com.shuffle.bitcoin.Coin;
+import com.shuffle.bitcoin.CoinNetworkError;
+import com.shuffle.bitcoin.Crypto;
+import com.shuffle.bitcoin.CryptographyError;
+import com.shuffle.bitcoin.DecryptionKey;
+import com.shuffle.bitcoin.EncryptionKey;
+import com.shuffle.bitcoin.SigningKey;
+import com.shuffle.bitcoin.Transaction;
+import com.shuffle.bitcoin.VerificationKey;
 
 import java.net.ProtocolException;
 import java.util.HashMap;

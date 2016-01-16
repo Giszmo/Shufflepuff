@@ -1,6 +1,6 @@
 package com.shuffle.protocol;
 
-import com.shuffle.cryptocoin.VerificationKey;
+import com.shuffle.bitcoin.VerificationKey;
 
 import java.util.LinkedList;
 import java.util.Map;

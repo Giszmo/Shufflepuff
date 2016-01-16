@@ -6,4 +6,4 @@
  * implement the interfaces in some other way and run the whole protocol with something else.
  *
  */
-package com.shuffle.cryptocoin;
+package com.shuffle.bitcoin;

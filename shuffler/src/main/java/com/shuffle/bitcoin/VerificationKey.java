@@ -1,9 +1,6 @@
-package com.shuffle.cryptocoin;
+package com.shuffle.bitcoin;
 
 
-import com.shuffle.cryptocoin.Address;
-import com.shuffle.cryptocoin.Signature;
-import com.shuffle.cryptocoin.Transaction;
 import com.shuffle.protocol.InvalidImplementationError;
 
 /**

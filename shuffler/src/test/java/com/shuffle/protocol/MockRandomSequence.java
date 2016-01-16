@@ -1,6 +1,6 @@
 package com.shuffle.protocol;
 
-import com.shuffle.cryptocoin.CryptographyError;
+import com.shuffle.bitcoin.CryptographyError;
 
 /**
  * Created by Daniel Krawisz on 12/6/15.

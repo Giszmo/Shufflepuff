@@ -1,7 +1,7 @@
 package com.shuffle.protocol;
 
-import com.shuffle.cryptocoin.Signature;
-import com.shuffle.cryptocoin.Transaction;
+import com.shuffle.bitcoin.Signature;
+import com.shuffle.bitcoin.Transaction;
 
 /**
  * Created by Daniel Krawisz on 12/9/15.

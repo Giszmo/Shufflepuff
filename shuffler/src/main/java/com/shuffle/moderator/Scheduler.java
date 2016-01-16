@@ -1,4 +1,4 @@
-package com.shuffle.server;
+package com.shuffle.moderator;
 
 
 import com.shuffle.protocol.SessionIdentifier;
@@ -9,15 +9,14 @@ import com.shuffle.protocol.SessionIdentifier;
  * Created by Daniel Krawisz on 12/25/15.
  */
 public class Scheduler {
-    Database db;
 
     // TODO
-    public Mix getMix(SessionIdentifier session) {
+    public Mixes getMix(SessionIdentifier session) {
         return null;
     }
 
     // TODO
-    public Mix create() {
+    public Mixes create() {
         return null;
     }
 }

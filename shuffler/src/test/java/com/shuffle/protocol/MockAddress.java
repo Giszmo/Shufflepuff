@@ -1,6 +1,6 @@
 package com.shuffle.protocol;
 
-import com.shuffle.cryptocoin.Address;
+import com.shuffle.bitcoin.Address;
 
 /**
  * Created by Daniel Krawisz on 12/19/15.

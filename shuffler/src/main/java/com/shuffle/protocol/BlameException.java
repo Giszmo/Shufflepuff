@@ -1,6 +1,6 @@
 package com.shuffle.protocol;
 
-import com.shuffle.cryptocoin.VerificationKey;
+import com.shuffle.bitcoin.VerificationKey;
 
 /**
  * Created by Daniel Krawisz on 12/4/15.

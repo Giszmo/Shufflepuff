@@ -1,11 +1,10 @@
 package com.shuffle.protocol;
 
-import com.shuffle.cryptocoin.DecryptionKey;
-import com.shuffle.cryptocoin.Transaction;
-import com.shuffle.cryptocoin.VerificationKey;
+import com.shuffle.bitcoin.DecryptionKey;
+import com.shuffle.bitcoin.Transaction;
+import com.shuffle.bitcoin.VerificationKey;
 
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
