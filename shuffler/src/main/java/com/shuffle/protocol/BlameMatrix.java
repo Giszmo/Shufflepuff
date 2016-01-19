@@ -1,6 +1,7 @@
 package com.shuffle.protocol;
 
 import com.shuffle.bitcoin.DecryptionKey;
+import com.shuffle.bitcoin.EncryptionKey;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
 
@@ -64,6 +65,8 @@ public class BlameMatrix {
         BlameReason reason;
         boolean credible; // Do we believe this evidence?
         Transaction t = null;
+        Map<VerificationKey, Message> output = null;
+        Map<VerificationKey, EncryptionKey> sent = null;
 
         public BlameEvidence(BlameReason reason, boolean credible) {
             // A transaction should always be included with InsufficientFunds.
@@ -233,5 +236,29 @@ public class BlameMatrix {
     @Override
     public String toString() {
         return blame.toString();
+    }
+
+    static public BlameEvidence EquivocationFailureBroadcast(Map<VerificationKey, Message> output) {
+        if (output == null) {
+            throw new NullPointerException();
+        }
+
+        BlameEvidence evidence = new BlameEvidence();
+        evidence.reason = BlameReason.EquivocationFailure;
+        evidence.credible = true;
+        evidence.output = output;
+        return evidence;
+    }
+
+    static public BlameEvidence EquivocationFailureAnnouncement(Map<VerificationKey, EncryptionKey> sent) {
+        if (sent == null) {
+            throw new NullPointerException();
+        }
+
+        BlameEvidence evidence = new BlameEvidence();
+        evidence.reason = BlameReason.EquivocationFailure;
+        evidence.credible = true;
+        evidence.sent = sent;
+        return evidence;
     }
 }

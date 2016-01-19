@@ -311,24 +311,133 @@ public class TestShuffleMachine {
         return test;
     }
 
-    // Run a test case for equivocatino during phase 1.
+    // Run a test case for equivocation during phase 1.
     public TestCase EquivocateAnnouncement(
             int caseNo,
             int numPlayers,
             Equivocation[] equivocators,
             Simulator sim
     ) {
-       return null; // TODO
+        long amount = 17;
+        SessionIdentifier session = new MockSessionIdentifier("eqv" + caseNo);
+        Simulator.InitialState init = sim.initialize(session, amount).defaultCoin(new MockCoin());
+
+        int eq = 0;
+        for (int i = 1; i <= numPlayers; i ++) {
+            init.player().initialFunds(20);
+
+            while(eq < equivocators.length && equivocators[eq].equivocator < i) {
+                eq++;
+            }
+
+            if (eq < equivocators.length && equivocators[eq].equivocator == i) {
+                init.equivocateAnnouncement(equivocators[eq].equivocation);
+            }
+        }
+
+        System.out.println("About to run an equivocation test.");
+
+        TestCase test = new TestCase(session, amount, "Announcement phase equivocation spending test case.", caseNo);
+        LinkedHashMap<SigningKey, ReturnState> results = init.run();
+        Set<SigningKey> malicious = new HashSet<>();
+
+        eq = 0;
+        int index = 0;
+        for (SigningKey key : results.keySet()) {
+            while(eq < equivocators.length && equivocators[eq].equivocator < index) {
+                eq++;
+            }
+
+            if (eq < equivocators.length && equivocators[eq].equivocator == index) {
+                malicious.add(key);
+            }
+
+            index++;
+        }
+
+        for(SigningKey i : results.keySet()) {
+
+            BlameMatrix bm = null;
+
+            if (malicious.contains(i)) {
+                bm = anyMatrix;
+            } else {
+                bm = new BlameMatrix();
+
+                for (SigningKey j : results.keySet()) {
+                    for (SigningKey k : results.keySet()) {
+                        if (malicious.contains(k)) {
+                            bm.put(j.VerificationKey(), k.VerificationKey(),
+                                    new BlameMatrix.BlameEvidence(BlameMatrix.BlameReason.EquivocationFailure, true));
+                        }
+                    }
+                }
+            }
+
+            test.put(i,
+                    new ReturnState(false, session, null, null, bm),
+                    results.get(i));
+
+            index ++;
+        }
+
+        return test;
     }
 
     // Run a test case for equivocation during phase 3.
-    public TestCase EquivocateOutput(int caseNo, int numPlayers, int[] eqivocation, Simulator sim) {
+    public TestCase EquivocateOutput(int caseNo, int numPlayers, int[] equivocation, Simulator sim) {
+        long amount = 17;
+        SessionIdentifier session = new MockSessionIdentifier("eqv" + caseNo);
+        Simulator.InitialState init = sim.initialize(session, amount).defaultCoin(new MockCoin());
 
+        // Only the last player can equivocate.
+        for (int i = 1; i < numPlayers; i ++) {
+            init.player().initialFunds(20);
+        }
 
-        return null; // TODO
+        init.player().initialFunds(20).equivocateBroadcast(equivocation);
+
+        TestCase test = new TestCase(session, amount, "Broadcast phase equivocation test case.", caseNo);
+        LinkedHashMap<SigningKey, ReturnState> results = init.run();
+        SigningKey malicious = null;
+
+        // Find the malicious last player.
+        int index = 0;
+        for (SigningKey i : results.keySet()) {
+
+            index++;
+            if (index == numPlayers) {
+                malicious = i;
+            }
+        }
+
+        for (SigningKey i : results.keySet()) {
+            BlameMatrix bm = new BlameMatrix();
+
+            index++;
+            if(index == numPlayers) {
+                bm = anyMatrix;
+            } else {
+                bm = new BlameMatrix();
+
+                for (SigningKey j : results.keySet()) {
+                            bm.put(j.VerificationKey(), malicious.VerificationKey(),
+                                    new BlameMatrix.BlameEvidence(BlameMatrix.BlameReason.EquivocationFailure, true));
+                }
+            }
+
+            test.put(i,
+                    new ReturnState(false, session, null, null, bm),
+                    results.get(i));
+
+            index ++;
+        }
+
+        return test;
     }
 
     @Test
+    // Tests for successful runs of the protocol.
     public void testSuccess() {
         MockCrypto crypto = new MockCrypto(45);
         Simulator sim = new Simulator(new MockMessageFactory(), crypto);
@@ -346,6 +455,7 @@ public class TestShuffleMachine {
     }
 
     @Test
+    // Tests for players who come in without enough cash.
     public void testInsufficientFunds() {
         MockCrypto crypto = new MockCrypto(2222);
         Simulator sim = new Simulator(new MockMessageFactory(), crypto);
@@ -365,23 +475,21 @@ public class TestShuffleMachine {
         InsufficientFunds(caseNo++, 10, new int[]{}, new int[]{}, new int[]{3, 5}, sim).check();
         InsufficientFunds(caseNo++, 10, new int[]{5}, new int[]{10}, new int[]{}, sim).check();
         InsufficientFunds(caseNo++, 10, new int[]{}, new int[]{3}, new int[]{9}, sim).check();
-        InsufficientFunds(caseNo,   10, new int[]{1}, new int[]{}, new int[]{2}, sim).check();
+        InsufficientFunds(caseNo, 10, new int[]{1}, new int[]{}, new int[]{2}, sim).check();
     }
 
     @Test
-    public void testShuffleMachine() {
-        MockCrypto crypto = new MockCrypto(2223);
+    // Tests for malicious players who send different output vectors to different players.
+    public void testEquivocationBroadcast() {
+        MockCrypto crypto = new MockCrypto(87);
         Simulator sim = new Simulator(new MockMessageFactory(), crypto);
         int caseNo = 0;
-
-        // Tests for players who spend funds while the protocol is going on.
-        DoubleSpend(caseNo++, new int[]{0, 0}, new int[]{1}, sim).check();
-        DoubleSpend(caseNo++, new int[]{0, 1, 0}, new int[]{1}, sim).check();
-        DoubleSpend(caseNo++, new int[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1}, new int[]{6}, sim).check();
-        DoubleSpend(caseNo++, new int[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1}, new int[]{3, 10}, sim).check();
-        DoubleSpend(caseNo++, new int[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1}, new int[]{1, 7, 8}, sim).check();
-        DoubleSpend(caseNo, new int[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1}, new int[]{4, 6, 7, 8}, sim).check();
-
+        // A player sends different output vectors to different players.
+        EquivocateOutput(caseNo++, 3, new int[]{1}, sim);
+        EquivocateOutput(caseNo++, 3, new int[]{2}, sim);
+        EquivocateOutput(caseNo++, 4, new int[]{1}, sim);
+        EquivocateOutput(caseNo++, 4, new int[]{1, 2}, sim);
+        EquivocateOutput(caseNo, 10, new int[]{3, 5, 7}, sim);
     }
 
     private class Equivocation {
@@ -396,7 +504,7 @@ public class TestShuffleMachine {
     }
 
     @Test
-    public void testEquivocation() {
+    public void testEquivocationAnnounce() {
         MockCrypto crypto = new MockCrypto(87);
         Simulator sim = new Simulator(new MockMessageFactory(), crypto);
         int caseNo = 0;
@@ -417,15 +525,26 @@ public class TestShuffleMachine {
                         new Equivocation(2, new int[]{3}),
                         new Equivocation(4, new int[]{5, 6}),
                         new Equivocation(8, new int[]{9})}, sim).check();
-        // A player sends different output vectors to different players.
-        EquivocateOutput(caseNo++, 3,  new int[]{1}, sim);
-        EquivocateOutput(caseNo++, 3,  new int[]{2}, sim);
-        EquivocateOutput(caseNo++, 4,  new int[]{1}, sim);
-        EquivocateOutput(caseNo++, 4,  new int[]{1, 2}, sim);
-        EquivocateOutput(caseNo  , 10, new int[]{3, 5, 7}, sim);
     }
 
     @Test
+    public void testDoubleSpending() {
+        MockCrypto crypto = new MockCrypto(2223);
+        Simulator sim = new Simulator(new MockMessageFactory(), crypto);
+        int caseNo = 0;
+
+        // Tests for players who spend funds while the protocol is going on.
+        DoubleSpend(caseNo++, new int[]{0, 0}, new int[]{1}, sim).check();
+        DoubleSpend(caseNo++, new int[]{0, 1, 0}, new int[]{1}, sim).check();
+        DoubleSpend(caseNo++, new int[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1}, new int[]{6}, sim).check();
+        DoubleSpend(caseNo++, new int[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1}, new int[]{3, 10}, sim).check();
+        DoubleSpend(caseNo++, new int[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1}, new int[]{1, 7, 8}, sim).check();
+        DoubleSpend(caseNo, new int[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1}, new int[]{4, 6, 7, 8}, sim).check();
+
+    }
+
+    @Test
+    // Tests for failures during the shuffle phase.
     public void testShuffleMalice() {
 
         // A player drops an address during phase 2.

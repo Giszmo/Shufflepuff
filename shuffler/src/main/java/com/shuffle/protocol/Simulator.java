@@ -87,17 +87,36 @@ public final class Simulator {
     private class Adversary {
         // This implementation of Network connects each shuffle machine to the simulator.
         private class MaliciousNetwork extends Network {
-            final MessageReplacement malicious;
+            MessageReplacement malicious;
 
-            MaliciousNetwork(MessageReplacement malicious) {
-                this.malicious = malicious;
+            MaliciousNetwork() {
+            }
+
+            public MaliciousNetwork addReplacement(MessageReplacement replacement) {
+
+                if (replacement == null) {
+                    return this;
+                }
+
+                if (malicious == null) {
+                    malicious = replacement;
+                } else {
+                    malicious = new Composition(replacement, malicious);
+                }
+
+                return this;
             }
 
             @Override
             public void sendTo(VerificationKey to, Packet packet) throws InvalidImplementationError, TimeoutError {
+
                 // Replace with malicious packet if necessary.
                 try {
-                    super.sendTo(to, malicious.replace(packet));
+                    if(malicious == null) {
+                        super.sendTo(to, packet);
+                    } else {
+                        super.sendTo(to, malicious.replace(packet));
+                    }
                 } catch (FormatException e) {
                     e.printStackTrace();
                 }
@@ -105,9 +124,11 @@ public final class Simulator {
         }
 
         final SessionIdentifier session;
+        final CoinShuffle shuffle;
         final CoinShuffle.ShuffleMachine machine;
-        final Network network;
+        MaliciousNetwork network;
         final SigningKey sk;
+        final SortedSet<VerificationKey> players;
 
         final Transaction t;
         final Coin coin;
@@ -119,35 +140,73 @@ public final class Simulator {
                 SigningKey sk,
                 SortedSet<VerificationKey> players,
                 Coin coin,
-                Transaction t,
-                final MessageReplacement lies) {
+                Transaction t) {
             this.session = session;
             this.sk = sk;
             this.coin = coin;
-            if (lies == null) {
-                this.network = new Network();
-            } else {
-                this.network = new MaliciousNetwork(lies);
-            }
+            this.network = new MaliciousNetwork();
+            this.players = players;
             this.t = t;
-            this.machine = new CoinShuffle(messages, crypto, coin, network).new ShuffleMachine(session, amount, sk, players, null, 1, 2);
+            shuffle = new CoinShuffle(messages, crypto, coin, network);
+            this.machine = shuffle.new ShuffleMachine(session, amount, sk, players, null, 1, 2);
+        }
+
+        Adversary lie(MessageReplacement lie) {
+            network.addReplacement(lie);
+            return this;
         }
 
         // A player sends different encryption keys to different players.
         public class EquivocateEncryptionKeys implements MessageReplacement {
             final Set<VerificationKey> others;
-            final Packet alternate;
+            final EncryptionKey alternate;
 
             public EquivocateEncryptionKeys(Set<VerificationKey> others, EncryptionKey alternate) {
                 this.others = others;
-                this.alternate = null; // TODO
+                this.alternate = alternate;
+            }
+
+            public EquivocateEncryptionKeys(int[] others) {
+                this.others = new TreeSet<>();
+
+                int p = 1;
+                int i = 0;
+                for(VerificationKey player: players) {
+                    while(i < others.length && others[i] < p) {
+                        i++;
+                    }
+
+                    if(i < others.length && others[i] == p) {
+                        this.others.add(player);
+                    }
+
+                    p ++;
+                }
+                alternate = crypto.makeDecryptionKey().EncryptionKey();
             }
 
             @Override
             public Packet replace(Packet packet) {
                 if (packet.phase == Phase.Announcement) {
                     if (others.contains(packet.recipient)) {
-                        return alternate;
+                        Message message = packet.message;
+
+                        // Sometimes a change address is included with message 1.
+                        Address change = null;
+                        try {
+                            message.readEncryptionKey();
+                            if (!message.isEmpty()) {
+                                change = message.readAddress();
+                            }
+                        } catch (FormatException e) {
+                            e.printStackTrace();
+                        }
+
+                        message.attach(alternate);
+
+                        if (change != null) {
+                            message.attach(change);
+                        }
                     }
                 }
 
@@ -158,7 +217,25 @@ public final class Simulator {
         // Send different output address to different players.
         public class EquivocateOutputVector implements MessageReplacement {
             Set<VerificationKey> others;
-            Packet alternate;
+            Message alternate;
+
+            public EquivocateOutputVector(int[] others) {
+                this.others = new TreeSet<>();
+
+                int p = 1;
+                int i = 0;
+                for(VerificationKey player: players) {
+                    while(others[i] < p) {
+                        i++;
+                    }
+
+                    if(i == p) {
+                        this.others.add(player);
+                    }
+
+                    p ++;
+                }
+            }
 
             @Override
             public Packet replace(Packet packet) {
@@ -166,9 +243,14 @@ public final class Simulator {
                     if (others.contains(packet.recipient)) {
                         if (alternate == null) {
                             // Reshuffle the packet we just got.
-                            // TODO
+                            try {
+                                alternate = shuffle.shuffle(packet.message);
+                            } catch (FormatException e) {
+                                e.printStackTrace();
+                            }
                         }
-                        return alternate;
+
+                        packet.message = alternate;
                     }
                 }
 
@@ -178,6 +260,11 @@ public final class Simulator {
 
         // Drop an address in phase 2.
         public class DropAddress implements MessageReplacement {
+            int drop;
+
+            public DropAddress(int drop) {
+                this.drop = drop;
+            }
 
             @Override
             public Packet replace(Packet packet) throws FormatException {
@@ -190,11 +277,9 @@ public final class Simulator {
                         addresses.add(message.readAddress());
                     }
 
-                    int n = crypto.getRandom(addresses.size() - 1);
-
                     int i = 0;
                     for (Address address : addresses) {
-                        if (i != n) {
+                        if (i != drop) {
                             message.attach(address);
                         }
                     }
@@ -205,6 +290,13 @@ public final class Simulator {
 
         // Drop an address and replace with a duplicate in phase 2.
         public class DropAddressReplaceDuplicate implements MessageReplacement {
+            int drop;
+            int duplicate;
+
+            public DropAddressReplaceDuplicate(int drop, int duplicate) {
+                this.drop = drop;
+                this.duplicate = duplicate;
+            }
             public DropAddressReplaceDuplicate() {}
 
             @Override
@@ -217,18 +309,11 @@ public final class Simulator {
                     while (!message.isEmpty()) {
                         addresses.add(message.readAddress());
                     }
-
-                    int n = crypto.getRandom(addresses.size() - 1);
-                    int m ;
-                    do {
-                        m = crypto.getRandom(addresses.size() - 1);
-                    } while (m != n);
-
-                    Address duplicate = addresses.get(m);
+                    Address duplicate = addresses.get(this.duplicate);
 
                     int i = 0;
                     for (Address address : addresses) {
-                        if (i != n) {
+                        if (i != drop) {
                             message.attach(address);
                         } else {
                             message.attach(duplicate);
@@ -242,9 +327,11 @@ public final class Simulator {
         // Drop an address and replace with a new one in phase 2.
         public class DropAddressReplaceNew implements MessageReplacement {
             final Address alternate;
+            int drop;
 
-            public DropAddressReplaceNew(Address alternate) {
-                this.alternate = alternate;
+            public DropAddressReplaceNew(int drop) {
+                this.drop = drop;
+                this.alternate = crypto.makeSigningKey().VerificationKey().address();
             }
 
             @Override
@@ -258,11 +345,9 @@ public final class Simulator {
                         addresses.add(message.readAddress());
                     }
 
-                    int n = crypto.getRandom(addresses.size() - 1);
-
                     int i = 0;
                     for (Address address : addresses) {
-                        if (i != n) {
+                        if (i != drop) {
                             message.attach(address);
                         } else {
                             message.attach(alternate);
@@ -270,6 +355,21 @@ public final class Simulator {
                     }
                 }
                 return packet;
+            }
+        }
+
+        public class Composition implements MessageReplacement {
+            MessageReplacement first;
+            MessageReplacement rest;
+
+            public Composition(MessageReplacement first, MessageReplacement rest) {
+                this.first = first;
+                this.rest = rest;
+            }
+
+            @Override
+            public Packet replace(Packet packet) throws FormatException {
+                return rest.replace(first.replace(packet));
             }
         }
 
@@ -477,6 +577,61 @@ public final class Simulator {
 
             Player() {}
 
+            Adversary adversary(Map<Player, SigningKey> keys) {
+                MockCoin newcoin;
+                if(coin != null) {
+                    newcoin = coin;
+                } else if (defaultCoin != null) {
+                    newcoin = defaultCoin;
+                } else {
+                    return null;
+                }
+
+                SortedSet<VerificationKey> identities = new TreeSet<>();
+
+                for (SigningKey key : keys.values()) {
+                    identities.add(key.VerificationKey());
+                }
+
+                SigningKey key = keys.get(this);
+                Address address = key.VerificationKey().address();
+                Transaction doubleSpendTrans = null;
+
+                // Set up the player's initial funds.
+                if (initialAmount > 0) {
+                    Address previousAddress = crypto.makeSigningKey().VerificationKey().address();
+                    newcoin.put(previousAddress, initialAmount);
+                    newcoin.spend(previousAddress, address, initialAmount).send();
+
+                    // Plot twist! We spend it all!
+                    if (spend > 0) {
+                        newcoin.spend(address, crypto.makeSigningKey().VerificationKey().address(), spend).send();
+                    } else if(doubleSpend > 0) {
+                        // is he going to double spend? If so, make a new transaction for him.
+                        doubleSpendTrans = coin.spend(address, crypto.makeSigningKey().VerificationKey().address(), doubleSpend);
+                    }
+                }
+
+                Adversary adversary = new Adversary(session, amount, key, identities, newcoin, doubleSpendTrans);
+
+                if (equivocateAnnouncement != null && equivocateAnnouncement.length > 0) {
+                    adversary.lie(adversary.new EquivocateEncryptionKeys(equivocateAnnouncement));
+                }
+
+                if (equivocateBroadcast != null && equivocateBroadcast.length > 0) {
+                    adversary.lie(adversary.new EquivocateEncryptionKeys(equivocateBroadcast));
+                }
+
+                if (replace && drop != 0) {
+                    adversary.lie(adversary.new DropAddressReplaceNew(drop));
+                } else if (duplicate != 0 && drop != 0) {
+                    adversary.lie(adversary.new DropAddressReplaceDuplicate(drop, duplicate));
+                } else if (drop != 0) {
+                    adversary.lie(adversary.new DropAddress(drop));
+                }
+
+                return adversary;
+            }
         }
 
         private InitialState(SessionIdentifier session, long amount) {
@@ -561,43 +716,11 @@ public final class Simulator {
 
             // Check that all players have a coin network set up, either the default or their own.
             for(Player player : players) {
-                MockCoin coin;
-                if(player.coin != null) {
-                    coin = player.coin;
-                } else if (defaultCoin != null) {
-                    coin = defaultCoin;
-                } else {
+                Adversary adversary = player.adversary(keys);
+                if (adversary == null) {
                     return null;
                 }
-
-                SortedSet<VerificationKey> identities = new TreeSet<>();
-
-                for (SigningKey key : keys.values()) {
-                    identities.add(key.VerificationKey());
-                }
-
-                SigningKey key = keys.get(player);
-                Address address = key.VerificationKey().address();
-                Transaction doubleSpend = null;
-
-                // Set up the player's initial funds.
-                if (player.initialAmount > 0) {
-                    Address previousAddress = crypto.makeSigningKey().VerificationKey().address();
-                    coin.put(previousAddress, player.initialAmount);
-                    coin.spend(previousAddress, address, player.initialAmount).send();
-
-                    // Plot twist! We spend it all!
-                    if (player.spend > 0) {
-                        coin.spend(address, crypto.makeSigningKey().VerificationKey().address(), player.spend).send();
-                    } else if(player.doubleSpend > 0) {
-                        // is he going to double spend? If so, make a new transaction for him.
-                        doubleSpend = player.coin.spend(address, crypto.makeSigningKey().VerificationKey().address(), 16);
-                    }
-                }
-
-                // TODO Message replacements.
-
-                adversaries.add(new Adversary(session, amount, key, identities, coin, doubleSpend, null));
+                adversaries.add(adversary);
             }
 
             return Simulator.this.runSimulation(amount, adversaries);
@@ -710,9 +833,9 @@ public final class Simulator {
             coin.put(address, 20);
 
             if (maliciousPlayers.containsKey(key)) {
-                init.add(new Adversary(session, amount, key, players, coin, null, maliciousPlayers.get(key)));
+                init.add(new Adversary(session, amount, key, players, coin, null).lie(maliciousPlayers.get(key)));
             } else {
-                init.add(new Adversary(session, amount, key, players, coin, null, null));
+                init.add(new Adversary(session, amount, key, players, coin, null));
             }
         }
 

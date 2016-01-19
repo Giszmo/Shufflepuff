@@ -337,9 +337,7 @@ final class CoinShuffle {
             private BlameMatrix equivocationCheck(
                     Map<VerificationKey, EncryptionKey> encryptonKeys,
                     VerificationKey vk) throws InterruptedException, ValueException, FormatException, ProtocolException, BlameException {
-                if (!equivocationCheckSent) {
 
-                }
                 // Put all temporary encryption keys into a list and hash the result.
                 Message equivocationCheck = messages.make();
                 for (int i = 2; i <= players.size(); i++) {
@@ -451,7 +449,7 @@ final class CoinShuffle {
                     hashes.put(packet.signer, packet.message);
                 }
 
-                // The messages history in the broadcast phase by the last player to all the other players.
+                // The messages sent in the broadcast phase by the last player to all the other players.
                 Map<VerificationKey, Message> outputVectors = new HashMap<>();
 
                 // The encryption keys history from every player to every other.
@@ -500,7 +498,10 @@ final class CoinShuffle {
                                         switch (received.phase) {
                                             case BroadcastOutput:
                                                 if (outputVectors.containsKey(from)) {
-                                                    // TODO blame someone here.
+                                                    // We should only ever receive one such message from each player.
+                                                    if (!received.equals(outputVectors.containsKey(from))) {
+                                                        matrix.put(vk, from, null /*TODO*/);
+                                                    }
                                                 }
                                                 outputVectors.put(from, received.message);
                                                 break;
@@ -515,7 +516,8 @@ final class CoinShuffle {
                                                 receivedKeys.put(from, key);
                                                 break;
                                             default:
-                                                // TODO this case should never happen. If it does, could it be malicious?
+                                                // TODO this case should never happen. It's not malicious but it's not allowed either.
+                                                matrix.put(vk, from, null /*TODO*/);
                                                 break;
                                         }
                                     }
@@ -585,12 +587,15 @@ final class CoinShuffle {
                     Set<VerificationKey> leftover = playerSet(1, players.size() - 1);
                     leftover.removeAll(outputVectors.keySet());
                     if (leftover.size() > 0) {
-                        // TODO blame someone.
+                        for (VerificationKey key : leftover) {
+                            matrix.put(vk, key, null /*TODO*/);
+                        }
                     }
 
                     // If they are not all equal, blame the last player for equivocating.
                     if (!areEqual(outputVectors.values())) {
-                        // TODO blame last player.
+                        matrix.put(vk, players.get(N),
+                                BlameMatrix.EquivocationFailureBroadcast(outputVectors));
                     }
                 }
 
@@ -602,7 +607,8 @@ final class CoinShuffle {
                         Map<VerificationKey, EncryptionKey> sent = sentKeys.get(from);
 
                         if (sent == null) {
-                            // TODO this shouldn't be possible.
+                            // This should not really happen.
+                            continue;
                         }
 
                         EncryptionKey key = null;
@@ -612,17 +618,20 @@ final class CoinShuffle {
                             EncryptionKey next = sent.get(to);
 
                             if (next == null) {
-                                // TODO blame player to. He should have history us this.
+                                // blame player to. He should have sent us this.
+                                matrix.put(vk, to, null /*TODO*/);
+                                continue;
                             }
 
-                            if (key == null) {
-                                key = next;
-                            } else {
+                            if (key != null) {
                                 if (!key.equals(next)) {
-                                    // TODO blame player from for equivocating.
+                                    matrix.put(vk, from,
+                                            BlameMatrix.EquivocationFailureAnnouncement(sent));
                                     break;
                                 }
                             }
+
+                            key = next;
                         }
                     }
                 }
