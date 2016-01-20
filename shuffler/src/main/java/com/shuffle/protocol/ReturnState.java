@@ -26,9 +26,9 @@ public class ReturnState {
     public boolean match(ReturnState m) {
         return success == m.success && session == m.session &&
                 (phase == null || phase == m.phase) &&
-                ((error == null && m.error == null) ||
-                (error != null && m.error != null && error.getClass().equals(m.error.getClass())))
-                && ((blame == null && m.blame == null) || (blame != null && blame.match(m.blame)));
+                (error == null && m.error == null ||
+                error != null && m.error != null && error.getClass().equals(m.error.getClass()))
+                && (blame == null && m.blame == null || blame != null && blame.match(m.blame));
     }
 
     public String toString() {

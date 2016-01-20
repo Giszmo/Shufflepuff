@@ -191,26 +191,24 @@ public final class Simulator {
 
             @Override
             public Packet replace(Packet packet) {
-                if (packet.phase == Phase.Announcement) {
-                    if (others.contains(packet.recipient)) {
-                        Message message = packet.message;
+                if (packet.phase == Phase.Announcement && others.contains(packet.recipient)) {
+                    Message message = packet.message;
 
-                        // Sometimes a change address is included with message 1.
-                        Address change = null;
-                        try {
-                            message.readEncryptionKey();
-                            if (!message.isEmpty()) {
-                                change = message.readAddress();
-                            }
-                        } catch (FormatException e) {
-                            e.printStackTrace();
+                    // Sometimes a change address is included with message 1.
+                    Address change = null;
+                    try {
+                        message.readEncryptionKey();
+                        if (!message.isEmpty()) {
+                            change = message.readAddress();
                         }
+                    } catch (FormatException e) {
+                        e.printStackTrace();
+                    }
 
-                        message.attach(alternate);
+                    message.attach(alternate);
 
-                        if (change != null) {
-                            message.attach(change);
-                        }
+                    if (change != null) {
+                        message.attach(change);
                     }
                 }
 
@@ -243,19 +241,17 @@ public final class Simulator {
 
             @Override
             public Packet replace(Packet packet) {
-                if (packet.phase == Phase.BroadcastOutput) {
-                    if (others.contains(packet.recipient)) {
-                        if (alternate == null) {
-                            // Reshuffle the packet we just got.
-                            try {
-                                alternate = shuffle.shuffle(packet.message);
-                            } catch (FormatException e) {
-                                e.printStackTrace();
-                            }
+                if (packet.phase == Phase.BroadcastOutput && others.contains(packet.recipient)) {
+                    if (alternate == null) {
+                        // Reshuffle the packet we just got.
+                        try {
+                            alternate = shuffle.shuffle(packet.message);
+                        } catch (FormatException e) {
+                            e.printStackTrace();
                         }
-
-                        packet.message = alternate;
                     }
+
+                    packet.message = alternate;
                 }
 
                 return packet;

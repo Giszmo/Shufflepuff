@@ -41,6 +41,15 @@ public class Packet {
     }
 
     @Override
+    public int hashCode() {
+        int hash = message == null ? 0 : message.hashCode();
+        hash = hash * 15 + (session == null ? 0 : session.hashCode());
+        hash = hash * 15 + (signer == null ? 0 : signer.hashCode());
+        hash = hash * 15 + (recipient == null ? 0 : recipient.hashCode());
+        return hash;
+    }
+
+    @Override
     public String toString() {
         return "{" + message.toString() + ", " + session.toString() + ", " + phase.toString() + ", " + signer.toString() + "}";
     }

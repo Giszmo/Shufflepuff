@@ -120,7 +120,16 @@ public class BlameMatrix {
             BlameEvidence b = (BlameEvidence)o;
 
             return reason == b.reason && credible == b.credible &&
-                    ((t == null && b.t == null) || (t != null && b.t != null && t.equals(b.t)));
+                    (t == null && b.t == null || t != null && b.t != null && t.equals(b.t));
+        }
+
+        @Override
+        public int hashCode() {
+            int hash = credible ? 0 : 1;
+            hash = hash * 2 + (output == null ? 0 : output.hashCode());
+            hash = hash * 15 + (reason == null ? 0 : reason.hashCode());
+            hash = hash * 15 + (signature == null ? 0 : signature.hashCode());
+            return hash;
         }
 
         public boolean match(BlameEvidence e) {
