@@ -4,6 +4,8 @@ import com.shuffle.bitcoin.CryptographyError;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.Transaction;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -21,7 +23,7 @@ import java.util.Set;
  * Created by Daniel Krawisz on 12/10/15.
  */
 public class TestShuffleMachine {
-
+    private static Logger log= LogManager.getLogger(TestShuffleMachine.class);
     // A blame matrix that matches any matrix given to it.
     // Used for ensuring a test can't fail no matter what value
     // simulated adversaries return, since we only care about testing the response of the
@@ -346,7 +348,7 @@ public class TestShuffleMachine {
             }
         }
 
-        System.out.println("About to run an equivocation test.");
+        log.info("About to run an equivocation test.");
 
         TestCase test = new TestCase(session, amount, "Announcement phase equivocation spending test case.", caseNo);
         LinkedHashMap<SigningKey, ReturnState> results = init.run();
