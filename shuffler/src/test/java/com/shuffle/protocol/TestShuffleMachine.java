@@ -348,7 +348,7 @@ public class TestShuffleMachine {
             }
         }
 
-        log.info("About to run an equivocation test.");
+        log.info("Running equivocation test.");
 
         TestCase test = new TestCase(session, amount, "Announcement phase equivocation spending test case.", caseNo);
         LinkedHashMap<SigningKey, ReturnState> results = init.run();
@@ -515,8 +515,8 @@ public class TestShuffleMachine {
 
         // Tests for successful runs.
         int caseNo = 0;
-        int minPlayers = 2; // 2;
-        int maxPlayers = 12; //12;
+        int minPlayers = 2;
+        int maxPlayers = 12;
         for (int numPlayer = minPlayers; numPlayer <= maxPlayers; numPlayer++) {
             try {
                 SuccessfulRun(caseNo, numPlayer, sim).check();
@@ -535,20 +535,20 @@ public class TestShuffleMachine {
         int caseNo = 0;
 
         // Tests for players who initially have insufficient funds.
-        InsufficientFunds(caseNo++, 2, new int[]{1}, new int[]{}, new int[]{}, sim).check();
-        InsufficientFunds(caseNo++, 2, new int[]{}, new int[]{1}, new int[]{}, sim).check();
-        InsufficientFunds(caseNo++, 2, new int[]{}, new int[]{}, new int[]{1}, sim).check();
-        InsufficientFunds(caseNo++, 2, new int[]{1, 2}, new int[]{}, new int[]{}, sim).check();
-        InsufficientFunds(caseNo++, 3, new int[]{1}, new int[]{}, new int[]{}, sim).check();
-        InsufficientFunds(caseNo++, 5, new int[]{3}, new int[]{}, new int[]{}, sim).check();
-        InsufficientFunds(caseNo++, 5, new int[]{}, new int[]{4}, new int[]{}, sim).check();
-        InsufficientFunds(caseNo++, 5, new int[]{}, new int[]{}, new int[]{5}, sim).check();
+        InsufficientFunds(caseNo++, 2,  new int[]{1}, new int[]{}, new int[]{}, sim).check();
+        InsufficientFunds(caseNo++, 2,  new int[]{}, new int[]{1}, new int[]{}, sim).check();
+        InsufficientFunds(caseNo++, 2,  new int[]{}, new int[]{}, new int[]{1}, sim).check();
+        InsufficientFunds(caseNo++, 2,  new int[]{1, 2}, new int[]{}, new int[]{}, sim).check();
+        InsufficientFunds(caseNo++, 3,  new int[]{1}, new int[]{}, new int[]{}, sim).check();
+        InsufficientFunds(caseNo++, 5,  new int[]{3}, new int[]{}, new int[]{}, sim).check();
+        InsufficientFunds(caseNo++, 5,  new int[]{}, new int[]{4}, new int[]{}, sim).check();
+        InsufficientFunds(caseNo++, 5,  new int[]{}, new int[]{}, new int[]{5}, sim).check();
         InsufficientFunds(caseNo++, 10, new int[]{5, 10}, new int[]{}, new int[]{}, sim).check();
         InsufficientFunds(caseNo++, 10, new int[]{}, new int[]{1, 2}, new int[]{}, sim).check();
         InsufficientFunds(caseNo++, 10, new int[]{}, new int[]{}, new int[]{3, 5}, sim).check();
         InsufficientFunds(caseNo++, 10, new int[]{5}, new int[]{10}, new int[]{}, sim).check();
         InsufficientFunds(caseNo++, 10, new int[]{}, new int[]{3}, new int[]{9}, sim).check();
-        InsufficientFunds(caseNo, 10, new int[]{1}, new int[]{}, new int[]{2}, sim).check();
+        InsufficientFunds(caseNo,   10, new int[]{1}, new int[]{}, new int[]{2}, sim).check();
     }
 
     @Test

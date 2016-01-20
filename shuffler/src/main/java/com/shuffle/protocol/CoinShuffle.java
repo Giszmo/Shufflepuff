@@ -788,6 +788,7 @@ final class CoinShuffle {
                         if (expectedPhase == packet.phase) {
                             i.remove();
                             found = packet;
+                            break;
                         }
                     }
                 }
