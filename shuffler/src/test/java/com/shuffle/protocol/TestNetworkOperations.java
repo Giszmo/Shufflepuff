@@ -320,6 +320,11 @@ public class TestNetworkOperations  {
                         new int[]{3, 4},
                         new int[]{},
                         new int[]{3}, true),
+                // before and after.
+                new receiveFromMultipleTestCase(4, 2,
+                        new int[]{3, 4},
+                        new int[]{4},
+                        new int[]{3})
         };
 
         int i = 0;
@@ -346,20 +351,20 @@ public class TestNetworkOperations  {
             // Send the first set of messages.
             for (int from: test.sendBefore) {
                 network.deliver(new Packet(
-                                new MockMessage(),
-                                mockSessionIdentifier,
-                                Phase.BroadcastOutput,
-                                new MockVerificationKey(from),
-                                new MockVerificationKey(test.me)));
+                        new MockMessage(),
+                        mockSessionIdentifier,
+                        Phase.BroadcastOutput,
+                        new MockVerificationKey(from),
+                        new MockVerificationKey(test.me)));
             }
 
             // Receive a message from an earlier phase to make sure we flip through the first set of messages.
             network.deliver(new Packet(
-                            new MockMessage(),
-                            mockSessionIdentifier,
-                            Phase.Shuffling,
-                            new MockVerificationKey(1),
-                            new MockVerificationKey(test.me)));
+                    new MockMessage(),
+                    mockSessionIdentifier,
+                    Phase.Shuffling,
+                    new MockVerificationKey(1),
+                    new MockVerificationKey(test.me)));
 
             try {
                 netop.receiveFrom(new MockVerificationKey(1), Phase.Shuffling);
@@ -370,11 +375,11 @@ public class TestNetworkOperations  {
             // Then send the second set of messages.
             for (int from: test.sendAfter) {
                 network.deliver(new Packet(
-                                new MockMessage(),
-                                mockSessionIdentifier,
-                                Phase.BroadcastOutput,
-                                new MockVerificationKey(from),
-                                new MockVerificationKey(test.me)));
+                        new MockMessage(),
+                        mockSessionIdentifier,
+                        Phase.BroadcastOutput,
+                        new MockVerificationKey(from),
+                        new MockVerificationKey(test.me)));
             }
 
             Set<VerificationKey> receiveFrom = new HashSet<>();

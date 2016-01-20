@@ -7,6 +7,8 @@ import com.shuffle.bitcoin.DecryptionKey;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -22,6 +24,7 @@ import java.util.TreeSet;
  * Created by Daniel Krawisz on 12/5/15.
  */
 public class TestShuffleMachineMethods {
+    private static Logger log= LogManager.getLogger(TestShuffleMachineMethods.class);
     private class shuffleTestCase {
         int[] randomSequence;
         int[] input;
@@ -127,7 +130,7 @@ public class TestShuffleMachineMethods {
             }
             try {
                 Message result = machine.shuffle(input);
-                System.out.println("got " + result.toString() + "; expected " + expected.toString());
+                log.info("got " + result.toString() + "; expected " + expected.toString());
                 Assert.assertTrue(result.equals(expected));
             } catch (CryptographyError e) {
                 Assert.fail("Unexpected CryptographyException");

@@ -8,6 +8,8 @@ import com.shuffle.bitcoin.EncryptionKey;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.Deque;
 import java.util.HashMap;
@@ -38,6 +40,7 @@ public final class Simulator {
     //long amount;
     final MessageFactory messages;
     final Crypto crypto;
+    private static Logger log= LogManager.getLogger(Simulator.class);
 
     // This implementation of Network connects each shuffle machine to the simulator.
     private class Network implements com.shuffle.protocol.Network {
@@ -118,7 +121,8 @@ public final class Simulator {
                         super.sendTo(to, malicious.replace(packet));
                     }
                 } catch (FormatException e) {
-                    e.printStackTrace();
+                    log.error("Error sending ",e);
+
                 }
             }
         }
@@ -521,7 +525,7 @@ public final class Simulator {
                 i++;
             }
         } catch (CryptographyError e) {
-            e.printStackTrace();
+            log.error("Some Crypto error happened",e);
         }
 
         //Timer timer = new Timer();
