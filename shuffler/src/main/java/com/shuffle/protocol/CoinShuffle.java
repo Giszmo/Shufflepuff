@@ -11,6 +11,8 @@ import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.net.ProtocolException;
 import java.util.Arrays;
@@ -47,7 +49,7 @@ final class CoinShuffle {
     final MessageFactory messages;
 
     final Network network;
-
+    static Logger log= LogManager.getLogger(CoinShuffle.class);
     public class ShuffleMachine {
         Phase phase;
 
@@ -66,6 +68,7 @@ final class CoinShuffle {
         final int maxRetries;
 
         final int minPlayers;
+
 
         // the phase can be accessed concurrently in case we want to update
         // the user on how the protocol is going.
@@ -987,7 +990,7 @@ final class CoinShuffle {
                         blame = new Round(numberedPlayers, change).protocolDefinition();
                     } catch (TimeoutError e) {
                         // TODO We have to go into "suspect" mode at this point to determine why the timeout occurred.
-                        System.out.println("WARNING: player " + sk.toString() + " received a time out: " + Arrays.toString(e.getStackTrace()));
+                        log.warn("player " + sk.toString() + " received a time out: ",e);
                         return new ReturnState(false, session, currentPhase(), e, null);
                     }
 
