@@ -91,4 +91,7 @@ public class MockNetwork implements Network {
         return sent.remove();
     }
 
+    public void deliver(Packet packet) {
+        sent.add(packet);
+    }
 }

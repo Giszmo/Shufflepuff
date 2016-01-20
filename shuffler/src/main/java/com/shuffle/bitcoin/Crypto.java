@@ -14,10 +14,12 @@ import com.shuffle.protocol.Message;
  * Created by Daniel Krawisz on 12/4/15.
  */
 public interface Crypto {
+    // Generate new signing key. (The key doesn't have to have any bitcoins in it; it can just be new.)
+    SigningKey makeSigningKey() throws CryptographyError;
+
     // Generate new decryption key.
     DecryptionKey makeDecryptionKey() throws CryptographyError;
-    // Generate new signing key.
-    SigningKey makeSigningKey() throws CryptographyError;
+
     // Get a random number between 0 and N inclusive.
     int getRandom(int n) throws CryptographyError, InvalidImplementationError;
     // Hash a message.

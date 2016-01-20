@@ -91,6 +91,17 @@ public class TestShuffleMachine {
         }
     }
 
+    private class Equivocation {
+        final int equivocator;
+        final int[] equivocation;
+
+
+        private Equivocation(int equivocator, int[] equivocation) {
+            this.equivocator = equivocator;
+            this.equivocation = equivocation;
+        }
+    }
+
     BlameMatrixPatternAny anyMatrix = new BlameMatrixPatternAny();
     BlameEvidencePatternAny anyReason = new BlameEvidencePatternAny();
 
@@ -152,15 +163,15 @@ public class TestShuffleMachine {
     }
 
     // Create a test case representing a successful run.
-    public void SuccessfulRun(int caseNo, int numPlayer, Simulator sim) {
+    public TestCase SuccessfulRun(int caseNo, int numPlayer, Simulator sim) {
         SessionIdentifier session = new MockSessionIdentifier("success" + caseNo);
         MockCoin coin = new MockCoin();
         long amount = 17;
 
-        successfulExpectation(
+        return successfulExpectation(
                 new TestCase(session, amount, "successful run with " + numPlayer + " players.", caseNo),
                 sim.successfulRun(session, numPlayer, amount, coin)
-        ).check();
+        );
     }
     
     public TestCase InsufficientFunds(
@@ -411,8 +422,10 @@ public class TestShuffleMachine {
             }
         }
 
+        assert malicious != null;
+
         for (SigningKey i : results.keySet()) {
-            BlameMatrix bm = new BlameMatrix();
+            BlameMatrix bm = null;
 
             index++;
             if(index == numPlayers) {
@@ -421,7 +434,7 @@ public class TestShuffleMachine {
                 bm = new BlameMatrix();
 
                 for (SigningKey j : results.keySet()) {
-                            bm.put(j.VerificationKey(), malicious.VerificationKey(),
+                    bm.put(j.VerificationKey(), malicious.VerificationKey(),
                                     new BlameMatrix.BlameEvidence(BlameMatrix.BlameReason.EquivocationFailure, true));
                 }
             }
@@ -436,6 +449,62 @@ public class TestShuffleMachine {
         return test;
     }
 
+    public TestCase DifferentTransactionSignature(int caseNo, int numPlayers, int[] weirdos, Simulator sim) {
+        Set<Integer> class2 = new HashSet<>();
+
+        for (int i = 0; i < weirdos.length; i++) {
+            class2.add(weirdos[i]);
+        }
+
+        MockCoin coin1 = new MockCoin().setZ(1);
+        MockCoin coin2 = new MockCoin().setZ(2);
+
+        long amount = 17;
+        SessionIdentifier session = new MockSessionIdentifier("sig" + caseNo);
+        Simulator.InitialState init = sim.initialize(session, amount);
+
+        for (int i = 1; i <= numPlayers; i ++) {
+            if (class2.contains(i)) {
+                init.player().initialFunds(20).coin(coin2);
+            } else {
+                init.player().initialFunds(20).coin(coin1);
+            }
+        }
+
+        TestCase test = new TestCase(session, amount, "Broadcast phase equivocation test case.", caseNo);
+        LinkedHashMap<SigningKey, ReturnState> results = init.run();
+
+        // Results should be that every player blames all players in the other class.
+        Set<SigningKey> keyClass2 = new HashSet<>();
+        int index = 1;
+        for (SigningKey key : results.keySet()) {
+            if (class2.contains(index)) {
+                keyClass2.add(key);
+            }
+            index ++;
+        }
+
+        for (Map.Entry<SigningKey, ReturnState> result : results.entrySet()) {
+            SigningKey i = result.getKey();
+            ReturnState returnState = result.getValue();
+
+            BlameMatrix bm = new BlameMatrix();
+
+            for (SigningKey j : results.keySet()) {
+                for(SigningKey k : results.keySet()) {
+                    if (keyClass2.contains(j) != keyClass2.contains(k)) {
+                        bm.put(j.VerificationKey(),k.VerificationKey(),
+                                new BlameMatrix.BlameEvidence(BlameMatrix.BlameReason.InvalidSignature, true));
+                    }
+                }
+            }
+
+            test.put(i, returnState, new ReturnState(false, session, Phase.VerificationAndSubmission, null, bm));
+        }
+
+        return test;
+    }
+
     @Test
     // Tests for successful runs of the protocol.
     public void testSuccess() {
@@ -444,9 +513,11 @@ public class TestShuffleMachine {
 
         // Tests for successful runs.
         int caseNo = 0;
-        for (int numPlayer = 2; numPlayer <= 12; numPlayer++) {
+        int minPlayers = 2; // 2;
+        int maxPlayers = 12; //12;
+        for (int numPlayer = minPlayers; numPlayer <= maxPlayers; numPlayer++) {
             try {
-                SuccessfulRun(caseNo, numPlayer, sim);
+                SuccessfulRun(caseNo, numPlayer, sim).check();
                 caseNo++;
             } catch (CryptographyError e) {
                 Assert.fail("could not create test case " + caseNo);
@@ -484,6 +555,7 @@ public class TestShuffleMachine {
         MockCrypto crypto = new MockCrypto(87);
         Simulator sim = new Simulator(new MockMessageFactory(), crypto);
         int caseNo = 0;
+
         // A player sends different output vectors to different players.
         EquivocateOutput(caseNo++, 3, new int[]{1}, sim);
         EquivocateOutput(caseNo++, 3, new int[]{2}, sim);
@@ -492,15 +564,17 @@ public class TestShuffleMachine {
         EquivocateOutput(caseNo, 10, new int[]{3, 5, 7}, sim);
     }
 
-    private class Equivocation {
-        final int equivocator;
-        final int[] equivocation;
+    @Test
+    public void testTransactionDisagreement() {
+        MockCrypto crypto = new MockCrypto(99999);
+        Simulator sim = new Simulator(new MockMessageFactory(), crypto);
+        int caseNo = 0;
 
-
-        private Equivocation(int equivocator, int[] equivocation) {
-            this.equivocator = equivocator;
-            this.equivocation = equivocation;
-        }
+        // Player generates a different transaction signature to everyone else.
+        DifferentTransactionSignature(caseNo++, 2,  new int[]{2}, sim).check();
+        DifferentTransactionSignature(caseNo++, 5,  new int[]{2}, sim).check();
+        DifferentTransactionSignature(caseNo++, 5,  new int[]{2, 3}, sim).check();
+        DifferentTransactionSignature(caseNo,   10, new int[]{2, 5, 6, 7}, sim).check();
     }
 
     @Test
@@ -550,11 +624,6 @@ public class TestShuffleMachine {
         // A player drops an address during phase 2.
         // A player drops an address and adds another one in phase 2.
         // A player drops an address and adds a duplicate in phase 2.
-    }
-
-    @Test
-    public void testTransactionDisagreement() {
-        // Player generates a different transaction signature to everyone else.
     }
 
     @Test

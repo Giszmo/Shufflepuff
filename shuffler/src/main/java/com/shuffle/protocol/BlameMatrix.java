@@ -2,6 +2,7 @@ package com.shuffle.protocol;
 
 import com.shuffle.bitcoin.DecryptionKey;
 import com.shuffle.bitcoin.EncryptionKey;
+import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
 
@@ -19,6 +20,7 @@ public class BlameMatrix {
         DoubleSpend,
         EquivocationFailure,
         ShuffleFailure,
+        InvalidSignature,
         MissingOutput,
     }
 
@@ -28,19 +30,32 @@ public class BlameMatrix {
         Transaction t = null;
         List<Packet> packets = null;
         DecryptionKey privateKey = null;
+        Map<VerificationKey, Signature> invalid = null;
 
         public Blame(VerificationKey accused, BlameReason reason) {
+            if (reason == null) {
+                throw new NullPointerException();
+            }
+            if (reason == BlameReason.InsufficientFunds) {
+                throw new NullPointerException();
+            }
             this.accused = accused;
             this.reason = reason;
         }
 
         public Blame(VerificationKey accused, Transaction t, BlameReason reason) {
+            if (t == null || accused == null || reason == null) {
+                throw new NullPointerException();
+            }
             this.accused = accused;
             this.t = t;
             this.reason = reason;
         }
 
         public Blame(List<Packet> packets) {
+            if (packets == null) {
+                throw new NullPointerException();
+            }
             this.packets = packets;
             this.reason = BlameReason.EquivocationFailure;
         }
@@ -49,6 +64,11 @@ public class BlameMatrix {
             this.privateKey = privateKey;
             this.packets = packets;
             this.reason = BlameReason.ShuffleFailure;
+        }
+
+        public Blame(Map<VerificationKey, Signature> invalid) {
+            this.invalid = invalid;
+            this.reason = BlameReason.InvalidSignature;
         }
 
         @Override
@@ -65,6 +85,7 @@ public class BlameMatrix {
         BlameReason reason;
         boolean credible; // Do we believe this evidence?
         Transaction t = null;
+        Signature signature = null;
         Map<VerificationKey, Message> output = null;
         Map<VerificationKey, EncryptionKey> sent = null;
 
@@ -259,6 +280,18 @@ public class BlameMatrix {
         evidence.reason = BlameReason.EquivocationFailure;
         evidence.credible = true;
         evidence.sent = sent;
+        return evidence;
+    }
+
+    static public BlameEvidence InvalidSignature(Signature signature) {
+        if (signature == null) {
+            throw new NullPointerException();
+        }
+
+        BlameEvidence evidence = new BlameEvidence();
+        evidence.reason = BlameReason.InvalidSignature;
+        evidence.credible = true;
+        evidence.signature = signature;
         return evidence;
     }
 }

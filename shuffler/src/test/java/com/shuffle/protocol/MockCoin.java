@@ -55,6 +55,8 @@ public class MockCoin implements Simulator.MockCoin {
     public class MockTransaction implements Transaction {
         final List<Output> inputs = new LinkedList<>();
         final List<Output> outputs = new LinkedList<>();
+        // A number used to represented slight variations in a transaction which would
+        // result in different signatures being produced.
         int z = 1;
 
         public MockTransaction(List<Output> inputs, List<Output> outputs) {
@@ -66,6 +68,11 @@ public class MockCoin implements Simulator.MockCoin {
             }
             this.inputs.addAll(inputs);
             this.outputs.addAll(outputs);
+        }
+
+        public MockTransaction(List<Output> inputs, List<Output> outputs, int z) {
+            this(inputs, outputs);
+            this.z = z;
         }
 
         @Override
@@ -84,7 +91,7 @@ public class MockCoin implements Simulator.MockCoin {
                 return true;
             }
 
-            if (z != this.z) {
+            if (z != mock.z) {
                 return false;
             }
 
@@ -136,11 +143,20 @@ public class MockCoin implements Simulator.MockCoin {
     // The transaction that sends to an input.
     final ConcurrentHashMap<Output, Transaction> sent = new ConcurrentHashMap<>();
 
+    // A number used to represented slight variations in a transaction which would
+    // result in different signatures being produced.
+    int z = 1;
+
     public MockCoin(Map<Address, Output> blockchain) {
         this.blockchain.putAll(blockchain);
     };
 
     public MockCoin() {
+    }
+
+    public MockCoin setZ(int z) {
+        this.z = z;
+        return this;
     }
 
     @Override
@@ -154,12 +170,10 @@ public class MockCoin implements Simulator.MockCoin {
         Output output = blockchain.get(from);
 
         if (output == null) {
-            System.out.println("    NULL CASE A: " + from.toString());
             return null;
         }
 
         if (amount > valueHeld(from)) {
-            System.out.println("    NULL CASE B");
             return null;
         }
 
@@ -273,7 +287,7 @@ public class MockCoin implements Simulator.MockCoin {
         for(Address address : to) {
             outputs.add(new Output(address, amount));
         }
-        return new MockTransaction(inputs, outputs);
+        return new MockTransaction(inputs, outputs, z);
     }
 
     @Override
@@ -299,7 +313,11 @@ public class MockCoin implements Simulator.MockCoin {
 
     @Override
     public boolean spendsFrom(Address addr, long amount, Transaction t) {
-        return t.equals(getConflictingTransaction(addr, amount));
+        Transaction conflict = getConflictingTransaction(addr, amount);
+        if (conflict == null) {
+            return false;
+        }
+        return t.equals(conflict);
     }
 
     @Override
