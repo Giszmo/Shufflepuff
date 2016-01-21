@@ -278,6 +278,7 @@ public class MockCoin implements Simulator.MockCoin {
             inputs.add(input);
 
             // If a change address has been provided, add that.
+            // TODO: some analysis tool found this next line and I'm clueless but I agree with the tool that this looks suspicious.
             Address change = changeAddresses.get(address);
             if (change != null) {
                 outputs.add(new Output(change, value - amount));

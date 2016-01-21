@@ -219,7 +219,7 @@ public class BlameMatrix {
 
         BlameMatrix bm = (BlameMatrix)o;
 
-        return blame.equals(bm);
+        return blame.equals(bm.blame);
     }
 
     @Override

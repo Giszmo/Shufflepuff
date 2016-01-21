@@ -530,7 +530,7 @@ final class CoinShuffle {
                                         switch (received.phase) {
                                             case BroadcastOutput:
                                                 // We should only ever receive one such message from each player.
-                                                if (outputVectors.containsKey(from) && !received.equals(outputVectors.containsKey(from))) {
+                                                if (outputVectors.containsKey(from) && !received.equals(outputVectors.get(from))) {
                                                     matrix.put(vk, from, null /*TODO*/);
                                                 }
                                                 outputVectors.put(from, received.message);
