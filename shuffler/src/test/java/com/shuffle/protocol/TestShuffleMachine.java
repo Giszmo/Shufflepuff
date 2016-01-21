@@ -23,7 +23,7 @@ import java.util.Set;
  * Created by Daniel Krawisz on 12/10/15.
  */
 public class TestShuffleMachine {
-    private static Logger log= LogManager.getLogger(TestShuffleMachine.class);
+    private static Logger log = LogManager.getLogger(TestShuffleMachine.class);
     // A blame matrix that matches any matrix given to it.
     // Used for ensuring a test can't fail no matter what value
     // simulated adversaries return, since we only care about testing the response of the
@@ -138,6 +138,8 @@ public class TestShuffleMachine {
             if(amount == 0){
                 Assert.fail();
             }
+
+            log.info("Checking test case: " + (description != null ? " " + description + "; " : "") + "case number = " + id);
 
             // Check that the map of error states returned matches that which was expected.
             for (Map.Entry<SigningKey, ReturnState> ex : expected.entrySet()) {

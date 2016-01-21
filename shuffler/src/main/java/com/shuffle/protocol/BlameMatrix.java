@@ -6,6 +6,9 @@ import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,6 +17,8 @@ import java.util.Map;
  * Created by Daniel Krawisz on 12/22/15.
  */
 public class BlameMatrix {
+    private static Logger log = LogManager.getLogger(BlameMatrix.class);
+
     public enum BlameReason {
         InsufficientFunds,
         NoFundsAtAll,
@@ -25,6 +30,7 @@ public class BlameMatrix {
     }
 
     public static class Blame {
+
         VerificationKey accused = null; // Can be null if we don't know who to accuse yet.
         BlameReason reason;
         Transaction t = null;
@@ -146,6 +152,13 @@ public class BlameMatrix {
         if (blames == null) {
             blames = new HashMap<>();
             blame.put(accuser, blames);
+        }
+
+        BlameEvidence blame = blames.get(accused);
+
+        if(blame != null) {
+            // There is a warning rather than an exception because I don't know for certain that this should never happen.
+            log.warn("Overwriting blame matrix entry [" + accuser.toString() + ", " + accused.toString() + "]");
         }
 
         blames.put(accused, evidence);

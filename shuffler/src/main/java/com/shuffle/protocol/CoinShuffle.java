@@ -499,6 +499,7 @@ final class CoinShuffle {
                                     credible = matrix.blameExists(vk, blame.accused, BlameMatrix.BlameReason.NoFundsAtAll);
                                     matrix.put(from, blame.accused,
                                             new BlameMatrix.BlameEvidence(BlameMatrix.BlameReason.NoFundsAtAll, credible));
+                                    break;
                                 }
                                 case InsufficientFunds: {
                                     if (from.equals(vk)) {
@@ -512,6 +513,7 @@ final class CoinShuffle {
                                     credible = coin.spendsFrom(blame.accused.address(), amount, blame.t);
                                     matrix.put(from, blame.accused,
                                             new BlameMatrix.BlameEvidence(BlameMatrix.BlameReason.InsufficientFunds, credible, blame.t));
+                                    break;
                                 }
                                 case EquivocationFailure: {
                                     Map<VerificationKey, EncryptionKey> receivedKeys = new HashMap<>();
@@ -560,6 +562,7 @@ final class CoinShuffle {
                                         matrix.put(vk, from, null /* TODO */);
                                     }
 
+                                    break;
                                 }
                                 case ShuffleFailure: {
                                     if (decryptionKeys.containsKey(from)) {
@@ -592,7 +595,7 @@ final class CoinShuffle {
                                                 break;
                                         }
                                     }
-
+                                    break;
                                 }
                                 case DoubleSpend: {
                                     if (from.equals(vk)) {
@@ -602,6 +605,7 @@ final class CoinShuffle {
                                     credible = coin.spendsFrom(blame.accused.address(), amount, blame.t);
                                     matrix.put(from, blame.accused,
                                             new BlameMatrix.BlameEvidence(BlameMatrix.BlameReason.DoubleSpend, credible, blame.t));
+                                    break;
                                 }
                                 case InvalidSignature: {
                                     if (from.equals(vk)) {
@@ -617,6 +621,7 @@ final class CoinShuffle {
                                         matrix.put(from, blame.accused,
                                                 BlameMatrix.InvalidSignature(invalid.getValue()));
                                     }
+                                    break;
                                 }
                                 default:
                                     throw new InvalidImplementationError();
@@ -991,7 +996,7 @@ final class CoinShuffle {
                         blame = new Round(numberedPlayers, change).protocolDefinition();
                     } catch (TimeoutError e) {
                         // TODO We have to go into "suspect" mode at this point to determine why the timeout occurred.
-                        log.warn("player " + sk.toString() + " received a time out: ",e);
+                        log.warn("player " + sk.toString() + " received a time out: ", e);
                         return new ReturnState(false, session, currentPhase(), e, null);
                     }
 
