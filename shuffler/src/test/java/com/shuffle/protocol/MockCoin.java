@@ -315,10 +315,7 @@ public class MockCoin implements Simulator.MockCoin {
     @Override
     public boolean spendsFrom(Address addr, long amount, Transaction t) {
         Transaction conflict = getConflictingTransaction(addr, amount);
-        if (conflict == null) {
-            return false;
-        }
-        return t.equals(conflict);
+        return conflict != null && t.equals(conflict);
     }
 
     @Override

@@ -1101,12 +1101,10 @@ final class CoinShuffle {
 
     // Test whether a set of messages are equal.
     static boolean areEqual(Iterable<Message> messages) throws InvalidImplementationError {
-        boolean equal = true;
-
         Message last = null;
         for (Message m : messages) {
             if (last != null) {
-                equal = equal && last.equals(m);
+                boolean equal = last.equals(m);
                 if (!equal) {
                     return false;
                 }
@@ -1115,7 +1113,7 @@ final class CoinShuffle {
             last = m;
         }
 
-        return equal;
+        return true;
     }
 
     static void readAnnouncements(Map<VerificationKey, Message> messages,

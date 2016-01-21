@@ -214,9 +214,7 @@ public class TestShuffleMachine {
         }
 
         for (SigningKey i : results.keySet()) {
-            BlameMatrix bm = null;
-            Phase phase;
-
+            BlameMatrix bm;
             if (offenders.containsKey(i) || deadbeatPlayers.contains(i)) {
                 bm = anyMatrix;
             } else {
@@ -257,13 +255,13 @@ public class TestShuffleMachine {
         Map<Integer, Simulator.MockCoin> coinNetMap = new HashMap<>();
         List<Simulator.MockCoin> coinNetList = new LinkedList<>();
 
-        for (int i = 0; i < views.length; i ++) {
-            if (!coinNetMap.containsKey(views[i])) {
+        for (int view : views) {
+            if (!coinNetMap.containsKey(view)) {
                 Simulator.MockCoin coin = new MockCoin();
-                coinNetMap.put(views[i], coin);
+                coinNetMap.put(view, coin);
                 coinNets.add(coin);
             }
-            coinNetList.add(coinNetMap.get(views[i]));
+            coinNetList.add(coinNetMap.get(view));
         }
 
         LinkedHashMap<SigningKey, ReturnState> results =
@@ -289,7 +287,7 @@ public class TestShuffleMachine {
         }}
 
         for (SigningKey i : results.keySet()) {
-            BlameMatrix bm = null;
+            BlameMatrix bm;
             Phase phase;
 
             if (offenders.containsKey(i)) {
@@ -370,7 +368,7 @@ public class TestShuffleMachine {
 
         for(SigningKey i : results.keySet()) {
 
-            BlameMatrix bm = null;
+            BlameMatrix bm;
 
             if (malicious.contains(i)) {
                 bm = anyMatrix;
@@ -427,7 +425,7 @@ public class TestShuffleMachine {
         assert malicious != null;
 
         for (SigningKey i : results.keySet()) {
-            BlameMatrix bm = null;
+            BlameMatrix bm;
 
             index++;
             if(index == numPlayers) {
@@ -454,8 +452,8 @@ public class TestShuffleMachine {
     public TestCase DifferentTransactionSignature(int caseNo, int numPlayers, int[] weirdos, Simulator sim) {
         Set<Integer> class2 = new HashSet<>();
 
-        for (int i = 0; i < weirdos.length; i++) {
-            class2.add(weirdos[i]);
+        for (int weirdo : weirdos) {
+            class2.add(weirdo);
         }
 
         MockCoin coin1 = new MockCoin().setZ(1);

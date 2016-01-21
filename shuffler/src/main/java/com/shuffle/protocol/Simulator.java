@@ -760,18 +760,18 @@ public final class Simulator {
 
         for (int i = 1; i <= numPlayers; i++) {
             init.player().initialFunds(20);
-            for (int j = 0; j < deadbeats.length; j++) {
-                if (deadbeats[j] == i) {
+            for (int deadbeat : deadbeats) {
+                if (deadbeat == i) {
                     init.initialFunds(0);
                 }
             }
-            for (int j = 0; j < poor.length; j++) {
-                if (poor[j] == i) {
+            for (int aPoor : poor) {
+                if (aPoor == i) {
                     init.initialFunds(10);
                 }
             }
-            for (int j = 0; j < spenders.length; j++) {
-                if (spenders[j] == i) {
+            for (int spender : spenders) {
+                if (spender == i) {
                     init.spend(16);
                 }
             }
@@ -793,8 +793,8 @@ public final class Simulator {
         for (MockCoin coinNet : coinNetList) {
             init.player().initialFunds(20).coin(coinNet);
 
-            for (int j = 0; j < doubleSpenders.length; j++) {
-                if (doubleSpenders[j] == i) {
+            for (int doubleSpender : doubleSpenders) {
+                if (doubleSpender == i) {
                     init.spend(16);
                 }
             }
