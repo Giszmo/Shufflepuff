@@ -17,17 +17,9 @@ public class MockSessionIdentifier implements SessionIdentifier {
             return false;
         }
 
-        MockSessionIdentifier s = (MockSessionIdentifier)o;
+        MockSessionIdentifier s = (MockSessionIdentifier) o;
 
-        if (this == s) {
-            return true;
-        }
-
-        if (version.equals(s.version) && id.equals(s.id)) {
-            return true;
-        }
-
-        return false;
+        return this == s || version.equals(s.version) && id.equals(s.id);
     }
 
     @Override

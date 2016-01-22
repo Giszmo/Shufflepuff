@@ -278,7 +278,7 @@ public class MockCoin implements Simulator.MockCoin {
             inputs.add(input);
 
             // If a change address has been provided, add that.
-            Address change = changeAddresses.get(address);
+            Address change = changeAddresses.get(key);
             if (change != null) {
                 outputs.add(new Output(change, value - amount));
             }
@@ -314,10 +314,7 @@ public class MockCoin implements Simulator.MockCoin {
     @Override
     public boolean spendsFrom(Address addr, long amount, Transaction t) {
         Transaction conflict = getConflictingTransaction(addr, amount);
-        if (conflict == null) {
-            return false;
-        }
-        return t.equals(conflict);
+        return conflict != null && t.equals(conflict);
     }
 
     @Override

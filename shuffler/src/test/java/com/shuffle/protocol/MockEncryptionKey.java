@@ -32,11 +32,7 @@ public class MockEncryptionKey implements EncryptionKey {
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof MockEncryptionKey)) {
-            return false;
-        }
-
-        return index == ((MockEncryptionKey)o).index;
+        return o instanceof MockEncryptionKey && index == ((MockEncryptionKey) o).index;
     }
 
 }

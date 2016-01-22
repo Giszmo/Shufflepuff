@@ -224,6 +224,7 @@ final class CoinShuffle {
                         return matrix;
                     }
                 } catch (BlameException e) {
+                    log.warn("Blame exception ", e);
                     // TODO might receive messages about failed shuffles or failed equivocation check.
                 }
 
@@ -265,7 +266,10 @@ final class CoinShuffle {
                 Map<VerificationKey, Message> signatureMessages = null;
                 try {
                     signatureMessages = receiveFromMultiple(playerSet(1, N), phase, false);
-                } catch (BlameException e) { /* This should not happen. */ }
+                } catch (BlameException e) {
+                    log.warn("Blame exception ", e);
+                    /* This should not happen. */
+                }
 
                 // Verify the signatures.
                 assert signatureMessages != null;
@@ -527,11 +531,9 @@ final class CoinShuffle {
                                     for (Packet received : blame.packets) {
                                         switch (received.phase) {
                                             case BroadcastOutput:
-                                                if (outputVectors.containsKey(from)) {
-                                                    // We should only ever receive one such message from each player.
-                                                    if (!received.equals(outputVectors.containsKey(from))) {
-                                                        matrix.put(vk, from, null /*TODO*/);
-                                                    }
+                                                // We should only ever receive one such message from each player.
+                                                if (outputVectors.containsKey(from) && !received.equals(outputVectors.get(from))) {
+                                                    matrix.put(vk, from, null /*TODO*/);
                                                 }
                                                 outputVectors.put(from, received.message);
                                                 break;
@@ -617,7 +619,7 @@ final class CoinShuffle {
                                     }
                                     for (Map.Entry<VerificationKey, Signature> invalid : blame.invalid.entrySet()) {
                                         // Is the evidence included sufficient?
-                                        credible = (t != null && !invalid.getKey().verify(t, invalid.getValue()));
+                                        credible = t != null && !invalid.getKey().verify(t, invalid.getValue());
                                         matrix.put(from, blame.accused,
                                                 BlameMatrix.InvalidSignature(invalid.getValue()));
                                     }
@@ -671,12 +673,9 @@ final class CoinShuffle {
                                 continue;
                             }
 
-                            if (key != null) {
-                                if (!key.equals(next)) {
-                                    matrix.put(vk, from,
-                                            BlameMatrix.EquivocationFailureAnnouncement(sent));
-                                    break;
-                                }
+                            if (key != null && !key.equals(next)) {
+                                matrix.put(vk, from, BlameMatrix.EquivocationFailureAnnouncement(sent));
+                                break;
                             }
 
                             key = next;
@@ -689,6 +688,7 @@ final class CoinShuffle {
                     Set<VerificationKey> leftover = playerSet(1, players.size() - 1);
                     leftover.removeAll(outputVectors.keySet());
                     if (leftover.size() > 0) {
+                        log.warn("leftover");
                         // TODO blame someone.
                     } else {
                         SortedSet<Address> outputs = new TreeSet<>();
@@ -1106,12 +1106,10 @@ final class CoinShuffle {
 
     // Test whether a set of messages are equal.
     static boolean areEqual(Iterable<Message> messages) throws InvalidImplementationError {
-        boolean equal = true;
-
         Message last = null;
         for (Message m : messages) {
             if (last != null) {
-                equal = (equal&&last.equals(m));
+                boolean equal = last.equals(m);
                 if (!equal) {
                     return false;
                 }
@@ -1120,7 +1118,7 @@ final class CoinShuffle {
             last = m;
         }
 
-        return equal;
+        return true;
     }
 
     static void readAnnouncements(Map<VerificationKey, Message> messages,

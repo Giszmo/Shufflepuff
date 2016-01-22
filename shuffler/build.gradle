@@ -1,4 +1,8 @@
 apply plugin: 'java'
+apply plugin: 'pmd'
+apply plugin: 'checkstyle'
+apply plugin: 'findbugs'
+
 test.ignoreFailures=true
 
 dependencies {
@@ -8,3 +12,7 @@ dependencies {
     compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.5'
     compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.5'
 }
+
+project.pmd.ignoreFailures = true
+project.findbugs.ignoreFailures = true
+

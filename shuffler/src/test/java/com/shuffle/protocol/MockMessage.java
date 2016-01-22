@@ -90,6 +90,16 @@ public class MockMessage implements Message {
         }
 
         @Override
+        public int hashCode() {
+            int hash = addr == null ? 0 : addr.hashCode();
+            hash = hash * 15 + (ek == null ? 0 : ek.hashCode());
+            hash = hash * 15 + (sig == null ? 0 : sig.hashCode());
+            hash = hash * 15 + (this.hash == null ? 0 : this.hash.hashCode());
+            hash = hash * 15 + (blame == null ? 0 : blame.hashCode());
+            return hash;
+        }
+
+        @Override
         public String toString() {
 
             if (addr != null) {

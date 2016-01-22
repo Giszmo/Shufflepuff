@@ -191,26 +191,24 @@ public final class Simulator {
 
             @Override
             public Packet replace(Packet packet) {
-                if (packet.phase == Phase.Announcement) {
-                    if (others.contains(packet.recipient)) {
-                        Message message = packet.message;
+                if (packet.phase == Phase.Announcement && others.contains(packet.recipient)) {
+                    Message message = packet.message;
 
-                        // Sometimes a change address is included with message 1.
-                        Address change = null;
-                        try {
-                            message.readEncryptionKey();
-                            if (!message.isEmpty()) {
-                                change = message.readAddress();
-                            }
-                        } catch (FormatException e) {
-                            e.printStackTrace();
+                    // Sometimes a change address is included with message 1.
+                    Address change = null;
+                    try {
+                        message.readEncryptionKey();
+                        if (!message.isEmpty()) {
+                            change = message.readAddress();
                         }
+                    } catch (FormatException e) {
+                        e.printStackTrace();
+                    }
 
-                        message.attach(alternate);
+                    message.attach(alternate);
 
-                        if (change != null) {
-                            message.attach(change);
-                        }
+                    if (change != null) {
+                        message.attach(change);
                     }
                 }
 
@@ -243,19 +241,17 @@ public final class Simulator {
 
             @Override
             public Packet replace(Packet packet) {
-                if (packet.phase == Phase.BroadcastOutput) {
-                    if (others.contains(packet.recipient)) {
-                        if (alternate == null) {
-                            // Reshuffle the packet we just got.
-                            try {
-                                alternate = shuffle.shuffle(packet.message);
-                            } catch (FormatException e) {
-                                e.printStackTrace();
-                            }
+                if (packet.phase == Phase.BroadcastOutput && others.contains(packet.recipient)) {
+                    if (alternate == null) {
+                        // Reshuffle the packet we just got.
+                        try {
+                            alternate = shuffle.shuffle(packet.message);
+                        } catch (FormatException e) {
+                            e.printStackTrace();
                         }
-
-                        packet.message = alternate;
                     }
+
+                    packet.message = alternate;
                 }
 
                 return packet;
@@ -764,18 +760,18 @@ public final class Simulator {
 
         for (int i = 1; i <= numPlayers; i++) {
             init.player().initialFunds(20);
-            for (int j = 0; j < deadbeats.length; j++) {
-                if (deadbeats[j] == i) {
+            for (int deadbeat : deadbeats) {
+                if (deadbeat == i) {
                     init.initialFunds(0);
                 }
             }
-            for (int j = 0; j < poor.length; j++) {
-                if (poor[j] == i) {
+            for (int aPoor : poor) {
+                if (aPoor == i) {
                     init.initialFunds(10);
                 }
             }
-            for (int j = 0; j < spenders.length; j++) {
-                if (spenders[j] == i) {
+            for (int spender : spenders) {
+                if (spender == i) {
                     init.spend(16);
                 }
             }
@@ -797,8 +793,8 @@ public final class Simulator {
         for (MockCoin coinNet : coinNetList) {
             init.player().initialFunds(20).coin(coinNet);
 
-            for (int j = 0; j < doubleSpenders.length; j++) {
-                if (doubleSpenders[j] == i) {
+            for (int doubleSpender : doubleSpenders) {
+                if (doubleSpender == i) {
                     init.spend(16);
                 }
             }

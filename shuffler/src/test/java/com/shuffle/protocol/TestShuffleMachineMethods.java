@@ -113,11 +113,11 @@ public class TestShuffleMachineMethods {
         };
 
         for(shuffleTestCase test : tests) {
-            MockCrypto crypto = new MockCrypto(90);
-            SigningKey key = null;
-            try {
-                key = crypto.makeSigningKey();
-            } catch (CryptographyError e) {}
+//            MockCrypto crypto = new MockCrypto(90);
+//            SigningKey key = null;
+//            try {
+//                key = crypto.makeSigningKey();
+//            } catch (CryptographyError e) {}
             CoinShuffle machine = shuffleTestInitialization(test.randomSequence);
 
             Message input = new MockMessage();
