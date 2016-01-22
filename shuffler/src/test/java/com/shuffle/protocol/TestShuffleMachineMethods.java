@@ -13,6 +13,8 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.SortedSet;
@@ -113,11 +115,6 @@ public class TestShuffleMachineMethods {
         };
 
         for(shuffleTestCase test : tests) {
-//            MockCrypto crypto = new MockCrypto(90);
-//            SigningKey key = null;
-//            try {
-//                key = crypto.makeSigningKey();
-//            } catch (CryptographyError e) {}
             CoinShuffle machine = shuffleTestInitialization(test.randomSequence);
 
             Message input = new MockMessage();
@@ -144,26 +141,31 @@ public class TestShuffleMachineMethods {
     }
 
     private class areEqualTestCase {
-        int[] input;
+        List<Message> input = new LinkedList<>();;
         boolean expected;
 
         areEqualTestCase(int[] input, boolean expected) {
-            this.input = input;
+
+            for(int i : input) {
+                this.input.add(new MockMessage().attach(new MockAddress(i)));
+            }
+
             this.expected = expected;
         }
-    }
 
-    Map<VerificationKey, Message> mockPacketMap(int[] input) throws CryptographyError {
-        Map<VerificationKey, Message> map = new HashMap<>();
+        areEqualTestCase(int[][] input, boolean expected) {
 
-        int index = 0;
-        for(int i : input) {
-            MockSigningKey key = new MockSigningKey(index);
-            map.put(key.VerificationKey(), new MockMessage().attach(new MockAddress(i)));
-            index++;
+            for(int[] in : input) {
+                Queue<MockMessage.Atom> queue = new LinkedList<>();
+                for (int i : in) {
+                    queue.add(new MockMessage.Atom(new MockAddress(i)));
+                }
+
+                this.input.add(new MockMessage().attach(new MockMessage.Hash(queue)));
+            }
+
+            this.expected = expected;
         }
-
-        return map;
     }
 
     @Test
@@ -201,12 +203,16 @@ public class TestShuffleMachineMethods {
                 new areEqualTestCase(
                         new int[]{2, 2, 3},
                         false
+                ),
+                new areEqualTestCase(
+                        new int[][]{new int[]{2, 3}, new int[]{2, 3}, new int[]{1, 3}},
+                        false
                 )
         };
 
         for(areEqualTestCase testCase : tests) {
             try {
-                Assert.assertEquals(testCase.expected, CoinShuffle.areEqual(mockPacketMap(testCase.input).values()));
+                Assert.assertEquals(testCase.expected, CoinShuffle.areEqual(testCase.input));
             } catch (InvalidImplementationError e) {
                 Assert.fail("Tests have failed due blockchain error in test class.");
             } catch (CryptographyError e) {

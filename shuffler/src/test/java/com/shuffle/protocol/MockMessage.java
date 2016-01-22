@@ -4,9 +4,13 @@ import com.shuffle.bitcoin.Address;
 import com.shuffle.bitcoin.EncryptionKey;
 import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.Transaction;
+import com.shuffle.bitcoin.VerificationKey;
 
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 
 /**
@@ -33,6 +37,16 @@ public class MockMessage implements Message {
             }
 
             return new Hash(newAtoms);
+        }
+
+        public boolean equals(Object o) {
+            if (!(o instanceof Hash)) {
+                return false;
+            }
+
+            Hash mockHashed = (Hash)o;
+
+            return new MockMessage(hashed).equals(new MockMessage(mockHashed.hashed));
         }
     }
 
@@ -86,7 +100,8 @@ public class MockMessage implements Message {
                     ((a.addr == null && addr == null) || (a.addr != null && addr != null && addr.equals(a.addr)))
                      && ((a.t == null && t == null) || (a.t != null && t != null && t.equals(a.t))) &&
                     ((a.packet == null && packet == null) || (a.packet != null && packet != null && packet.equals(a.packet)))
-                     && ((a.blame == null && blame == null) || (a.blame != null && blame != null && blame.equals(a.blame)));
+                     && ((a.blame == null && blame == null) || (a.blame != null && blame != null && blame.equals(a.blame)))
+                     && ((a.hash == null && hash == null) || (a.hash != null && hash != null && hash.equals(a.hash)));
         }
 
         @Override
@@ -160,7 +175,7 @@ public class MockMessage implements Message {
             }
 
             if (blame != null) {
-                return new Atom(blame);
+                return new Atom(blame.copy());
             }
 
             return null;
@@ -246,6 +261,14 @@ public class MockMessage implements Message {
         return this;
     }
 
+    public Message attach(Hash hash) {
+        if (hash == null) {
+            throw new NullPointerException();
+        }
+        atoms.add(new Atom(hash));
+        return this;
+    }
+
     @Override
     public Message attach(Message message) throws InvalidImplementationError {
         if (message == null) {
@@ -266,8 +289,7 @@ public class MockMessage implements Message {
             throw new FormatException();
         }
 
-        atoms.remove();
-        return atom.ek;
+        return atoms.remove().ek;
     }
 
     @Override
@@ -297,8 +319,7 @@ public class MockMessage implements Message {
             throw new FormatException();
         }
 
-        atoms.remove();
-        return atom.sig;
+        return atoms.remove().sig;
     }
 
     @Override

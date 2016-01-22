@@ -63,9 +63,9 @@ public class MockVerificationKey implements VerificationKey {
         }
 
         if (index < key.index) {
-            return 1;
+            return -1;
         }
 
-        return -1;
+        return 1;
     }
 }

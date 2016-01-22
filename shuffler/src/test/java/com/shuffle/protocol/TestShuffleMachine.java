@@ -9,6 +9,7 @@ import org.apache.logging.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -97,10 +98,27 @@ public class TestShuffleMachine {
         final int equivocator;
         final int[] equivocation;
 
-
         private Equivocation(int equivocator, int[] equivocation) {
+            // Testing the case where the first player is the equivocator is too hard for now.
+            // It would require basically writing a whole new version of protocolDefinition()
+            // to be a test function. It is unlikely that testing case will find a bug in the code.
+            if (equivocator == 1) {
+                throw new IllegalArgumentException();
+            }
+
+            for (int eq : equivocation) {
+                if (eq <= equivocator) {
+                    throw new IllegalArgumentException();
+                }
+            }
+
             this.equivocator = equivocator;
             this.equivocation = equivocation;
+        }
+
+        @Override
+        public String toString() {
+            return "equivocation[" + equivocator + ", " + Arrays.toString(equivocation) + "]";
         }
     }
 
@@ -355,7 +373,7 @@ public class TestShuffleMachine {
         Set<SigningKey> malicious = new HashSet<>();
 
         eq = 0;
-        int index = 0;
+        int index = 1;
         for (SigningKey key : results.keySet()) {
             while(eq < equivocators.length && equivocators[eq].equivocator < index) {
                 eq++;
@@ -379,7 +397,9 @@ public class TestShuffleMachine {
 
                 for (SigningKey j : results.keySet()) {
                     for (SigningKey k : results.keySet()) {
-                        if (malicious.contains(k)) {
+                        if (malicious.contains(j)) {
+                            bm.put(j.VerificationKey(), k.VerificationKey(), anyReason);
+                        } else if (malicious.contains(k)) {
                             bm.put(j.VerificationKey(), k.VerificationKey(),
                                     new BlameMatrix.BlameEvidence(BlameMatrix.BlameReason.EquivocationFailure, true));
                         }
@@ -408,7 +428,7 @@ public class TestShuffleMachine {
             init.player().initialFunds(20);
         }
 
-        init.player().initialFunds(20).equivocateBroadcast(equivocation);
+        init.player().initialFunds(20).equivocateOutputVector(equivocation);
 
         TestCase test = new TestCase(session, amount, "Broadcast phase equivocation test case.", caseNo);
         LinkedHashMap<SigningKey, ReturnState> results = init.run();
@@ -559,11 +579,11 @@ public class TestShuffleMachine {
         int caseNo = 0;
 
         // A player sends different output vectors to different players.
-        EquivocateOutput(caseNo++, 3, new int[]{1}, sim);
-        EquivocateOutput(caseNo++, 3, new int[]{2}, sim);
-        EquivocateOutput(caseNo++, 4, new int[]{1}, sim);
-        EquivocateOutput(caseNo++, 4, new int[]{1, 2}, sim);
-        EquivocateOutput(caseNo, 10, new int[]{3, 5, 7}, sim);
+        EquivocateOutput(caseNo++, 3, new int[]{1}, sim).check();
+        EquivocateOutput(caseNo++, 3, new int[]{2}, sim).check();
+        EquivocateOutput(caseNo++, 4, new int[]{1}, sim).check();
+        EquivocateOutput(caseNo++, 4, new int[]{1, 2}, sim).check();
+        EquivocateOutput(caseNo, 10, new int[]{3, 5, 7}, sim).check();
     }
 
     @Test
@@ -588,10 +608,10 @@ public class TestShuffleMachine {
         // A player sends different encryption keys to different players.
         EquivocateAnnouncement(caseNo++, 3,
                 new Equivocation[]{
-                        new Equivocation(1, new int[]{2})}, sim).check();
-        EquivocateAnnouncement(caseNo++, 10,
+                        new Equivocation(2, new int[]{3})}, sim).check();
+        EquivocateAnnouncement(caseNo++, 5,
                 new Equivocation[]{
-                        new Equivocation(1, new int[]{4, 5})}, sim).check();
+                        new Equivocation(2, new int[]{4, 5})}, sim).check();
         EquivocateAnnouncement(caseNo++, 10,
                 new Equivocation[]{
                         new Equivocation(5, new int[]{1, 10}),

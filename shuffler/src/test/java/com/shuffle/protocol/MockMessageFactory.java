@@ -11,15 +11,4 @@ public class MockMessageFactory implements MessageFactory {
     public Message make() {
         return new MockMessage();
     }
-
-    @Override
-    public Message copy(Message message) throws InvalidImplementationError {
-        if (!(message instanceof MockMessage)) {
-            throw new InvalidImplementationError();
-        }
-
-        MockMessage mock = (MockMessage)message;
-
-        return mock.copy();
-    }
 }

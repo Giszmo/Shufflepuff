@@ -21,4 +21,6 @@ public interface Message {
     Signature readSignature() throws FormatException;
     Address readAddress() throws FormatException;
     BlameMatrix.Blame readBlame() throws FormatException;
+
+    Message copy() throws InvalidImplementationError;
 }

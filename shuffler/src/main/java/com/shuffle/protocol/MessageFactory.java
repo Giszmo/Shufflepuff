@@ -5,5 +5,4 @@ package com.shuffle.protocol;
  */
 public interface MessageFactory {
     Message make(); // Make a new packet.
-    Message copy(Message packet) throws InvalidImplementationError;
 }

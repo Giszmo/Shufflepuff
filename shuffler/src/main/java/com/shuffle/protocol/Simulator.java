@@ -42,18 +42,54 @@ public final class Simulator {
     final Crypto crypto;
     private static Logger log= LogManager.getLogger(Simulator.class);
 
+    public interface MockCoin extends Coin {
+        void put(Address addr, long value);
+        Transaction spend(Address from, Address to, long amount);
+    }
+
+    public interface MessageReplacement {
+        // Replace a message with a malicious message.
+        Packet replace(Packet packet) throws FormatException;
+    }
+
     // This implementation of Network connects each shuffle machine to the simulator.
     private class Network implements com.shuffle.protocol.Network {
+        MessageReplacement malicious; // Can be used to replace messages with malicious ones.
         final BlockingQueue<Packet> inbox = new LinkedBlockingQueue<>();
 
         Network() {
         }
 
+        public Network addReplacement(MessageReplacement replacement) {
+
+            if (replacement == null) {
+                return this;
+            }
+
+            if (malicious == null) {
+                malicious = replacement;
+            } else {
+                malicious = new Composition(replacement, malicious);
+            }
+
+            return this;
+        }
+
         @Override
         public void sendTo(VerificationKey to, Packet packet) throws InvalidImplementationError, TimeoutError {
+            Packet copy = packet.copy();
+
+            // Replace with malicious packet if necessary.
+            if (malicious != null) {
+                try {
+                    copy = malicious.replace(copy);
+                } catch (FormatException e) {
+                    log.error("Error sending ", e);
+                }
+            }
 
             try {
-                Simulator.this.sendTo(to, new Packet(messages.copy(packet.message), packet.session, packet.phase, packet.signer, packet.recipient));
+                Simulator.this.sendTo(to, copy);
             } catch (InterruptedException e) {
                 // This means that the thread running the machine we are delivering to has been interrupted.
                 // This would look like a timeout if this were happening over a real network.
@@ -75,62 +111,29 @@ public final class Simulator {
         }
     }
 
-    public interface MockCoin extends Coin {
-        void put(Address addr, long value);
-        Transaction spend(Address from, Address to, long amount);
-    }
+    public class Composition implements MessageReplacement {
+        MessageReplacement first;
+        MessageReplacement rest;
 
-    public interface MessageReplacement {
-        // Replace a message with a malicious message.
-        Packet replace(Packet packet) throws FormatException;
+        public Composition(MessageReplacement first, MessageReplacement rest) {
+            this.first = first;
+            this.rest = rest;
+        }
+
+        @Override
+        public Packet replace(Packet packet) throws FormatException {
+            return rest.replace(first.replace(packet));
+        }
     }
 
     // The malicious adversary can be made to send malicious messages or to spend bitcoins at
     // inappropriate times.
     private class Adversary {
-        // This implementation of Network connects each shuffle machine to the simulator.
-        private class MaliciousNetwork extends Network {
-            MessageReplacement malicious;
-
-            MaliciousNetwork() {
-            }
-
-            public MaliciousNetwork addReplacement(MessageReplacement replacement) {
-
-                if (replacement == null) {
-                    return this;
-                }
-
-                if (malicious == null) {
-                    malicious = replacement;
-                } else {
-                    malicious = new Composition(replacement, malicious);
-                }
-
-                return this;
-            }
-
-            @Override
-            public void sendTo(VerificationKey to, Packet packet) throws InvalidImplementationError, TimeoutError {
-
-                // Replace with malicious packet if necessary.
-                try {
-                    if(malicious == null) {
-                        super.sendTo(to, packet);
-                    } else {
-                        super.sendTo(to, malicious.replace(packet));
-                    }
-                } catch (FormatException e) {
-                    log.error("Error sending ",e);
-
-                }
-            }
-        }
 
         final SessionIdentifier session;
         final CoinShuffle shuffle;
         final CoinShuffle.ShuffleMachine machine;
-        MaliciousNetwork network;
+        Network network;
         final SigningKey sk;
         final SortedSet<VerificationKey> players;
 
@@ -148,7 +151,7 @@ public final class Simulator {
             this.session = session;
             this.sk = sk;
             this.coin = coin;
-            this.network = new MaliciousNetwork();
+            this.network = new Network();
             this.players = players;
             this.t = t;
             shuffle = new CoinShuffle(messages, crypto, coin, network);
@@ -164,11 +167,6 @@ public final class Simulator {
         public class EquivocateEncryptionKeys implements MessageReplacement {
             final Set<VerificationKey> others;
             final EncryptionKey alternate;
-
-            public EquivocateEncryptionKeys(Set<VerificationKey> others, EncryptionKey alternate) {
-                this.others = others;
-                this.alternate = alternate;
-            }
 
             public EquivocateEncryptionKeys(int[] others) {
                 this.others = new TreeSet<>();
@@ -355,21 +353,6 @@ public final class Simulator {
                     }
                 }
                 return packet;
-            }
-        }
-
-        public class Composition implements MessageReplacement {
-            MessageReplacement first;
-            MessageReplacement rest;
-
-            public Composition(MessageReplacement first, MessageReplacement rest) {
-                this.first = first;
-                this.rest = rest;
-            }
-
-            @Override
-            public Packet replace(Packet packet) throws FormatException {
-                return rest.replace(first.replace(packet));
             }
         }
 
@@ -569,8 +552,12 @@ public final class Simulator {
             MockCoin coin = null;
             boolean change = false; // Whether to make a change address.
 
+            // Whether the adversary should equivocate during the announcement phase and to whom.
             int[] equivocateAnnouncement = new int[]{};
-            int[] equivocateBroadcast = new int[]{};
+
+            // Whether the adversary should equivocate during the broadcast phase and to whom.
+            int[] equivocateOutputVector = new int[]{};
+
             int drop = 0; // Whether to drop an address in phase 2.
             int duplicate = 0; // Whether to duplicate another address and replace it with the dropped address.
             boolean replace = false; // Whether to replace dropped address with a new one.
@@ -618,8 +605,8 @@ public final class Simulator {
                     adversary.lie(adversary.new EquivocateEncryptionKeys(equivocateAnnouncement));
                 }
 
-                if (equivocateBroadcast != null && equivocateBroadcast.length > 0) {
-                    adversary.lie(adversary.new EquivocateEncryptionKeys(equivocateBroadcast));
+                if (equivocateOutputVector != null && equivocateOutputVector.length > 0) {
+                    adversary.lie(adversary.new EquivocateOutputVector(equivocateOutputVector));
                 }
 
                 if (replace && drop != 0) {
@@ -646,7 +633,7 @@ public final class Simulator {
         }
 
         public InitialState player() {
-            players.add(new Player());
+            players.addLast(new Player());
             return this;
         }
 
@@ -675,8 +662,8 @@ public final class Simulator {
             return this;
         }
 
-        InitialState equivocateBroadcast(int[] equivocate) {
-            players.getLast().equivocateBroadcast = equivocate;
+        InitialState equivocateOutputVector(int[] equivocate) {
+            players.getLast().equivocateOutputVector = equivocate;
             return this;
         }
 

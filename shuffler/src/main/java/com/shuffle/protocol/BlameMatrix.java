@@ -10,6 +10,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -30,13 +31,12 @@ public class BlameMatrix {
     }
 
     public static class Blame {
-
-        VerificationKey accused = null; // Can be null if we don't know who to accuse yet.
-        BlameReason reason;
-        Transaction t = null;
-        List<Packet> packets = null;
-        DecryptionKey privateKey = null;
-        Map<VerificationKey, Signature> invalid = null;
+        final BlameReason reason;
+        final VerificationKey accused; // Can be null if we don't know who to accuse yet.
+        final Transaction t;
+        final List<Packet> packets;
+        final DecryptionKey privateKey;
+        final Map<VerificationKey, Signature> invalid;
 
         public Blame(VerificationKey accused, BlameReason reason) {
             if (reason == null) {
@@ -47,6 +47,10 @@ public class BlameMatrix {
             }
             this.accused = accused;
             this.reason = reason;
+            t = null;
+            packets = null;
+            privateKey = null;
+            invalid = null;
         }
 
         public Blame(VerificationKey accused, Transaction t, BlameReason reason) {
@@ -56,6 +60,9 @@ public class BlameMatrix {
             this.accused = accused;
             this.t = t;
             this.reason = reason;
+            packets = null;
+            privateKey = null;
+            invalid = null;
         }
 
         public Blame(List<Packet> packets) {
@@ -64,17 +71,42 @@ public class BlameMatrix {
             }
             this.packets = packets;
             this.reason = BlameReason.EquivocationFailure;
+            accused = null;
+            t = null;
+            privateKey = null;
+            invalid = null;
         }
 
         public Blame(DecryptionKey privateKey, List<Packet> packets) {
             this.privateKey = privateKey;
             this.packets = packets;
             this.reason = BlameReason.ShuffleFailure;
+            accused = null;
+            t = null;
+            invalid = null;
         }
 
         public Blame(Map<VerificationKey, Signature> invalid) {
             this.invalid = invalid;
             this.reason = BlameReason.InvalidSignature;
+            accused = null;
+            t = null;
+            packets = null;
+            privateKey = null;
+        }
+
+        Blame(BlameReason reason,
+              VerificationKey accused,
+              Transaction t,
+              DecryptionKey privateKey,
+              List<Packet> packets,
+              Map<VerificationKey, Signature> invalid) {
+            this.reason = reason;
+            this.accused = accused;
+            this.t = t;
+            this.packets = packets;
+            this.invalid = invalid;
+            this.privateKey = privateKey;
         }
 
         @Override
@@ -83,7 +115,25 @@ public class BlameMatrix {
             if (accused != null) {
                 str += (accused.toString() + ", ");
             }
+            if (packets != null) {
+                str += (packets.toString() + ", ");
+            }
             return str + reason.toString() + "]";
+        }
+        
+        public Blame copy() {
+            List<Packet> packets = null;
+
+            if (this.packets != null) {
+                packets = new LinkedList<>();
+
+                for (Packet packet : this.packets) {
+
+                    packets.add(packet.copy());
+                }
+            }
+
+            return new Blame(reason, accused, t, privateKey, packets, invalid);
         }
     }
 
@@ -92,7 +142,7 @@ public class BlameMatrix {
         boolean credible; // Do we believe this evidence?
         Transaction t = null;
         Signature signature = null;
-        Map<VerificationKey, Message> output = null;
+        Map<VerificationKey, Packet> output = null;
         Map<VerificationKey, EncryptionKey> sent = null;
 
         public BlameEvidence(BlameReason reason, boolean credible) {
@@ -156,6 +206,10 @@ public class BlameMatrix {
     Map<VerificationKey, Map<VerificationKey, BlameEvidence>> blame = new HashMap<>();
 
     public void put(VerificationKey accuser, VerificationKey accused, BlameEvidence evidence) {
+        if(evidence != null) {
+            log.warn("null blame evidence given for " + accuser.toString() + " to " + accused.toString());
+        }
+
         Map<VerificationKey, BlameEvidence> blames = blame.get(accuser);
 
         if (blames == null) {
@@ -281,7 +335,7 @@ public class BlameMatrix {
         return blame.toString();
     }
 
-    static public BlameEvidence EquivocationFailureBroadcast(Map<VerificationKey, Message> output) {
+    static public BlameEvidence EquivocationFailureBroadcast(Map<VerificationKey, Packet> output) {
         if (output == null) {
             throw new NullPointerException();
         }
