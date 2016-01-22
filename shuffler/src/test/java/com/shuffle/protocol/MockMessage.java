@@ -4,13 +4,10 @@ import com.shuffle.bitcoin.Address;
 import com.shuffle.bitcoin.EncryptionKey;
 import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.Transaction;
-import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.protocol.blame.Blame;
 
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
 import java.util.Queue;
 
 /**
@@ -55,7 +52,7 @@ public class MockMessage implements Message {
         public EncryptionKey ek = null;
         public Signature sig = null;
         public Hash hash = null;
-        public BlameMatrix.Blame blame;
+        public Blame blame;
 
         public Transaction t;
         // Sometimes, we have blockchain send whole packets that we previously received.
@@ -85,7 +82,7 @@ public class MockMessage implements Message {
             this.packet = packet;
         }
 
-        public Atom(BlameMatrix.Blame blame) {this.blame = blame;}
+        public Atom(Blame blame) {this.blame = blame;}
 
         @Override
         public boolean equals(Object o) {
@@ -253,7 +250,7 @@ public class MockMessage implements Message {
     }
 
     @Override
-    public Message attach(BlameMatrix.Blame blame) {
+    public Message attach(Blame blame) {
         if (blame == null) {
             throw new NullPointerException();
         }
@@ -303,7 +300,7 @@ public class MockMessage implements Message {
     }
 
     @Override
-    public BlameMatrix.Blame readBlame() throws FormatException {
+    public Blame readBlame() throws FormatException {
         Atom atom = atoms.peek();
         if (atom == null || atom.blame == null) {
             throw new FormatException();

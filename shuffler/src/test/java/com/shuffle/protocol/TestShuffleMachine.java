@@ -3,6 +3,9 @@ package com.shuffle.protocol;
 import com.shuffle.bitcoin.CryptographyError;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.Transaction;
+import com.shuffle.protocol.blame.Matrix;
+import com.shuffle.protocol.blame.Evidence;
+import com.shuffle.protocol.blame.Reason;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -29,10 +32,10 @@ public class TestShuffleMachine {
     // Used for ensuring a test can't fail no matter what value
     // simulated adversaries return, since we only care about testing the response of the
     // honest players.
-    public static class BlameMatrixPatternAny extends BlameMatrix {
+    public static class MatrixPatternAny extends Matrix {
 
         @Override
-        public boolean match(BlameMatrix bm) {
+        public boolean match(Matrix bm) {
             return true;
         }
 
@@ -42,9 +45,9 @@ public class TestShuffleMachine {
         }
     }
 
-    public static class BlameEvidencePatternAny extends BlameMatrix.BlameEvidence {
+    public static class BlameEvidencePatternAny extends Evidence {
         @Override
-        public boolean match(BlameMatrix.BlameEvidence e) {
+        public boolean match(Evidence e) {
             return true;
         }
 
@@ -58,7 +61,7 @@ public class TestShuffleMachine {
         ReturnState a;
         ReturnState b;
 
-        public ReturnStatePatternOr(boolean success, SessionIdentifier session, Phase phase, Throwable error, BlameMatrix blame) {
+        public ReturnStatePatternOr(boolean success, SessionIdentifier session, Phase phase, Throwable error, Matrix blame) {
             super(success, session, phase, error, blame);
         }
 
@@ -122,7 +125,7 @@ public class TestShuffleMachine {
         }
     }
 
-    BlameMatrixPatternAny anyMatrix = new BlameMatrixPatternAny();
+    MatrixPatternAny anyMatrix = new MatrixPatternAny();
     BlameEvidencePatternAny anyReason = new BlameEvidencePatternAny();
 
     public class TestCase {
@@ -234,12 +237,12 @@ public class TestShuffleMachine {
         }
 
         for (SigningKey i : results.keySet()) {
-            BlameMatrix bm;
+            Matrix bm;
             if (offenders.containsKey(i) || deadbeatPlayers.contains(i)) {
                 bm = anyMatrix;
             } else {
 
-                bm = new BlameMatrix();
+                bm = new Matrix();
 
                 for (SigningKey j : results.keySet()) {
                     for (SigningKey k : results.keySet()) {
@@ -248,10 +251,10 @@ public class TestShuffleMachine {
                             bm.put(j.VerificationKey(), k.VerificationKey(), anyReason);
                         } else if(deadbeatPlayers.contains(k)) {
                             bm.put(j.VerificationKey(), k.VerificationKey(),
-                                    new BlameMatrix.BlameEvidence(BlameMatrix.BlameReason.NoFundsAtAll, true));
+                                    new Evidence(Reason.NoFundsAtAll, true));
                         } else if(offenders.containsKey(k)) {
                             bm.put(j.VerificationKey(), k.VerificationKey(),
-                                    new BlameMatrix.BlameEvidence(BlameMatrix.BlameReason.InsufficientFunds, true, offenders.get(k)));
+                                    new Evidence(Reason.InsufficientFunds, true, offenders.get(k)));
                         }
                     }
                 }
@@ -307,14 +310,14 @@ public class TestShuffleMachine {
         }}
 
         for (SigningKey i : results.keySet()) {
-            BlameMatrix bm;
+            Matrix bm;
             Phase phase;
 
             if (offenders.containsKey(i)) {
                 bm = anyMatrix;
                 phase = null;
             } else {
-                bm = new BlameMatrix();
+                bm = new Matrix();
                 phase = Phase.Blame;
                 for (SigningKey j : results.keySet()) {
                     for (SigningKey k : results.keySet()) {
@@ -327,7 +330,7 @@ public class TestShuffleMachine {
                                 // Only include the transaction if the player has the same view
                                 // of the network as the double spender.
                                 bm.put(j.VerificationKey(), k.VerificationKey(),
-                                        new BlameMatrix.BlameEvidence(BlameMatrix.BlameReason.DoubleSpend, true, offenders.get(k)));
+                                        new Evidence(Reason.DoubleSpend, true, offenders.get(k)));
                             }
                         }
                     }
@@ -388,12 +391,12 @@ public class TestShuffleMachine {
 
         for(SigningKey i : results.keySet()) {
 
-            BlameMatrix bm;
+            Matrix bm;
 
             if (malicious.contains(i)) {
                 bm = anyMatrix;
             } else {
-                bm = new BlameMatrix();
+                bm = new Matrix();
 
                 for (SigningKey j : results.keySet()) {
                     for (SigningKey k : results.keySet()) {
@@ -401,7 +404,7 @@ public class TestShuffleMachine {
                             bm.put(j.VerificationKey(), k.VerificationKey(), anyReason);
                         } else if (malicious.contains(k)) {
                             bm.put(j.VerificationKey(), k.VerificationKey(),
-                                    new BlameMatrix.BlameEvidence(BlameMatrix.BlameReason.EquivocationFailure, true));
+                                    new Evidence(Reason.EquivocationFailure, true));
                         }
                     }
                 }
@@ -447,17 +450,17 @@ public class TestShuffleMachine {
         assert malicious != null;
 
         for (SigningKey i : results.keySet()) {
-            BlameMatrix bm;
+            Matrix bm;
 
             index++;
             if(index == numPlayers) {
                 bm = anyMatrix;
             } else {
-                bm = new BlameMatrix();
+                bm = new Matrix();
 
                 for (SigningKey j : results.keySet()) {
                     bm.put(j.VerificationKey(), malicious.VerificationKey(),
-                                    new BlameMatrix.BlameEvidence(BlameMatrix.BlameReason.EquivocationFailure, true));
+                                    new Evidence(Reason.EquivocationFailure, true));
                 }
             }
 
@@ -510,13 +513,13 @@ public class TestShuffleMachine {
             SigningKey i = result.getKey();
             ReturnState returnState = result.getValue();
 
-            BlameMatrix bm = new BlameMatrix();
+            Matrix bm = new Matrix();
 
             for (SigningKey j : results.keySet()) {
                 for(SigningKey k : results.keySet()) {
                     if (keyClass2.contains(j) != keyClass2.contains(k)) {
                         bm.put(j.VerificationKey(),k.VerificationKey(),
-                                new BlameMatrix.BlameEvidence(BlameMatrix.BlameReason.InvalidSignature, true));
+                                new Evidence(Reason.InvalidSignature, true));
                     }
                 }
             }

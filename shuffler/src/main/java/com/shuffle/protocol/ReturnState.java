@@ -1,5 +1,7 @@
 package com.shuffle.protocol;
 
+import com.shuffle.protocol.blame.Matrix;
+
 /**
  * An error state that the protocol returns if the it fails.
  *
@@ -10,9 +12,9 @@ public class ReturnState {
     SessionIdentifier session;
     Phase phase;
     Throwable error = null;
-    BlameMatrix blame = null;
+    Matrix blame = null;
 
-    public ReturnState(boolean success, SessionIdentifier session, Phase phase, Throwable error, BlameMatrix blame) {
+    public ReturnState(boolean success, SessionIdentifier session, Phase phase, Throwable error, Matrix blame) {
         this.success = success;
         this.session = session;
         this.phase = phase;

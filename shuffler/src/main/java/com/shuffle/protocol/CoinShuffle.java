@@ -11,11 +11,16 @@ import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.protocol.blame.Blame;
+import com.shuffle.protocol.blame.BlameException;
+import com.shuffle.protocol.blame.Matrix;
+import com.shuffle.protocol.blame.Evidence;
+import com.shuffle.protocol.blame.Reason;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.net.ProtocolException;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -95,7 +100,7 @@ final class CoinShuffle {
 
             Transaction t = null;
 
-            BlameMatrix protocolDefinition(
+            Matrix protocolDefinition(
             ) throws
                     TimeoutError,
                     FormatException,
@@ -115,7 +120,7 @@ final class CoinShuffle {
                 // Check for sufficient funds.
                 // There was a problem with the wording of the original paper which would have meant
                 // that player 1's funds never would have been checked, but we have to do that.
-                BlameMatrix matrix = blameInsufficientFunds();
+                Matrix matrix = blameInsufficientFunds();
                 if (matrix != null) {
                     return matrix;
                 }
@@ -147,7 +152,7 @@ final class CoinShuffle {
                 } catch (BlameException e) {
                     // might receive blame messages about insufficient funds.
                     phase = Phase.Blame;
-                    return fillBlameMatrix(new BlameMatrix());
+                    return fillBlameMatrix(new Matrix());
                 }
 
                 readAnnouncements(announcement, encryptionKeys, change);
@@ -209,8 +214,7 @@ final class CoinShuffle {
                     // Everyone else receives the broadcast and checks to make sure their message was included.
                     if (!newAddresses.contains(addr_new)) {
                         phase = Phase.Blame;
-                        broadcast(messages.make().attach(new BlameMatrix.Blame(players.get(N),
-                                BlameMatrix.BlameReason.MissingOutput)));
+                        broadcast(messages.make().attach(Blame.MissingOutput(players.get(N))));
                         return blameShuffleMisbehavior(dk);
                     }
 
@@ -243,14 +247,14 @@ final class CoinShuffle {
                 } catch (CoinNetworkError e) {
                     // If there is an error, then see if a double spending transaction can be found.
                     phase = Phase.Blame;
-                    BlameMatrix bm = new BlameMatrix();
+                    Matrix bm = new Matrix();
 
                     Message doubleSpend = messages.make();
                     for (VerificationKey key : players.values()) {
                         Transaction o = coin.getConflictingTransaction(key.address(), amount);
                         if (o != null) {
-                            doubleSpend.attach(new BlameMatrix.Blame(key, o, BlameMatrix.BlameReason.DoubleSpend));
-                            bm.put(vk, key, new BlameMatrix.BlameEvidence(BlameMatrix.BlameReason.DoubleSpend, true, o));
+                            doubleSpend.attach(Blame.DoubleSpend(key, o));
+                            bm.put(vk, key, Evidence.DoubleSpend(true, o));
                         }
                     }
                     if (doubleSpend.isEmpty()) {
@@ -285,21 +289,21 @@ final class CoinShuffle {
 
                 if (invalid.size() > 0) {
                     phase = Phase.Blame;
-                    BlameMatrix bm = new BlameMatrix();
+                    Matrix bm = new Matrix();
                     Message blameMessage = messages.make();
-                    blameMessage.attach(new BlameMatrix.Blame(invalid));
+                    blameMessage.attach(Blame.InvalidSignature(invalid));
 
                     for(Map.Entry<VerificationKey, Signature> bad : invalid.entrySet()) {
                         VerificationKey key = bad.getKey();
                         Signature signature = bad.getValue();
-                        bm.put(vk, key, BlameMatrix.InvalidSignature(signature));
+                        bm.put(vk, key, Evidence.InvalidSignature(true, signature));
                     }
                     return fillBlameMatrix(bm);
                 }
 
                 if (blameReceived) {
                     phase = Phase.Blame;
-                    return fillBlameMatrix(new BlameMatrix());
+                    return fillBlameMatrix(new Matrix());
                 }
 
                 // Send the transaction into the net.
@@ -336,15 +340,13 @@ final class CoinShuffle {
                     try {
                         decrypted.attach(key.decrypt(address));
                     } catch (CryptographyError e) {
-                        broadcast(messages.make().attach(new BlameMatrix.Blame(players.get(N),
-                                BlameMatrix.BlameReason.ShuffleFailure)));
+                        broadcast(messages.make().attach(Blame.ShuffleFailure()));
                         return null;
                     }
                 }
 
                 if (addrs.size() != count || count != expected) {
-                    broadcast(messages.make().attach(new BlameMatrix.Blame(players.get(N),
-                            BlameMatrix.BlameReason.MissingOutput)));
+                    broadcast(messages.make().attach(Blame.MissingOutput(players.get(N))));
                     return null;
                 }
 
@@ -357,7 +359,7 @@ final class CoinShuffle {
             boolean equivocationCheckSent = false;
 
             // There is an error case in which we have to do an equivocation check, so this phase is in a separate function.
-            private BlameMatrix equivocationCheck(
+            private Matrix equivocationCheck(
                     Map<VerificationKey, EncryptionKey> encryptonKeys,
                     VerificationKey vk) throws InterruptedException, ValueException, FormatException, ProtocolException, BlameException {
 
@@ -387,14 +389,14 @@ final class CoinShuffle {
                 Message blameMessage = messages.make();
                 List<Packet> evidence = getPacketsByPhase(Phase.Announcement);
                 evidence.addAll(getPacketsByPhase(Phase.BroadcastOutput));
-                blameMessage.attach(new BlameMatrix.Blame(evidence));
+                blameMessage.attach(Blame.EquivocationFailure(evidence));
                 broadcast(blameMessage);
 
-                return fillBlameMatrix(new BlameMatrix());
+                return fillBlameMatrix(new Matrix());
             }
 
             // Check for players with insufficient funds. This happens in phase 1 and phase 5.
-            private BlameMatrix blameInsufficientFunds() throws InterruptedException, FormatException, ValueException {
+            private Matrix blameInsufficientFunds() throws InterruptedException, FormatException, ValueException {
                 List<VerificationKey> offenders = new LinkedList<>();
 
                 // Check that each participant has the required amounts.
@@ -412,19 +414,19 @@ final class CoinShuffle {
 
                 // If not, enter blame phase and find offending transactions.
                 phase = Phase.Blame;
-                BlameMatrix matrix = new BlameMatrix();
+                Matrix matrix = new Matrix();
                 Message blameMessage = messages.make();
                 for (VerificationKey offender : offenders) {
                     Transaction t = coin.getConflictingTransaction(offender.address(), amount);
 
                     if (t == null) {
-                        blameMessage.attach(new BlameMatrix.Blame(offender, BlameMatrix.BlameReason.NoFundsAtAll));
+                        blameMessage.attach(Blame.NoFundsAtAll(offender));
                         matrix.put(vk, offender,
-                                new BlameMatrix.BlameEvidence(BlameMatrix.BlameReason.NoFundsAtAll, true));
+                                Evidence.NoFundsAtAll(true));
                     } else {
-                        blameMessage.attach(new BlameMatrix.Blame(offender, t, BlameMatrix.BlameReason.InsufficientFunds));
+                        blameMessage.attach(Blame.InsufficientFunds(offender, t));
                         matrix.put(vk, offender,
-                                new BlameMatrix.BlameEvidence(BlameMatrix.BlameReason.InsufficientFunds, true, t));
+                                Evidence.InsufficientFunds(true, t));
                     }
                 }
 
@@ -436,10 +438,10 @@ final class CoinShuffle {
             }
 
             // Some misbehavior that has occurred during the shuffle phase.
-            private BlameMatrix blameShuffleMisbehavior(DecryptionKey dk) throws InterruptedException, FormatException, ValueException, ProtocolException, BlameException {
+            private Matrix blameShuffleMisbehavior(DecryptionKey dk) throws InterruptedException, FormatException, ValueException, ProtocolException, BlameException {
                 // First skip to phase 4 and do an equivocation check.
                 phase = Phase.EquivocationCheck;
-                BlameMatrix matrix = equivocationCheck(encryptionKeys, vk);
+                Matrix matrix = equivocationCheck(encryptionKeys, vk);
 
                 // If we get a blame matrix back, that means that the culprit was found.
                 if (matrix != null) {
@@ -455,15 +457,15 @@ final class CoinShuffle {
                 evidence.addAll(getPacketsByPhase(Phase.BroadcastOutput));
 
                 // Send them all with the decryption key.
-                blameMessage.attach(new BlameMatrix.Blame(dk, evidence));
+                blameMessage.attach(Blame.ShuffleAndEquivocationFailure(dk, evidence));
                 broadcast(blameMessage);
 
-                return fillBlameMatrix(new BlameMatrix());
+                return fillBlameMatrix(new Matrix());
             }
 
             // When we know we'll receive a bunch of blame messages, we have to go through them all to figure
             // out what's going on.
-            private BlameMatrix fillBlameMatrix(BlameMatrix matrix) throws InterruptedException, FormatException, ValueException {
+            private Matrix fillBlameMatrix(Matrix matrix) throws InterruptedException, FormatException, ValueException {
                 Map<VerificationKey, List<Packet>> blameMessages = receiveAllBlame();
 
                 // Get all hashes received in phase 4 so that we can check that they were reported correctly.
@@ -493,7 +495,7 @@ final class CoinShuffle {
                         Message message = packet.message;
 
                         while (!message.isEmpty()) {
-                            BlameMatrix.Blame blame = message.readBlame();
+                            Blame blame = message.readBlame();
                             boolean credible;
                             switch (blame.reason) {
                                 case NoFundsAtAll: {
@@ -501,9 +503,9 @@ final class CoinShuffle {
                                         break; // Skip, this is mine.
                                     }
                                     // Do we already know about this? The evidence is not credible if we don't.
-                                    credible = matrix.blameExists(vk, blame.accused, BlameMatrix.BlameReason.NoFundsAtAll);
+                                    credible = matrix.blameExists(vk, blame.accused, Reason.NoFundsAtAll);
                                     matrix.put(from, blame.accused,
-                                            new BlameMatrix.BlameEvidence(BlameMatrix.BlameReason.NoFundsAtAll, credible));
+                                            new Evidence(Reason.NoFundsAtAll, credible));
                                     break;
                                 }
                                 case InsufficientFunds: {
@@ -517,7 +519,7 @@ final class CoinShuffle {
                                     // Is the evidence included sufficient?
                                     credible = coin.spendsFrom(blame.accused.address(), amount, blame.t);
                                     matrix.put(from, blame.accused,
-                                            new BlameMatrix.BlameEvidence(BlameMatrix.BlameReason.InsufficientFunds, credible, blame.t));
+                                            new Evidence(Reason.InsufficientFunds, credible, blame.t));
                                     break;
                                 }
                                 case EquivocationFailure: {
@@ -565,7 +567,7 @@ final class CoinShuffle {
                                     // Is the evidence included sufficient?
                                     credible = coin.spendsFrom(blame.accused.address(), amount, blame.t);
                                     matrix.put(from, blame.accused,
-                                            new BlameMatrix.BlameEvidence(BlameMatrix.BlameReason.DoubleSpend, credible, blame.t));
+                                            Evidence.DoubleSpend(credible, blame.t));
                                     break;
                                 }
                                 case InvalidSignature: {
@@ -580,7 +582,7 @@ final class CoinShuffle {
                                         // Is the evidence included sufficient?
                                         credible = t != null && !invalid.getKey().verify(t, invalid.getValue());
                                         matrix.put(from, blame.accused,
-                                                BlameMatrix.InvalidSignature(invalid.getValue()));
+                                                Evidence.InvalidSignature(credible, invalid.getValue()));
                                     }
                                     break;
                                 }
@@ -609,7 +611,7 @@ final class CoinShuffle {
                     // If they are not all equal, blame the last player for equivocating.
                     if (!areEqual(outputMessages)) {
                         matrix.put(vk, players.get(N),
-                                BlameMatrix.EquivocationFailureBroadcast(outputVectors));
+                                Evidence.EquivocationFailureBroadcast(outputVectors));
                     }
                 }
 
@@ -642,7 +644,7 @@ final class CoinShuffle {
                             }
 
                             if (key != null && !key.equals(next)) {
-                                matrix.put(vk, from, BlameMatrix.EquivocationFailureAnnouncement(sent));
+                                matrix.put(vk, from, Evidence.EquivocationFailureAnnouncement(sent));
                                 break;
                             }
 
@@ -941,7 +943,7 @@ final class CoinShuffle {
 
             // Here we handle a bunch of lower level errors.
             try {
-                BlameMatrix blame = null;
+                Matrix blame = null;
                 while (true) {
 
                     if (players.size() - eliminated.size() < minPlayers) {
@@ -1114,13 +1116,14 @@ final class CoinShuffle {
             VerificationKey vk,
             VerificationKey from,
             List<Packet> packets,
-            BlameMatrix matrix,
+            Matrix matrix,
             // The messages sent in the broadcast phase by the last player to all the other players.
             Map<VerificationKey, Packet> outputVectors,
              // The list of messages history in phase 2.
             Map<VerificationKey, Message> shuffleMessages,
             // The keys received by everyone in the announcement phase.
             Map<VerificationKey, EncryptionKey> receivedKeys,
+            // The keys sent by everyone in the announcement phase.
             Map<VerificationKey, Map<VerificationKey, EncryptionKey>> sentKeys
     ) throws FormatException {
 
