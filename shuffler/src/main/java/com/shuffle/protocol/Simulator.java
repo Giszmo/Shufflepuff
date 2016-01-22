@@ -225,11 +225,11 @@ public final class Simulator {
                 int p = 1;
                 int i = 0;
                 for(VerificationKey player: players) {
-                    while(others[i] < p) {
+                    while(i < others.length && others[i] < p) {
                         i++;
                     }
 
-                    if(i == p) {
+                    if(i < others.length && others[i] == p) {
                         this.others.add(player);
                     }
 
