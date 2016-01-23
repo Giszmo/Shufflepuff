@@ -668,8 +668,10 @@ public class TestShuffleMachine {
         // A player claims something went wrong in phase 2 when it didn't.
     }
 
-    // Error test cases that I need to make:
+    @Test
+    // Players disconnect at different points during the protocol.
+    // TODO must include cases in which a malicious player disconnects after sending a malicious message!!
+    public void testDisconnect() {
 
-    // A player disconnects at the wrong time.
-    // Different combinations of these at the same time.
+    }
 }

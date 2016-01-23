@@ -12,11 +12,11 @@ import java.util.Queue;
  * Created by Daniel Krawisz on 12/5/15.
  */
 public class MockNetwork implements Network {
-    public static class SentMessage implements Map.Entry<SignedPacket, MockVerificationKey> {
+    public static class SentMessage implements Map.Entry<SignedPacket, VerificationKey> {
         SignedPacket packet;
-        MockVerificationKey to;
+        VerificationKey to;
 
-        public SentMessage(SignedPacket packet, MockVerificationKey to) {
+        public SentMessage(SignedPacket packet, VerificationKey to) {
             this.to = to;
             this.packet = packet;
         }
@@ -27,12 +27,12 @@ public class MockNetwork implements Network {
         }
 
         @Override
-        public MockVerificationKey getValue() {
+        public VerificationKey getValue() {
             return to;
         }
 
         @Override
-        public MockVerificationKey setValue(MockVerificationKey to) {
+        public VerificationKey setValue(VerificationKey to) {
             return this.to = to;
         }
 
@@ -56,7 +56,7 @@ public class MockNetwork implements Network {
         }
     }
 
-    Queue<Map.Entry<SignedPacket, MockVerificationKey>> responses;
+    Queue<Map.Entry<SignedPacket, VerificationKey>> responses;
     Queue<SignedPacket> sent;
 
     MockNetwork() {
@@ -69,19 +69,14 @@ public class MockNetwork implements Network {
         this.responses = new LinkedList<>();
     }
 
-    Queue<Map.Entry<SignedPacket, MockVerificationKey>> getResponses() {
+    Queue<Map.Entry<SignedPacket, VerificationKey>> getResponses() {
         return responses;
     }
 
     @Override
-    public void sendTo(VerificationKey to, SignedPacket packet) throws InvalidImplementationError {
-        if (!(to instanceof MockVerificationKey)) {
-            throw new InvalidImplementationError();
-        }
+    public void sendTo(VerificationKey to, SignedPacket packet) {
 
-        final MockVerificationKey mockTo = (MockVerificationKey)to;
-
-        responses.add(new SentMessage(packet, mockTo));
+        responses.add(new SentMessage(packet, to));
     }
 
     @Override

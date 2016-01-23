@@ -58,8 +58,8 @@ public class TestMailbox {
 
             new Mailbox(new MockSessionIdentifier("testBroadcast" + index), me, players, network).broadcast(messages.make(), Phase.Shuffling);
 
-            for (Map.Entry<SignedPacket, MockVerificationKey> sent : network.getResponses()) {
-                MockVerificationKey sentBy = sent.getValue();
+            for (Map.Entry<SignedPacket, VerificationKey> sent : network.getResponses()) {
+                VerificationKey sentBy = sent.getValue();
                 Assert.assertTrue(players.contains(sentBy));
                 players.remove(sentBy);
             }
@@ -125,7 +125,7 @@ public class TestMailbox {
 
             int expected = (test.success ? 1 : 0);
 
-            Queue<Map.Entry<SignedPacket, MockVerificationKey>> responses = network.getResponses();
+            Queue<Map.Entry<SignedPacket, VerificationKey>> responses = network.getResponses();
             Assert.assertEquals(
                     String.format(
                             "Recieved %d responses when only expected %d in test case %d",
