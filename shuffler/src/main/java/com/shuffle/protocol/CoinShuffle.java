@@ -23,7 +23,6 @@ import org.apache.logging.log4j.Logger;
 import java.net.ProtocolException;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -53,8 +52,8 @@ final class CoinShuffle {
 
     final MessageFactory messages;
 
-    final Network network;
     static Logger log= LogManager.getLogger(CoinShuffle.class);
+
     public class ShuffleMachine {
         Phase phase;
 
@@ -74,7 +73,6 @@ final class CoinShuffle {
 
         final int minPlayers;
 
-
         // the phase can be accessed concurrently in case we want to update
         // the user on how the protocol is going.
         public Phase currentPhase() {
@@ -87,7 +85,7 @@ final class CoinShuffle {
 
             final private int me; // Which player am I?
 
-            final private Map<Integer, VerificationKey> players; // The keys representing all the players, in order.
+            final private Map<Integer, VerificationKey> players; // The keys representing all the players.
 
             final private int N; // The number of players.
 
@@ -99,6 +97,8 @@ final class CoinShuffle {
             final Map<VerificationKey, Signature> signatures = new HashMap<>();
 
             Transaction t = null;
+
+            final private Mailbox mailbox;
 
             Matrix protocolDefinition(
             ) throws
@@ -142,13 +142,13 @@ final class CoinShuffle {
                     if (this.change != null) {
                         message.attach(this.change);
                     }
-                    broadcast(message);
+                    mailbox.broadcast(message, phase);
                 }
 
                 // Now we wait to receive similar key from everyone else.
                 Map<VerificationKey, Message> announcement = null;
                 try {
-                    announcement = receiveFromMultiple(playerSet(2, N), phase, true);
+                    announcement = mailbox.receiveFromMultiple(playerSet(2, N), phase, true);
                 } catch (BlameException e) {
                     // might receive blame messages about insufficient funds.
                     phase = Phase.Blame;
@@ -177,7 +177,7 @@ final class CoinShuffle {
                     // Each subsequent player reorders the cycle and removes one layer of encryption.
                     Message shuffled = messages.make();
                     if (me != 1) {
-                        shuffled = decryptAll(shuffled.attach(receiveFrom(players.get(me - 1), phase)), dk, me - 1);
+                        shuffled = decryptAll(shuffled.attach(mailbox.receiveFrom(players.get(me - 1), phase)), dk, me - 1);
                         if (shuffled == null) {
                             return blameShuffleMisbehavior(dk);
                         }
@@ -196,7 +196,7 @@ final class CoinShuffle {
 
                     // Pass it along to the next player.
                     if (me != N) {
-                        send(new Packet(shuffled, session, phase, vk, players.get(me + 1)));
+                        mailbox.send(new Packet(shuffled, session, phase, vk, players.get(me + 1)));
                     }
 
                     // Phase 3: broadcast outputs.
@@ -206,15 +206,15 @@ final class CoinShuffle {
                     if (me == N) {
                         // The last player adds his own new address in without encrypting anything and shuffles the result.
                         newAddresses = readNewAddresses(shuffled);
-                        broadcast(shuffled);
+                        mailbox.broadcast(shuffled, phase);
                     } else {
-                        newAddresses = readNewAddresses(receiveFrom(players.get(N), phase));
+                        newAddresses = readNewAddresses(mailbox.receiveFrom(players.get(N), phase));
                     }
 
                     // Everyone else receives the broadcast and checks to make sure their message was included.
                     if (!newAddresses.contains(addr_new)) {
                         phase = Phase.Blame;
-                        broadcast(messages.make().attach(Blame.MissingOutput(players.get(N))));
+                        mailbox.broadcast(messages.make().attach(Blame.MissingOutput(players.get(N))), phase);
                         return blameShuffleMisbehavior(dk);
                     }
 
@@ -261,15 +261,15 @@ final class CoinShuffle {
                         throw new CoinNetworkError();
                     }
 
-                    broadcast(doubleSpend);
+                    mailbox.broadcast(doubleSpend, phase);
                     return fillBlameMatrix(bm);
                 }
 
-                broadcast(messages.make().attach(sk.makeSignature(t)));
+                mailbox.broadcast(messages.make().attach(sk.makeSignature(t)), phase);
 
                 Map<VerificationKey, Message> signatureMessages = null;
                 try {
-                    signatureMessages = receiveFromMultiple(playerSet(1, N), phase, false);
+                    signatureMessages = mailbox.receiveFromMultiple(playerSet(1, N), phase, false);
                 } catch (BlameException e) {
                     log.warn("Blame exception ", e);
                     /* This should not happen. */
@@ -301,7 +301,7 @@ final class CoinShuffle {
                     return fillBlameMatrix(bm);
                 }
 
-                if (blameReceived) {
+                if (mailbox.blameReceived()) {
                     phase = Phase.Blame;
                     return fillBlameMatrix(new Matrix());
                 }
@@ -340,13 +340,13 @@ final class CoinShuffle {
                     try {
                         decrypted.attach(key.decrypt(address));
                     } catch (CryptographyError e) {
-                        broadcast(messages.make().attach(Blame.ShuffleFailure()));
+                        mailbox.broadcast(messages.make().attach(Blame.ShuffleFailure()), phase);
                         return null;
                     }
                 }
 
                 if (addrs.size() != count || count != expected) {
-                    broadcast(messages.make().attach(Blame.MissingOutput(players.get(N))));
+                    mailbox.broadcast(messages.make().attach(Blame.MissingOutput(players.get(N))), phase);
                     return null;
                 }
 
@@ -371,12 +371,12 @@ final class CoinShuffle {
 
                 equivocationCheck = crypto.hash(equivocationCheck);
                 if (!equivocationCheckSent) {
-                    broadcast(equivocationCheck);
+                    mailbox.broadcast(equivocationCheck, phase);
                     equivocationCheckSent = true;
                 }
 
                 // Wait for a similar message from everyone else and check that the result is the name.
-                Map<VerificationKey, Message> hashes = receiveFromMultiple(playerSet(1, players.size()), phase, true);
+                Map<VerificationKey, Message> hashes = mailbox.receiveFromMultiple(playerSet(1, players.size()), phase, true);
                 hashes.put(vk, equivocationCheck);
 
                 if (areEqual(hashes.values())) {
@@ -387,10 +387,10 @@ final class CoinShuffle {
                 // Collect all packets from phase 1 and 3.
                 phase = Phase.Blame;
                 Message blameMessage = messages.make();
-                List<Packet> evidence = getPacketsByPhase(Phase.Announcement);
-                evidence.addAll(getPacketsByPhase(Phase.BroadcastOutput));
+                List<SignedPacket> evidence = mailbox.getPacketsByPhase(Phase.Announcement);
+                evidence.addAll(mailbox.getPacketsByPhase(Phase.BroadcastOutput));
                 blameMessage.attach(Blame.EquivocationFailure(evidence));
-                broadcast(blameMessage);
+                mailbox.broadcast(blameMessage, phase);
 
                 return fillBlameMatrix(new Matrix());
             }
@@ -431,7 +431,7 @@ final class CoinShuffle {
                 }
 
                 // Broadcast offending transactions.
-                broadcast(blameMessage);
+                mailbox.broadcast(blameMessage, phase);
 
                 // Get all subsequent blame messages.
                 return fillBlameMatrix(matrix);
@@ -453,12 +453,12 @@ final class CoinShuffle {
 
                 // Collect all packets from phase 2 and 3.
                 Message blameMessage = messages.make();
-                List<Packet> evidence = getPacketsByPhase(Phase.Shuffling);
-                evidence.addAll(getPacketsByPhase(Phase.BroadcastOutput));
+                List<SignedPacket> evidence = mailbox.getPacketsByPhase(Phase.Shuffling);
+                evidence.addAll(mailbox.getPacketsByPhase(Phase.BroadcastOutput));
 
                 // Send them all with the decryption key.
                 blameMessage.attach(Blame.ShuffleAndEquivocationFailure(dk, evidence));
-                broadcast(blameMessage);
+                mailbox.broadcast(blameMessage, phase);
 
                 return fillBlameMatrix(new Matrix());
             }
@@ -466,13 +466,13 @@ final class CoinShuffle {
             // When we know we'll receive a bunch of blame messages, we have to go through them all to figure
             // out what's going on.
             private Matrix fillBlameMatrix(Matrix matrix) throws InterruptedException, FormatException, ValueException {
-                Map<VerificationKey, List<Packet>> blameMessages = receiveAllBlame();
+                Map<VerificationKey, List<Packet>> blameMessages = mailbox.receiveAllBlame();
 
                 // Get all hashes received in phase 4 so that we can check that they were reported correctly.
-                List<Packet> hashMessages = getPacketsByPhase(Phase.EquivocationCheck);
+                List<SignedPacket> hashMessages = mailbox.getPacketsByPhase(Phase.EquivocationCheck);
                 Map<VerificationKey, Message> hashes = new HashMap<>();
-                for (Packet packet : hashMessages) {
-                    hashes.put(packet.signer, packet.message);
+                for (SignedPacket packet : hashMessages) {
+                    hashes.put(packet.packet.signer, packet.packet.message);
                 }
 
                 // The messages sent in the broadcast phase by the last player to all the other players.
@@ -546,6 +546,9 @@ final class CoinShuffle {
                                     break;
                                 }
                                 case ShuffleFailure: {
+                                    break; // Should have already been handled.
+                                }
+                                case ShuffleAndEquivocationFailure: {
                                     if (decryptionKeys.containsKey(from)) {
                                         // TODO blame someone here.
                                     }
@@ -700,10 +703,6 @@ final class CoinShuffle {
                 return matrix;
             }
 
-            final Queue<Packet> delivered = new LinkedList<>(); // A queue of messages that has been delivered that we aren't ready to look at yet.
-            final Queue<Packet> history = new LinkedList<>(); // All messages sent or received (does not include those in delivered).
-            boolean blameReceived = false;
-
             // Get the set of players from i to N.
             public Set<VerificationKey> playerSet(int i, int n) throws CryptographyError, InvalidImplementationError {
                 if (i < 1) {
@@ -725,188 +724,11 @@ final class CoinShuffle {
                 return playerSet(1, N);
             }
 
-            public void broadcast(Message message) throws TimeoutError, CryptographyError, InvalidImplementationError {
-                Set<VerificationKey> keys = playerSet();
-
-                for (VerificationKey to : keys) {
-                    // Don't send a message to myself!
-                    if (!to.equals(sk.VerificationKey())) {
-                        send(new Packet(message, session, phase, vk, to));
-                    }
-                }
-            }
-
-            // Send a message into the network.
-            public void send(Packet packet) throws TimeoutError, CryptographyError, InvalidImplementationError {
-                // Don't send anything to ourselves or to a nonexistent player.
-                if (!packet.recipient.equals(vk) && players.values().contains(packet.recipient)) {
-                    network.sendTo(packet.recipient, packet);
-                }
-                history.add(packet.copy());
-            }
-
-            // Get the next message from the phase we're in. It's possible for other players to get
-            // ahead under some circumstances, so we have to keep their messages to look at later.
-            // It always returns a blame packet if encountered.
-            Packet receiveNextPacket(Phase expectedPhase)
-                    throws FormatException, CryptographyError,
-                    InterruptedException, TimeoutError, InvalidImplementationError, ValueException {
-
-                Packet found = null;
-
-                // Go through the queue of received messages if any are there.
-                if (delivered.size() > 0) {
-                    Iterator<Packet> i = delivered.iterator();
-                    while (i.hasNext()) {
-                        Packet packet = i.next();
-
-                        // Return any that matches what we're looking for.
-                        if (expectedPhase == packet.phase) {
-                            i.remove();
-                            found = packet;
-                            break;
-                        }
-                    }
-                }
-
-                // Now we wait for the right message from the network, since we haven't already received it.
-                if (found == null) {
-                    while (true) {
-                        Packet packet = network.receive();
-                        Phase phase = packet.phase;
-
-                        // Check that this is someone in the same session of this protocol as us.
-                        if (!session.equals(packet.session)) {
-                            throw new ValueException(ValueException.Values.session, session.toString(), packet.session.toString());
-                        }
-
-                        // Check that this message is intended for us.
-                        if (!packet.recipient.equals(sk.VerificationKey())) {
-                            throw new ValueException(ValueException.Values.recipient, sk.VerificationKey().toString(), packet.recipient.toString());
-                        }
-
-                        if (expectedPhase == phase || phase == Phase.Blame) {
-                            found = packet;
-                            break;
-                        }
-
-                        delivered.add(packet);
-                    }
-                }
-
-                history.add(found.copy());
-                if (found.phase == Phase.Blame) {
-                    blameReceived = true;
-                }
-                return found;
-            }
-
-            // Get all packets history or received by phase. Used during blame phase.
-            public List<Packet> getPacketsByPhase(Phase phase) {
-                List<Packet> selection = new LinkedList<>();
-
-                for (Packet packet : history) {
-                    if (packet.phase == phase) {
-                        selection.add(packet);
-                    }
-                }
-
-                for (Packet packet : delivered) {
-                    if (packet.phase == phase) {
-                        selection.add(packet);
-                    }
-                }
-
-                return selection;
-            }
-
-            // Wait to receive a message from a given player.
-            public Message receiveFrom(VerificationKey from, Phase expectedPhase)
-                    throws TimeoutError, CryptographyError, FormatException, ValueException,
-                    InvalidImplementationError, InterruptedException, BlameException {
-
-                Packet packet = receiveNextPacket(expectedPhase);
-
-                if (packet.phase == Phase.Blame && expectedPhase != Phase.Blame) {
-                    throw new BlameException(packet.signer, packet);
-                }
-
-                // If we receive a message, but it is not from the expected source, it might be a blame message.
-                if (!from.equals(packet.signer)) {
-                    throw new ValueException(ValueException.Values.phase, packet.phase.toString(), expectedPhase.toString());
-                }
-
-                return packet.message;
-            }
-
-            // Receive messages from a set of players, which may come in any order.
-            public Map<VerificationKey, Message> receiveFromMultiple(
-                    Set<VerificationKey> from,
-                    Phase expectedPhase,
-                    boolean blameInterrupt // Whether to stop if a blame message is received.
-            )
-                    throws TimeoutError, CryptographyError, FormatException,
-                    InvalidImplementationError, ValueException, InterruptedException, ProtocolException, BlameException {
-
-                // Collect the messages in here.
-                Map<VerificationKey, Message> broadcasts = new HashMap<>();
-
-                // Don't receive a message from myself.
-                from.remove(sk.VerificationKey());
-
-                while (from.size() > 0) {
-                    Packet packet = receiveNextPacket(expectedPhase);
-                    if (expectedPhase != Phase.Blame && packet.phase == Phase.Blame) {
-                        if (blameInterrupt) {
-                            throw new BlameException(packet.signer, packet);
-                        }
-                        continue;
-                    }
-                    VerificationKey sender = packet.signer;
-
-                    if(broadcasts.containsKey(sender)) {
-                        throw new ProtocolException();
-                    }
-                    broadcasts.put(sender, packet.message);
-                    from.remove(sender);
-                }
-
-                return broadcasts;
-            }
-
-            // When the blame phase it reached, there may be a lot of blame going around. This function
-            // waits to receive all blame messages until a timeout exception is caught, and then returns
-            // the list of blame messages, organized by player.
-            public Map<VerificationKey, List<Packet>> receiveAllBlame() throws InterruptedException, FormatException, ValueException {
-                Map<VerificationKey, List<Packet>> blame = new HashMap<>();
-                for (VerificationKey player : players.values()) {
-                    blame.put(player, new LinkedList<Packet>());
-                }
-
-                // First get the blame messages in history too.
-                for (Packet packet : history) {
-                    if (packet.phase == Phase.Blame) {
-                        blame.get(sk.VerificationKey()).add(packet);
-                    }
-                }
-
-                // Then receive any more blame messages until there are no more.
-                while(true) {
-                    try {
-                        Packet next = receiveNextPacket(Phase.Blame);
-                        blame.get(next.signer).add(next);
-                    } catch (TimeoutError e) {
-                        break;
-                    }
-                }
-
-                return blame;
-            }
-
             // A round is a single run of the protocol.
-            Round(Map<Integer, VerificationKey> players, Address change) throws InvalidParticipantSetException {
+            Round(Map<Integer, VerificationKey> players, Address change, Mailbox mailbox) throws InvalidParticipantSetException {
                 this.players = players;
                 this.change = change;
+                this.mailbox = mailbox;
 
                 int m = -1;
                 N = players.size();
@@ -928,7 +750,7 @@ final class CoinShuffle {
 
         // Run the protocol. This function manages retries and (nonmalicious) error cases.
         // The core loop is in the function protocolDefinition above.
-        ReturnState run() throws InvalidImplementationError, InterruptedException {
+        ReturnState run(Network network) throws InvalidImplementationError, InterruptedException {
 
             // Don't let the protocol be run more than once at a time.
             if (phase != Phase.Uninitiated) {
@@ -960,13 +782,16 @@ final class CoinShuffle {
                         }
                     }
 
+                    // Make an inbox for the next round.
+                    Mailbox mailbox = new Mailbox(session, sk, numberedPlayers.values(), network);
+
                     // Send an introductory message and make sure all players agree on who is in
                     // this round of the protocol.
                     // TODO
 
                     // Run the protocol.
                     try {
-                        blame = new Round(numberedPlayers, change).protocolDefinition();
+                        blame = new Round(numberedPlayers, change, mailbox).protocolDefinition();
                     } catch (TimeoutError e) {
                         // TODO We have to go into "suspect" mode at this point to determine why the timeout occurred.
                         log.warn("player " + sk.toString() + " received a time out: ", e);
@@ -1115,7 +940,7 @@ final class CoinShuffle {
     static void fillBlameMatrixCollectHistory(
             VerificationKey vk,
             VerificationKey from,
-            List<Packet> packets,
+            List<SignedPacket> packets,
             Matrix matrix,
             // The messages sent in the broadcast phase by the last player to all the other players.
             Map<VerificationKey, Packet> outputVectors,
@@ -1133,8 +958,9 @@ final class CoinShuffle {
         }
 
         // Collect all packets received in the appropriate place.
-        for (Packet received : packets) {
-            switch (received.phase) {
+        for (SignedPacket received : packets) {
+            Packet packet = received.packet;
+            switch (packet.phase) {
                 case BroadcastOutput:
                     if (outputVectors.containsKey(from)) {
                         // We should only ever receive one such message from each player.
@@ -1142,24 +968,24 @@ final class CoinShuffle {
                             matrix.put(vk, from, null /*TODO*/);
                         }
                     }
-                    outputVectors.put(from, received);
+                    outputVectors.put(from, packet);
                     break;
                 case Announcement:
-                    Map<VerificationKey, EncryptionKey> map = sentKeys.get(received.signer);
+                    Map<VerificationKey, EncryptionKey> map = sentKeys.get(packet.signer);
                     if (map == null) {
                         map = new HashMap<VerificationKey, EncryptionKey>();
-                        sentKeys.put(received.signer, map);
+                        sentKeys.put(packet.signer, map);
                     }
 
-                    EncryptionKey key = received.message.readEncryptionKey();
+                    EncryptionKey key = packet.message.readEncryptionKey();
                     map.put(from, key);
-                    receivedKeys.put(received.signer, key);
+                    receivedKeys.put(packet.signer, key);
                     break;
                 case Shuffling:
                     if (shuffleMessages.containsKey(from)) {
                         // TODO blame someone here.
                     }
-                    shuffleMessages.put(from, received.message);
+                    shuffleMessages.put(from, packet.message);
                     break;
                 default:
                     // TODO this case should never happen. It's not malicious but it's not allowed either.
@@ -1179,6 +1005,7 @@ final class CoinShuffle {
             Address change, // Change address. (can be null)
             int maxRetries, // maximum number of rounds this protocol can go through.,
             int minPlayers, // Minimum number of players allowed for the protocol to continue.
+            Network network, // The network that connects us to the other players.
             // If this is not null, the machine is put in this queue so that another thread can
             // query the phase as it runs.
             LinkedBlockingQueue<ShuffleMachine> queue
@@ -1186,25 +1013,26 @@ final class CoinShuffle {
         if (amount <= 0) {
             throw new IllegalArgumentException();
         }
+        if (session == null || sk == null || players == null || change == null || network == null) {
+            throw new NullPointerException();
+        }
         ShuffleMachine machine = new ShuffleMachine(session, amount, sk, players, change, maxRetries, minPlayers);
         if (queue != null) {
             queue.add(machine);
         }
-        return machine.run();
+        return machine.run(network);
     }
 
     public CoinShuffle(
             MessageFactory messages, // Object that knows how to create and copy messages.
             Crypto crypto, // Connects to the cryptography.
-            Coin coin, // Connects us to the Bitcoin or other cryptocurrency netork.
-            Network network // Connects us to the other shuffle players.
+            Coin coin // Connects us to the Bitcoin or other cryptocurrency netork.
     ) {
-        if (crypto == null || coin == null || messages == null || network == null) {
+        if (crypto == null || coin == null || messages == null) {
             throw new NullPointerException();
         }
         this.crypto = crypto;
         this.coin = coin;
         this.messages = messages;
-        this.network = network;
     }
 }

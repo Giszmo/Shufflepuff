@@ -5,6 +5,7 @@ import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.protocol.Packet;
+import com.shuffle.protocol.SignedPacket;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -20,7 +21,7 @@ public class Blame {
     final public Reason reason;
     final public VerificationKey accused; // Can be null if we don't know who to accuse yet.
     final public Transaction t;
-    final public List<Packet> packets;
+    final public List<SignedPacket> packets;
     final public DecryptionKey privateKey;
     final public Map<VerificationKey, Signature> invalid;
 
@@ -28,7 +29,7 @@ public class Blame {
           VerificationKey accused,
           Transaction t,
           DecryptionKey privateKey,
-          List<Packet> packets,
+          List<SignedPacket> packets,
           Map<VerificationKey, Signature> invalid) {
 
         if (reason == null) {
@@ -92,12 +93,12 @@ public class Blame {
     }
 
     public Blame copy() {
-        List<Packet> packets = null;
+        List<SignedPacket> packets = null;
 
         if (this.packets != null) {
             packets = new LinkedList<>();
 
-            for (Packet packet : this.packets) {
+            for (SignedPacket packet : this.packets) {
 
                 packets.add(packet.copy());
             }
@@ -132,7 +133,7 @@ public class Blame {
     }
 
     // Sent when something goes wrong in phase 4.
-    public static Blame EquivocationFailure(List<Packet> packets) {
+    public static Blame EquivocationFailure(List<SignedPacket> packets) {
         return new Blame(Reason.EquivocationFailure, null, null, null, packets, null);
     }
 
@@ -142,7 +143,7 @@ public class Blame {
     }
 
     // Sent when there is a failure in phase two and in the subsequent equivocation check.
-    public static Blame ShuffleAndEquivocationFailure(DecryptionKey privateKey, List<Packet> packets) {
+    public static Blame ShuffleAndEquivocationFailure(DecryptionKey privateKey, List<SignedPacket> packets) {
         return new Blame(Reason.ShuffleFailure, null, null, privateKey, packets, null);
     }
 }

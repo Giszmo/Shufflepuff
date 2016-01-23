@@ -1,6 +1,7 @@
 package com.shuffle.protocol;
 
 import com.shuffle.bitcoin.Address;
+import com.shuffle.bitcoin.CryptographyError;
 import com.shuffle.bitcoin.EncryptionKey;
 import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.Transaction;
@@ -300,13 +301,23 @@ public class MockMessage implements Message {
     }
 
     @Override
-    public Blame readBlame() throws FormatException {
+    public Blame readBlame() throws FormatException, CryptographyError {
         Atom atom = atoms.peek();
         if (atom == null || atom.blame == null) {
             throw new FormatException();
         }
 
-        return atoms.remove().blame;
+        Blame blame = atoms.remove().blame;
+
+        if (blame.packets != null) {
+            for (SignedPacket packet : blame.packets) {
+                if (!packet.verify()) {
+                    throw new CryptographyError();
+                }
+            }
+        }
+
+        return blame;
     }
 
     @Override

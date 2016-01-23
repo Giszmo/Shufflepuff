@@ -2,6 +2,7 @@ package com.shuffle.bitcoin;
 
 
 import com.shuffle.protocol.InvalidImplementationError;
+import com.shuffle.protocol.Packet;
 
 /**
  *
@@ -11,6 +12,7 @@ import com.shuffle.protocol.InvalidImplementationError;
  */
 public interface VerificationKey extends Comparable {
     boolean verify(Transaction t, Signature sig) throws InvalidImplementationError;
+    boolean verify(Packet packet, Signature sig);
     boolean equals(Object vk);
 
     // Get the cryptocurrency address corresponding to this public key.

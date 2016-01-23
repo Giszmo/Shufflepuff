@@ -7,113 +7,17 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.net.ProtocolException;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeMap;
-import java.util.TreeSet;
 
 /**
  * Tests for certain functions pertaining to network interactions.
  *
  * Created by Daniel Krawisz on 12/7/15.
  */
-public class TestNetworkOperations  {
-
-    public CoinShuffle.ShuffleMachine.Round net(
-            int seed,
-            MockSessionIdentifier session,
-            MockSigningKey sk,
-            Map<Integer, VerificationKey> players,
-            Phase phase,
-            MockMessageFactory messages,
-            Network network) throws InvalidParticipantSetException {
-        SortedSet<VerificationKey> playerSet = new TreeSet<>();
-        playerSet.addAll(players.values());
-        CoinShuffle.ShuffleMachine machine =
-                new CoinShuffle(messages, new MockCrypto(seed), new MockCoin(), network).new
-                    ShuffleMachine(session, 20l, sk, playerSet, null, 1, 2);
-        machine.phase = phase;
-        return machine.new Round(players, null);
-    }
-
-    static class playerSetTestCase {
-        int i; // Minimum number blockchain take.
-        int n; // Maximum number blockchain take.
-        int N; // Number of players.
-        int player; // Which player is us.
-        int[] expected; // Which keys should have been returned.
-
-        playerSetTestCase(int i, int n, int N, int player, int[] expected) {
-            this.i = i;
-            this.n = n;
-            this.N = N;
-            this.player = player;
-            this.expected = expected;
-        }
-
-        @Override
-        public String toString() {
-            return "player set test case {" + i + ", " + n + ", " + N + ", " + player + ", " + Arrays.toString(expected) + "}";
-        }
-    }
-
-    @Test
-    public void testPlayerSet() throws InvalidParticipantSetException {
-        playerSetTestCase tests[] =
-                new playerSetTestCase[]{
-                        new playerSetTestCase(
-                                1,5,1,1,
-                                new int[]{1}
-                        ),
-                        new playerSetTestCase(
-                                1,5,5,1,
-                                new int[]{1,2,3,4,5}
-                        ),
-                        new playerSetTestCase(
-                                1,3,5,1,
-                                new int[]{1,2,3}
-                        ),
-                        new playerSetTestCase(
-                                2,4,5,3,
-                                new int[]{2,3,4}
-                        ),
-                        new playerSetTestCase(
-                                -1,7,5,3,
-                                new int[]{1,2,3,4,5}
-                        ),
-                        new playerSetTestCase(
-                                4,7,5,1,
-                                new int[]{4,5}
-                        )
-                };
-
-        int i = 0;
-        for(playerSetTestCase test : tests) {
-            // make the set of players.
-            TreeMap<Integer, VerificationKey> players = new TreeMap<Integer, VerificationKey>();
-            for (int j = 1; j <= test.N; j ++) {
-                players.put(j, new MockVerificationKey(j));
-            }
-
-            Set<VerificationKey> result = null;
-                // Set up the network operations object.
-                CoinShuffle.ShuffleMachine.Round netop =
-                    net(234, new MockSessionIdentifier("testPlayerSet" + i), new MockSigningKey(test.player), players,
-                        Phase.Shuffling, new MockMessageFactory(), new MockNetwork());
-                result = netop.playerSet(test.i, test.n);
-
-            for (int expect : test.expected) {
-                Assert.assertTrue(String.format("Unable to remove expected player %d",expect),result.remove(new MockVerificationKey(expect)));
-            }
-
-            Assert.assertTrue("Not every expected player was removed.",result.isEmpty());
-            i++;
-        }
-    }
+public class TestMailbox {
 
     static class broadcastTestCase {
         int recipients;
@@ -136,24 +40,36 @@ public class TestNetworkOperations  {
                         new broadcastTestCase(4, 2),
                 };
 
+        int index = 0;
         for (broadcastTestCase test : tests) {
 
             // Create mock network object.
             MockNetwork network = new MockNetwork();
 
             // make the set of players.
-            TreeMap<Integer, VerificationKey> players = new TreeMap<Integer, VerificationKey>();
+            Set<VerificationKey> players = new HashSet<VerificationKey>();
             for (int i = 1; i <= test.recipients; i ++) {
-                players.put(i, new MockVerificationKey(i));
+                players.add(new MockVerificationKey(i));
             }
 
             MockMessageFactory messages = new MockMessageFactory();
 
-            // Set up the network operations object.
-                CoinShuffle.ShuffleMachine.Round netop =
-                        net(577, new MockSessionIdentifier("broadcastTest" + test.recipients), new MockSigningKey(1), players,
-                            Phase.Shuffling, messages, network);
-                netop.broadcast(messages.make());
+            MockSigningKey me = new MockSigningKey(test.sender);
+
+            new Mailbox(new MockSessionIdentifier("testBroadcast" + index), me, players, network).broadcast(messages.make(), Phase.Shuffling);
+
+            for (Map.Entry<SignedPacket, MockVerificationKey> sent : network.getResponses()) {
+                MockVerificationKey sentBy = sent.getValue();
+                Assert.assertTrue(players.contains(sentBy));
+                players.remove(sentBy);
+            }
+
+            Assert.assertEquals(1, players.size());
+
+            players.remove(me.VerificationKey());
+            Assert.assertEquals(0, players.size());
+
+            index++;
         }
     }
 
@@ -182,7 +98,7 @@ public class TestNetworkOperations  {
                 new sendToTestCase(1, 2, 2, true)
         };
 
-        int i = 0;
+        int index = 0;
         for (sendToTestCase test : tests) {
             // The player sending and inbox.
             MockSigningKey sk = new MockSigningKey(1);
@@ -191,21 +107,17 @@ public class TestNetworkOperations  {
             MockNetwork network = new MockNetwork();
 
             // make the set of players.
-            TreeMap<Integer, VerificationKey> players = new TreeMap<Integer, VerificationKey>();
+            Set<VerificationKey> players = new HashSet<VerificationKey>();
             for (int j = 1; j <= test.players; j ++) {
-                players.put(j, new MockVerificationKey(j));
+                players.add(new MockVerificationKey(j));
             }
 
             // Set up the shuffle machine (only used to query for the current phase).
-            MockMessageFactory message = new MockMessageFactory();
-            MockSessionIdentifier mockSessionIdentifier = new MockSessionIdentifier("testSend" + i);
+            MockSessionIdentifier mockSessionIdentifier = new MockSessionIdentifier("testSend" + index);
 
-            // Set up the network operations object.
-            CoinShuffle.ShuffleMachine.Round netop =
-                    net(8989, mockSessionIdentifier, sk, players,
-                            Phase.Shuffling, message, network);
-
-            netop.send(new Packet(
+            new Mailbox(
+                    mockSessionIdentifier, sk, players, network
+            ).send(new Packet(
                     new MockMessage(), mockSessionIdentifier,
                     Phase.Shuffling,
                     sk.VerificationKey(),
@@ -213,18 +125,18 @@ public class TestNetworkOperations  {
 
             int expected = (test.success ? 1 : 0);
 
-            Queue<Map.Entry<Packet, MockVerificationKey>> responses = network.getResponses();
+            Queue<Map.Entry<SignedPacket, MockVerificationKey>> responses = network.getResponses();
             Assert.assertEquals(
                     String.format(
                             "Recieved %d responses when only expected %d in test case %d",
-                            responses.size(), expected, i),
+                            responses.size(), expected, index),
                     (test.success ? 1 : 0),
                     responses.size());
 
             for (Map.Entry msg : responses) {
-                Assert.assertTrue("Received response does not equal expected",new MockVerificationKey(test.recipient).equals(msg.getValue()));
+                Assert.assertTrue("Received response does not equal expected", new MockVerificationKey(test.recipient).equals(msg.getValue()));
             }
-            i++;
+            index++;
         }
     }
 
@@ -253,7 +165,7 @@ public class TestNetworkOperations  {
                 // TODO
         };
 
-        int i = 0;
+        int index = 0;
         for (receiveFromTestCase test : tests) {
             // The player sending and inbox.
             MockSigningKey sk = new MockSigningKey(1);
@@ -262,20 +174,17 @@ public class TestNetworkOperations  {
             MockNetwork network = new MockNetwork();
 
             // make the set of players.
-            TreeMap<Integer, VerificationKey> players = new TreeMap<Integer, VerificationKey>();
+            Set<VerificationKey> players = new HashSet<VerificationKey>();
             for (int j = 1; j <= test.players.length; j ++) {
-                players.put(j, new MockVerificationKey(test.players[j - 1]));
+                players.add(new MockVerificationKey(test.players[j - 1]));
             }
 
-            MockSessionIdentifier mockSessionIdentifier = new MockSessionIdentifier("receiveFromTest" + i);
+            MockSessionIdentifier mockSessionIdentifier = new MockSessionIdentifier("receiveFromTest" + index);
 
-            // Set up the network operations object.
-            CoinShuffle.ShuffleMachine.Round netop =
-                    net(9341, mockSessionIdentifier, sk, players,
-                            Phase.Shuffling, new MockMessageFactory(), network);
-
-            netop.receiveFrom(new MockVerificationKey(test.requested), test.phase);
-            i++;
+            new Mailbox(
+                    mockSessionIdentifier, sk, players, network
+            ).receiveFrom(new MockVerificationKey(test.requested), test.phase);
+            index++;
         }
     }
 
@@ -336,50 +245,61 @@ public class TestNetworkOperations  {
             MockNetwork network = new MockNetwork();
 
             // make the set of players.
-            TreeMap<Integer, VerificationKey> players = new TreeMap<Integer, VerificationKey>();
+            Set<VerificationKey> players = new HashSet<VerificationKey>();
             for (int j = 1; j <= test.players; j ++) {
-                players.put(j, new MockVerificationKey(j));
+                players.add(new MockVerificationKey(j));
             }
 
             MockSessionIdentifier mockSessionIdentifier = new MockSessionIdentifier("receiveFromMultiple" + i);
 
             // Set up the network operations object.
-            CoinShuffle.ShuffleMachine.Round netop =
-                    net(475, mockSessionIdentifier, sk, players,
-                            Phase.Shuffling, new MockMessageFactory(), network);
+            Mailbox mailbox = new Mailbox(mockSessionIdentifier, sk, players, network);
 
             // Send the first set of messages.
             for (int from: test.sendBefore) {
-                network.deliver(new Packet(
-                        new MockMessage(),
-                        mockSessionIdentifier,
-                        Phase.BroadcastOutput,
-                        new MockVerificationKey(from),
-                        new MockVerificationKey(test.me)));
+                MockSigningKey sender = new MockSigningKey(from);
+
+                network.deliver(
+                        sender.makeSignedPacket(
+                            new Packet(
+                                new MockMessage(),
+                                mockSessionIdentifier,
+                                Phase.BroadcastOutput,
+                                sender.VerificationKey(),
+                                new MockVerificationKey(test.me))));
             }
 
-            // Receive a message from an earlier phase to make sure we flip through the first set of messages.
-            network.deliver(new Packet(
-                    new MockMessage(),
-                    mockSessionIdentifier,
-                    Phase.Shuffling,
-                    new MockVerificationKey(1),
-                    new MockVerificationKey(test.me)));
+            {
+                // Receive a message from an earlier phase to make sure we flip through the first set of messages.
+                MockSigningKey sender = new MockSigningKey(1);
+                network.deliver(
+                        sender.makeSignedPacket(
+                                new Packet(
+                                        new MockMessage(),
+                                        mockSessionIdentifier,
+                                        Phase.Shuffling,
+                                        sender.VerificationKey(),
+                                        new MockVerificationKey(test.me))));
+            }
 
             try {
-                netop.receiveFrom(new MockVerificationKey(1), Phase.Shuffling);
+                mailbox.receiveFrom(new MockVerificationKey(1), Phase.Shuffling);
             } catch (TimeoutError e) {
                 Assert.fail();
             }
 
             // Then send the second set of messages.
             for (int from: test.sendAfter) {
-                network.deliver(new Packet(
-                        new MockMessage(),
-                        mockSessionIdentifier,
-                        Phase.BroadcastOutput,
-                        new MockVerificationKey(from),
-                        new MockVerificationKey(test.me)));
+                MockSigningKey sender = new MockSigningKey(from);
+
+                network.deliver(
+                        sender.makeSignedPacket(
+                                new Packet(
+                                        new MockMessage(),
+                                        mockSessionIdentifier,
+                                        Phase.BroadcastOutput,
+                                        sender.VerificationKey(),
+                                        new MockVerificationKey(test.me))));
             }
 
             Set<VerificationKey> receiveFrom = new HashSet<>();
@@ -390,7 +310,7 @@ public class TestNetworkOperations  {
             // Now receive them all.
             Map<VerificationKey, Message> messages = null;
             try {
-                messages = netop.receiveFromMultiple(receiveFrom, Phase.BroadcastOutput, true);
+                messages = mailbox.receiveFromMultiple(receiveFrom, Phase.BroadcastOutput, true);
                 if (test.timeoutExpected) {
                     Assert.fail("Failed to throw TimeoutError in test case " + i);
                 }

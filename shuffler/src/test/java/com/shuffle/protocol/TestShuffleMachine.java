@@ -74,10 +74,13 @@ public class TestShuffleMachine {
     public class MutateTransactionSignature implements Simulator.MessageReplacement {
 
         @Override
-        public Packet replace(Packet packet) throws FormatException {
+        // TODO make entire new packet!!!
+        public SignedPacket replace(SignedPacket sigPacket) throws FormatException {
+            Packet packet = sigPacket.packet;
             if (packet.phase == Phase.VerificationAndSubmission) {
-                if (packet.message instanceof MockMessage) {
+                if (packet.message instanceof MockMessage && packet.signer instanceof MockVerificationKey) {
                     MockMessage mockMessage = (MockMessage)packet.message;
+                    MockVerificationKey mvk = (MockVerificationKey)packet.signer;
 
                     MockMessage.Atom atom = mockMessage.atoms.peek();
                     if (atom.sig instanceof MockSignature) {
@@ -87,13 +90,20 @@ public class TestShuffleMachine {
                             MockCoin.MockTransaction mt = (MockCoin.MockTransaction) mockSig.t;
                             MockCoin.MockTransaction nmt = mt.copy();
                             nmt.z = 2;
-                            mockSig.t = nmt;
+
+                            MockSignature newMockSig = new MockSignature(nmt, mockSig.key);
+
+                            Packet newPacket = new Packet(
+                                    new MockMessage().attach(new MockSignature(nmt, mockSig.key)),
+                                    packet.session, packet.phase, packet.signer, packet.recipient);
+
+                            return new SignedPacket(newPacket, new MockSignature(newPacket, mvk));
                         }
                     }
                 }
             }
 
-            return packet;
+            return sigPacket;
         }
     }
 

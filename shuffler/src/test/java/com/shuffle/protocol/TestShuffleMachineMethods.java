@@ -12,12 +12,15 @@ import org.apache.logging.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Set;
 import java.util.SortedSet;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 /**
@@ -27,6 +30,99 @@ import java.util.TreeSet;
  */
 public class TestShuffleMachineMethods {
     private static Logger log= LogManager.getLogger(TestShuffleMachineMethods.class);
+
+    public CoinShuffle.ShuffleMachine.Round net(
+            int seed,
+            MockSessionIdentifier session,
+            MockSigningKey sk,
+            Map<Integer, VerificationKey> players,
+            Phase phase,
+            MockMessageFactory messages,
+            Network network) throws InvalidParticipantSetException {
+        SortedSet<VerificationKey> playerSet = new TreeSet<>();
+        playerSet.addAll(players.values());
+        CoinShuffle.ShuffleMachine machine =
+                new CoinShuffle(messages, new MockCrypto(seed), new MockCoin()).new
+                        ShuffleMachine(session, 20l, sk, playerSet, null, 1, 2);
+        machine.phase = phase;
+        return machine.new Round(players, null, new Mailbox(session, sk, playerSet, network));
+    }
+
+    static class playerSetTestCase {
+        int i; // Minimum number blockchain take.
+        int n; // Maximum number blockchain take.
+        int N; // Number of players.
+        int player; // Which player is us.
+        int[] expected; // Which keys should have been returned.
+
+        playerSetTestCase(int i, int n, int N, int player, int[] expected) {
+            this.i = i;
+            this.n = n;
+            this.N = N;
+            this.player = player;
+            this.expected = expected;
+        }
+
+        @Override
+        public String toString() {
+            return "player set test case {" + i + ", " + n + ", " + N + ", " + player + ", " + Arrays.toString(expected) + "}";
+        }
+    }
+
+    @Test
+    public void testPlayerSet() throws InvalidParticipantSetException {
+        playerSetTestCase tests[] =
+                new playerSetTestCase[]{
+                        new playerSetTestCase(
+                                1,5,1,1,
+                                new int[]{1}
+                        ),
+                        new playerSetTestCase(
+                                1,5,5,1,
+                                new int[]{1,2,3,4,5}
+                        ),
+                        new playerSetTestCase(
+                                1,3,5,1,
+                                new int[]{1,2,3}
+                        ),
+                        new playerSetTestCase(
+                                2,4,5,3,
+                                new int[]{2,3,4}
+                        ),
+                        new playerSetTestCase(
+                                -1,7,5,3,
+                                new int[]{1,2,3,4,5}
+                        ),
+                        new playerSetTestCase(
+                                4,7,5,1,
+                                new int[]{4,5}
+                        )
+                };
+
+        int i = 0;
+        for(playerSetTestCase test : tests) {
+            // make the set of players.
+            TreeMap<Integer, VerificationKey> players = new TreeMap<Integer, VerificationKey>();
+            for (int j = 1; j <= test.N; j ++) {
+                players.put(j, new MockVerificationKey(j));
+            }
+
+            Set<VerificationKey> result = null;
+            // Set up the network operations object.
+            CoinShuffle.ShuffleMachine.Round netop =
+                    net(234, new MockSessionIdentifier("testPlayerSet" + i), new MockSigningKey(test.player), players,
+                            Phase.Shuffling, new MockMessageFactory(), new MockNetwork());
+            result = netop.playerSet(test.i, test.n);
+
+            for (int expect : test.expected) {
+                Assert.assertTrue(String.format("Unable to remove expected player %d",expect),result.remove(new MockVerificationKey(expect)));
+            }
+
+            Assert.assertTrue("Not every expected player was removed.",result.isEmpty());
+            i++;
+        }
+    }
+
     private class shuffleTestCase {
         int[] randomSequence;
         int[] input;
@@ -44,8 +140,7 @@ public class TestShuffleMachineMethods {
                 new MockMessageFactory(),
                 new MockCrypto(
                         new MockRandomSequence(rand)),
-                new MockCoin(),
-                new MockNetwork());
+                new MockCoin());
     }
 
     @Test
@@ -226,8 +321,7 @@ public class TestShuffleMachineMethods {
         return new CoinShuffle(
                 new MockMessageFactory(),
                 crypto,
-                new MockCoin(),
-                new MockNetwork()).new ShuffleMachine(
+                new MockCoin()).new ShuffleMachine(
                     session, 20l, sk, players, null, 0, 2);
     }
 
@@ -257,8 +351,9 @@ public class TestShuffleMachineMethods {
 
                 SessionIdentifier mockSessionIdentifier = new MockSessionIdentifier("testDecryptAll" + i);
                 SigningKey sk = new MockSigningKey(1);
+                Mailbox mailbox = new Mailbox(mockSessionIdentifier, sk, playerSet, new MockNetwork());
                 CoinShuffle.ShuffleMachine.Round round =
-                        standardTestInitialization(mockSessionIdentifier, sk, playerSet, crypto).new Round(players, null);
+                        standardTestInitialization(mockSessionIdentifier, sk, playerSet, crypto).new Round(players, null, mailbox);
 
                 Message result = round.decryptAll(new MockMessage().attach(input), dk, i + 1);
 
@@ -301,8 +396,9 @@ public class TestShuffleMachineMethods {
                 }
 
                 SigningKey sk = new MockSigningKey(1);
+                Mailbox mailbox = new Mailbox(mockSessionIdentifier, sk, playerSet, new MockNetwork());
                 CoinShuffle.ShuffleMachine.Round round =
-                        standardTestInitialization(mockSessionIdentifier, sk, playerSet, crypto).new Round(players, null);
+                        standardTestInitialization(mockSessionIdentifier, sk, playerSet, crypto).new Round(players, null, mailbox);
 
                 try {
                     round.decryptAll(new MockMessage().attach(input), dk, i);
@@ -342,8 +438,9 @@ public class TestShuffleMachineMethods {
 
                 SessionIdentifier mockSessionIdentifier = new MockSessionIdentifier("testReadNewAddresses" + i);
                 SigningKey sk = new MockSigningKey(1);
+                Mailbox mailbox = new Mailbox(mockSessionIdentifier, sk, playerSet, new MockNetwork());
                 CoinShuffle.ShuffleMachine.Round round =
-                        standardTestInitialization(mockSessionIdentifier, sk, playerSet, crypto).new Round(players, null);
+                        standardTestInitialization(mockSessionIdentifier, sk, playerSet, crypto).new Round(players, null, mailbox);
 
                 Queue<Address> result = round.readNewAddresses(new MockMessage().attach(input));
 
@@ -371,8 +468,9 @@ public class TestShuffleMachineMethods {
                 input.attach(new MockEncryptionKey(14));
                 SessionIdentifier mockSessionIdentifier = new MockSessionIdentifier("testReadNewAddressesfail" + i);
                 SigningKey sk = new MockSigningKey(1);
+                Mailbox mailbox = new Mailbox(mockSessionIdentifier, sk, playerSet, new MockNetwork());
                 CoinShuffle.ShuffleMachine.Round round =
-                        standardTestInitialization(mockSessionIdentifier, sk, playerSet, crypto).new Round(players, null);
+                        standardTestInitialization(mockSessionIdentifier, sk, playerSet, crypto).new Round(players, null, mailbox);
 
                 try {
                     round.readNewAddresses(new MockMessage().attach(input));

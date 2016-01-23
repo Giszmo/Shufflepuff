@@ -24,7 +24,20 @@ public class MockVerificationKey implements VerificationKey {
             throw new InvalidImplementationError();
         }
 
-        return (((MockSignature)sig).t.equals(t)) && (((MockSignature)sig).key.equals(this));
+        MockSignature mock = (MockSignature)sig;
+
+        return mock.t != null && mock.t.equals(t) && mock.key.equals(this);
+    }
+
+    @Override
+    public boolean verify(Packet packet, Signature sig) {
+        if (!(sig instanceof MockSignature)) {
+            throw new InvalidImplementationError();
+        }
+
+        MockSignature mock = (MockSignature)sig;
+
+        return mock.packet != null && mock.packet.equals(packet) && mock.key.equals(this);
     }
 
     @Override

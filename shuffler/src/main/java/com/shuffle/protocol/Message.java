@@ -1,6 +1,7 @@
 package com.shuffle.protocol;
 
 import com.shuffle.bitcoin.Address;
+import com.shuffle.bitcoin.CryptographyError;
 import com.shuffle.bitcoin.EncryptionKey;
 import com.shuffle.bitcoin.Signature;
 import com.shuffle.protocol.blame.Blame;
@@ -21,7 +22,7 @@ public interface Message {
     EncryptionKey readEncryptionKey() throws FormatException;
     Signature readSignature() throws FormatException;
     Address readAddress() throws FormatException;
-    Blame readBlame() throws FormatException;
+    Blame readBlame() throws FormatException, CryptographyError;
 
     Message copy() throws InvalidImplementationError;
 }

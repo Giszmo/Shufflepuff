@@ -7,12 +7,20 @@ import com.shuffle.bitcoin.Transaction;
  * Created by Daniel Krawisz on 12/9/15.
  */
 public class MockSignature implements Signature {
-    Transaction t;
-    MockVerificationKey key;
+    final Transaction t;
+    final Packet packet;
+    final MockVerificationKey key;
 
     MockSignature(Transaction t, MockVerificationKey key) {
         this.t = t;
         this.key = key;
+        this.packet = null;
+    }
+
+    MockSignature(Packet packet, MockVerificationKey key) {
+        this.packet = packet;
+        this.key = key;
+        this.t = null;
     }
 
     @Override

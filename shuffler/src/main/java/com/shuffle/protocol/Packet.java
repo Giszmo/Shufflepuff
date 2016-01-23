@@ -1,5 +1,6 @@
 package com.shuffle.protocol;
 
+import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.VerificationKey;
 
 /**
@@ -11,14 +12,14 @@ import com.shuffle.bitcoin.VerificationKey;
  */
 public class Packet {
 
-    Message message;
-    SessionIdentifier session;
-    Phase phase;
-    VerificationKey signer;
-    VerificationKey recipient;
+    final Message message;
+    final SessionIdentifier session;
+    final Phase phase;
+    final VerificationKey signer;
+    final VerificationKey recipient;
 
     public Packet(Message message, SessionIdentifier session, Phase phase, VerificationKey signer, VerificationKey recipient) {
-        if (session == null || phase == null || signer == null) {
+        if (session == null || phase == null || signer == null || recipient == null) {
             throw new NullPointerException();
         }
 
@@ -43,9 +44,9 @@ public class Packet {
     @Override
     public int hashCode() {
         int hash = message == null ? 0 : message.hashCode();
-        hash = hash * 15 + (session == null ? 0 : session.hashCode());
-        hash = hash * 15 + (signer == null ? 0 : signer.hashCode());
-        hash = hash * 15 + (recipient == null ? 0 : recipient.hashCode());
+        hash = hash * 15 + session.hashCode();
+        hash = hash * 15 + signer.hashCode();
+        hash = hash * 15 + recipient.hashCode();
         return hash;
     }
 

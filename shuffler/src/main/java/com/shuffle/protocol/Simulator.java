@@ -49,13 +49,13 @@ public final class Simulator {
 
     public interface MessageReplacement {
         // Replace a message with a malicious message.
-        Packet replace(Packet packet) throws FormatException;
+        SignedPacket replace(SignedPacket packet) throws FormatException;
     }
 
     // This implementation of Network connects each shuffle machine to the simulator.
     private class Network implements com.shuffle.protocol.Network {
         MessageReplacement malicious; // Can be used to replace messages with malicious ones.
-        final BlockingQueue<Packet> inbox = new LinkedBlockingQueue<>();
+        final BlockingQueue<SignedPacket> inbox = new LinkedBlockingQueue<>();
 
         Network() {
         }
@@ -76,8 +76,8 @@ public final class Simulator {
         }
 
         @Override
-        public void sendTo(VerificationKey to, Packet packet) throws InvalidImplementationError, TimeoutError {
-            Packet copy = packet.copy();
+        public void sendTo(VerificationKey to, SignedPacket packet) throws InvalidImplementationError, TimeoutError {
+            SignedPacket copy = packet.copy();
 
             // Replace with malicious packet if necessary.
             if (malicious != null) {
@@ -98,15 +98,15 @@ public final class Simulator {
         }
 
         @Override
-        public Packet receive() throws TimeoutError, InterruptedException {
-            Packet next = inbox.poll(1, TimeUnit.SECONDS);
+        public SignedPacket receive() throws TimeoutError, InterruptedException {
+            SignedPacket next = inbox.poll(1, TimeUnit.SECONDS);
             if (next == null) {
                 throw new TimeoutError();
             }
             return next;
         }
 
-        public void deliver(Packet packet) throws InterruptedException {
+        public void deliver(SignedPacket packet) throws InterruptedException {
             inbox.put(packet);
         }
     }
@@ -121,7 +121,7 @@ public final class Simulator {
         }
 
         @Override
-        public Packet replace(Packet packet) throws FormatException {
+        public SignedPacket replace(SignedPacket packet) throws FormatException {
             return rest.replace(first.replace(packet));
         }
     }
@@ -154,7 +154,7 @@ public final class Simulator {
             this.network = new Network();
             this.players = players;
             this.t = t;
-            shuffle = new CoinShuffle(messages, crypto, coin, network);
+            shuffle = new CoinShuffle(messages, crypto, coin);
             this.machine = shuffle.new ShuffleMachine(session, amount, sk, players, null, 1, 2);
         }
 
@@ -188,9 +188,10 @@ public final class Simulator {
             }
 
             @Override
-            public Packet replace(Packet packet) {
-                if (packet.phase == Phase.Announcement && others.contains(packet.recipient)) {
-                    Message message = packet.message;
+            public SignedPacket replace(SignedPacket packet) {
+                // TODO: must make a new packet or the signature verifciation won't work.
+                if (packet.packet.phase == Phase.Announcement && others.contains(packet.packet.recipient)) {
+                    Message message = packet.packet.message;
 
                     // Sometimes a change address is included with message 1.
                     Address change = null;
@@ -238,18 +239,19 @@ public final class Simulator {
             }
 
             @Override
-            public Packet replace(Packet packet) {
-                if (packet.phase == Phase.BroadcastOutput && others.contains(packet.recipient)) {
+            public SignedPacket replace(SignedPacket packet) {
+                if (packet.packet.phase == Phase.BroadcastOutput && others.contains(packet.packet.recipient)) {
                     if (alternate == null) {
                         // Reshuffle the packet we just got.
                         try {
-                            alternate = shuffle.shuffle(packet.message);
+                            alternate = shuffle.shuffle(packet.packet.message);
                         } catch (FormatException e) {
                             e.printStackTrace();
                         }
                     }
 
-                    packet.message = alternate;
+                    Packet newPacket = new Packet(alternate, packet.packet.session, packet.packet.phase, packet.packet.signer, packet.packet.recipient);
+                    return new SignedPacket(newPacket, sk.makeSignature(newPacket));
                 }
 
                 return packet;
@@ -265,11 +267,12 @@ public final class Simulator {
             }
 
             @Override
-            public Packet replace(Packet packet) throws FormatException {
-                if (packet.phase == Phase.Shuffling) {
+            // TODO make a whole new packet.
+            public SignedPacket replace(SignedPacket packet) throws FormatException {
+                if (packet.packet.phase == Phase.Shuffling) {
                     // drop a random address from the packet.
                     List<Address> addresses = new LinkedList<>();
-                    Message message = packet.message;
+                    Message message = packet.packet.message;
 
                     while (!message.isEmpty()) {
                         addresses.add(message.readAddress());
@@ -298,11 +301,12 @@ public final class Simulator {
             public DropAddressReplaceDuplicate() {}
 
             @Override
-            public Packet replace(Packet packet) throws FormatException {
-                if (packet.phase == Phase.Shuffling) {
+            // TODO make a whole new packet.
+            public SignedPacket replace(SignedPacket packet) throws FormatException {
+                if (packet.packet.phase == Phase.Shuffling) {
                     // drop a random address from the packet.
                     List<Address> addresses = new LinkedList<>();
-                    Message message = packet.message;
+                    Message message = packet.packet.message;
 
                     while (!message.isEmpty()) {
                         addresses.add(message.readAddress());
@@ -333,11 +337,12 @@ public final class Simulator {
             }
 
             @Override
-            public Packet replace(Packet packet) throws FormatException {
-                if (packet.phase == Phase.Shuffling) {
+            // TODO same
+            public SignedPacket replace(SignedPacket packet) throws FormatException {
+                if (packet.packet.phase == Phase.Shuffling) {
                     // drop a random address from the packet.
                     List<Address> addresses = new LinkedList<>();
-                    Message message = packet.message;
+                    Message message = packet.packet.message;
 
                     while (!message.isEmpty()) {
                         addresses.add(message.readAddress());
@@ -362,7 +367,7 @@ public final class Simulator {
 
         public ReturnState turnOn() throws InvalidImplementationError {
             try {
-                return machine.run();
+                return machine.run(network);
             } catch (InterruptedException e) {
                 return new ReturnState(false, session, machine.currentPhase(), e, null);
             }
@@ -372,9 +377,9 @@ public final class Simulator {
             return machine.currentPhase();
         }
 
-        public void deliver(Packet packet) throws InterruptedException {
+        public void deliver(SignedPacket packet) throws InterruptedException {
             // Part way through the protocol, send the malicious bitcoin transaction. 
-            if (packet.phase == Phase.EquivocationCheck && !transactionSent && t != null) {
+            if (packet.packet.phase == Phase.EquivocationCheck && !transactionSent && t != null) {
                 t.send();
                 transactionSent = true;
             }
@@ -400,7 +405,7 @@ public final class Simulator {
             q = new LinkedBlockingQueue<>();
         }
 
-        public void deliver(Packet packet) throws InvalidImplementationError, InterruptedException {
+        public void deliver(SignedPacket packet) throws InvalidImplementationError, InterruptedException {
             machine.deliver(packet);
         }
 
@@ -480,7 +485,7 @@ public final class Simulator {
         }
     }
 
-    public void sendTo(VerificationKey to, Packet packet) throws InvalidImplementationError, InterruptedException {
+    public void sendTo(VerificationKey to, SignedPacket packet) throws InvalidImplementationError, InterruptedException {
         machines.get(to).deliver(packet);
     }
 

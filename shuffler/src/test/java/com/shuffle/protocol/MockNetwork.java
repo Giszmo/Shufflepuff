@@ -7,20 +7,22 @@ import java.util.Map;
 import java.util.Queue;
 
 /**
+ * Mock implementation of the Network interface for testing purposes.
+ *
  * Created by Daniel Krawisz on 12/5/15.
  */
 public class MockNetwork implements Network {
-    public static class SentMessage implements Map.Entry<Packet, MockVerificationKey> {
-        Packet packet;
+    public static class SentMessage implements Map.Entry<SignedPacket, MockVerificationKey> {
+        SignedPacket packet;
         MockVerificationKey to;
 
-        public SentMessage(Packet packet, MockVerificationKey to) {
+        public SentMessage(SignedPacket packet, MockVerificationKey to) {
             this.to = to;
             this.packet = packet;
         }
 
         @Override
-        public Packet getKey() {
+        public SignedPacket getKey() {
             return packet;
         }
 
@@ -54,25 +56,25 @@ public class MockNetwork implements Network {
         }
     }
 
-    Queue<Map.Entry<Packet, MockVerificationKey>> responses;
-    Queue<Packet> sent;
+    Queue<Map.Entry<SignedPacket, MockVerificationKey>> responses;
+    Queue<SignedPacket> sent;
 
     MockNetwork() {
         this.sent = new LinkedList<>();
         this.responses = new LinkedList<>();
     }
 
-    MockNetwork(Queue<Packet> sent) {
+    MockNetwork(Queue<SignedPacket> sent) {
         this.sent = sent;
         this.responses = new LinkedList<>();
     }
 
-    Queue<Map.Entry<Packet, MockVerificationKey>> getResponses() {
+    Queue<Map.Entry<SignedPacket, MockVerificationKey>> getResponses() {
         return responses;
     }
 
     @Override
-    public void sendTo(VerificationKey to, Packet packet) throws InvalidImplementationError {
+    public void sendTo(VerificationKey to, SignedPacket packet) throws InvalidImplementationError {
         if (!(to instanceof MockVerificationKey)) {
             throw new InvalidImplementationError();
         }
@@ -83,7 +85,7 @@ public class MockNetwork implements Network {
     }
 
     @Override
-    public Packet receive() throws TimeoutError {
+    public SignedPacket receive() throws TimeoutError {
         if (sent.size() == 0) {
             throw new TimeoutError();
         }
@@ -91,7 +93,7 @@ public class MockNetwork implements Network {
         return sent.remove();
     }
 
-    public void deliver(Packet packet) {
+    public void deliver(SignedPacket packet) {
         sent.add(packet);
     }
 }
