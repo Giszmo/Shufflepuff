@@ -7,6 +7,9 @@ import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.protocol.blame.Blame;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Queue;
@@ -15,6 +18,7 @@ import java.util.Queue;
  * Created by Daniel Krawisz on 12/19/15.
  */
 public class MockMessage implements Message {
+    private static Logger log = LogManager.getLogger(TestShuffleMachine.class);
 
     public static class Hash {
         public Queue<Atom> hashed;
@@ -312,6 +316,7 @@ public class MockMessage implements Message {
         if (blame.packets != null) {
             for (SignedPacket packet : blame.packets) {
                 if (!packet.verify()) {
+                    log.warn("packet failed verification: " + packet.toString());
                     throw new CryptographyError();
                 }
             }

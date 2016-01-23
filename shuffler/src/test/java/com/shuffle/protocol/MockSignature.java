@@ -24,6 +24,17 @@ public class MockSignature implements Signature {
     }
 
     @Override
+    public Signature copy() {
+        if (packet != null) {
+            return new MockSignature(packet.copy(), key);
+        }
+        if (t != null) {
+            return new MockSignature(t, key);
+        }
+        return null;
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (!(o instanceof MockSignature)) {
             return false;
@@ -35,5 +46,16 @@ public class MockSignature implements Signature {
     @Override
     public int hashCode() {
         return key.hashCode();
+    }
+
+    @Override
+    public String toString() {
+        if (packet != null) {
+            return "signature[" + packet.toString() + ", " + key.toString() + "]";
+        }
+        if (t != null) {
+            return "signature[" + t.toString() + ", " + key.toString() + "]";
+        }
+        return "signature[" + key.toString() + "]";
     }
 }

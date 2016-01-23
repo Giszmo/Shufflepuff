@@ -381,7 +381,7 @@ public class TestShuffleMachine {
 
         log.info("Running equivocation test.");
 
-        TestCase test = new TestCase(session, amount, "Announcement phase equivocation spending test case.", caseNo);
+        TestCase test = new TestCase(session, amount, "Announcement phase equivocation test case.", caseNo);
         LinkedHashMap<SigningKey, ReturnState> results = init.run();
         Set<SigningKey> malicious = new HashSet<>();
 
@@ -462,15 +462,20 @@ public class TestShuffleMachine {
         for (SigningKey i : results.keySet()) {
             Matrix bm;
 
-            index++;
-            if(index == numPlayers) {
+            if(i.equals(malicious)) {
                 bm = anyMatrix;
             } else {
                 bm = new Matrix();
 
                 for (SigningKey j : results.keySet()) {
-                    bm.put(j.VerificationKey(), malicious.VerificationKey(),
+                    for (SigningKey k : results.keySet()) {
+                        if (j.equals(malicious)) {
+                            bm.put(j.VerificationKey(), k.VerificationKey(), anyReason);
+                        } else if (k.equals(malicious)){
+                            bm.put(j.VerificationKey(), k.VerificationKey(),
                                     new Evidence(Reason.EquivocationFailure, true));
+                        }
+                    }
                 }
             }
 
@@ -600,19 +605,6 @@ public class TestShuffleMachine {
     }
 
     @Test
-    public void testTransactionDisagreement() {
-        MockCrypto crypto = new MockCrypto(99999);
-        Simulator sim = new Simulator(new MockMessageFactory(), crypto);
-        int caseNo = 0;
-
-        // Player generates a different transaction signature to everyone else.
-        DifferentTransactionSignature(caseNo++, 2,  new int[]{2}, sim).check();
-        DifferentTransactionSignature(caseNo++, 5,  new int[]{2}, sim).check();
-        DifferentTransactionSignature(caseNo++, 5,  new int[]{2, 3}, sim).check();
-        DifferentTransactionSignature(caseNo,   10, new int[]{2, 5, 6, 7}, sim).check();
-    }
-
-    @Test
     public void testEquivocationAnnounce() {
         MockCrypto crypto = new MockCrypto(87);
         Simulator sim = new Simulator(new MockMessageFactory(), crypto);
@@ -629,11 +621,24 @@ public class TestShuffleMachine {
                 new Equivocation[]{
                         new Equivocation(5, new int[]{1, 10}),
                         new Equivocation(7, new int[]{2, 8})}, sim).check();
-        EquivocateAnnouncement(caseNo++, 10,
+        EquivocateAnnouncement(caseNo, 10,
                 new Equivocation[]{
                         new Equivocation(2, new int[]{3}),
                         new Equivocation(4, new int[]{5, 6}),
                         new Equivocation(8, new int[]{9})}, sim).check();
+    }
+
+    @Test
+    public void testTransactionDisagreement() {
+        MockCrypto crypto = new MockCrypto(99999);
+        Simulator sim = new Simulator(new MockMessageFactory(), crypto);
+        int caseNo = 0;
+
+        // Player generates a different transaction signature to everyone else.
+        DifferentTransactionSignature(caseNo++, 2, new int[]{2}, sim).check();
+        DifferentTransactionSignature(caseNo++, 5, new int[]{2}, sim).check();
+        DifferentTransactionSignature(caseNo++, 5, new int[]{2, 3}, sim).check();
+        DifferentTransactionSignature(caseNo, 10, new int[]{2, 5, 6, 7}, sim).check();
     }
 
     @Test
@@ -666,6 +671,11 @@ public class TestShuffleMachine {
 
         // A player lies about the equivocation check.
         // A player claims something went wrong in phase 2 when it didn't.
+    }
+
+    @Test
+    public void testInvalidSignature() {
+        // Test that a player is excluded for making an invalid signature.
     }
 
     @Test

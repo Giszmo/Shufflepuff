@@ -24,6 +24,11 @@ public class SignedPacket {
     }
 
     public SignedPacket copy() {
-        return new SignedPacket(packet.copy(), signature);
+        return new SignedPacket(packet.copy(), signature.copy());
+    }
+
+    @Override
+    public String toString() {
+        return packet.toString() + "[" + signature.toString() + "]";
     }
 }

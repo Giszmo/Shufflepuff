@@ -188,10 +188,11 @@ public final class Simulator {
             }
 
             @Override
-            public SignedPacket replace(SignedPacket packet) {
-                // TODO: must make a new packet or the signature verifciation won't work.
-                if (packet.packet.phase == Phase.Announcement && others.contains(packet.packet.recipient)) {
-                    Message message = packet.packet.message;
+            public SignedPacket replace(SignedPacket sigPacket) {
+                Packet packet = sigPacket.packet;
+
+                if (packet.phase == Phase.Announcement && others.contains(packet.recipient)) {
+                    Message message = packet.message.copy();
 
                     // Sometimes a change address is included with message 1.
                     Address change = null;
@@ -209,9 +210,12 @@ public final class Simulator {
                     if (change != null) {
                         message.attach(change);
                     }
+
+                    Packet newPacket = new Packet(message, packet.session, packet.phase, packet.signer, packet.recipient);
+                    return new SignedPacket(newPacket, sk.makeSignature(newPacket));
                 }
 
-                return packet;
+                return sigPacket;
             }
         }
 
@@ -267,12 +271,13 @@ public final class Simulator {
             }
 
             @Override
-            // TODO make a whole new packet.
-            public SignedPacket replace(SignedPacket packet) throws FormatException {
-                if (packet.packet.phase == Phase.Shuffling) {
+            public SignedPacket replace(SignedPacket sigPacket) throws FormatException {
+                Packet packet = sigPacket.packet;
+
+                if (packet.phase == Phase.Shuffling) {
                     // drop a random address from the packet.
                     List<Address> addresses = new LinkedList<>();
-                    Message message = packet.packet.message;
+                    Message message = packet.message.copy();
 
                     while (!message.isEmpty()) {
                         addresses.add(message.readAddress());
@@ -284,8 +289,11 @@ public final class Simulator {
                             message.attach(address);
                         }
                     }
+
+                    Packet newPacket = new Packet(message, packet.session, packet.phase, packet.signer, packet.recipient);
+                    return new SignedPacket(newPacket, sk.makeSignature(newPacket));
                 }
-                return packet;
+                return sigPacket;
             }
         }
 
@@ -298,15 +306,15 @@ public final class Simulator {
                 this.drop = drop;
                 this.duplicate = duplicate;
             }
-            public DropAddressReplaceDuplicate() {}
 
             @Override
-            // TODO make a whole new packet.
-            public SignedPacket replace(SignedPacket packet) throws FormatException {
-                if (packet.packet.phase == Phase.Shuffling) {
+            public SignedPacket replace(SignedPacket sigPacket) throws FormatException {
+                Packet packet = sigPacket.packet;
+
+                if (packet.phase == Phase.Shuffling) {
                     // drop a random address from the packet.
                     List<Address> addresses = new LinkedList<>();
-                    Message message = packet.packet.message;
+                    Message message = packet.message.copy();
 
                     while (!message.isEmpty()) {
                         addresses.add(message.readAddress());
@@ -321,8 +329,11 @@ public final class Simulator {
                             message.attach(duplicate);
                         }
                     }
+
+                    Packet newPacket = new Packet(message, packet.session, packet.phase, packet.signer, packet.recipient);
+                    return new SignedPacket(newPacket, sk.makeSignature(newPacket));
                 }
-                return packet;
+                return sigPacket;
             }
         }
 
@@ -337,12 +348,12 @@ public final class Simulator {
             }
 
             @Override
-            // TODO same
-            public SignedPacket replace(SignedPacket packet) throws FormatException {
-                if (packet.packet.phase == Phase.Shuffling) {
+            public SignedPacket replace(SignedPacket sigPacket) throws FormatException {
+                Packet packet = sigPacket.packet;
+                if (packet.phase == Phase.Shuffling) {
                     // drop a random address from the packet.
                     List<Address> addresses = new LinkedList<>();
-                    Message message = packet.packet.message;
+                    Message message = packet.message.copy();
 
                     while (!message.isEmpty()) {
                         addresses.add(message.readAddress());
@@ -356,8 +367,11 @@ public final class Simulator {
                             message.attach(alternate);
                         }
                     }
+
+                    Packet newPacket = new Packet(message, packet.session, packet.phase, packet.signer, packet.recipient);
+                    return new SignedPacket(newPacket, sk.makeSignature(newPacket));
                 }
-                return packet;
+                return sigPacket;
             }
         }
 
