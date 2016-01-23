@@ -9,7 +9,7 @@ import com.shuffle.protocol.SignedPacket;
  *
  * Created by Daniel Krawisz on 12/3/15.
  */
-public abstract class SigningKey {
+public abstract class SigningKey implements Comparable {
     public abstract VerificationKey VerificationKey() throws CryptographyError;
     public abstract Signature makeSignature(Transaction t) throws CryptographyError;
     public abstract Signature makeSignature(Packet p) throws CryptographyError;

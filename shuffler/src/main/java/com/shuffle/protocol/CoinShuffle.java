@@ -964,7 +964,7 @@ final class CoinShuffle {
                 case BroadcastOutput:
                     if (outputVectors.containsKey(from)) {
                         // We should only ever receive one such message from each player.
-                        if (outputVectors.containsKey(from) && !outputVectors.get(from).equals(received)) {
+                        if (outputVectors.containsKey(from) && !outputVectors.get(from).equals(received.packet)) {
                             matrix.put(vk, from, null /*TODO*/);
                         }
                     }

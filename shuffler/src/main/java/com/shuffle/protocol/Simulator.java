@@ -14,7 +14,6 @@ import org.apache.logging.log4j.Logger;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -508,7 +507,7 @@ public final class Simulator {
         this.crypto = crypto;
     }
 
-    private synchronized LinkedHashMap<SigningKey, ReturnState> runSimulation(
+    private synchronized Map<SigningKey, ReturnState> runSimulation(
             long amount,
             List<Adversary> init)  {
         if (init == null ) throw new NullPointerException();
@@ -528,7 +527,7 @@ public final class Simulator {
 
         //Timer timer = new Timer();
         List<Future<Map.Entry<SigningKey, ReturnState>>> wait = new LinkedList<>();
-        LinkedHashMap<SigningKey, ReturnState> results = new LinkedHashMap<>();
+        Map<SigningKey, ReturnState> results = new HashMap<>();
 
         // First run all the machines.
         for (BlackBox machine : machines.values()) {
@@ -712,7 +711,7 @@ public final class Simulator {
             return this;
         }
 
-        public LinkedHashMap<SigningKey, ReturnState> run() {
+        public Map<SigningKey, ReturnState> run() {
             List<Adversary> adversaries = new LinkedList<>();
             Map<Player, SigningKey> keys = new HashMap<>();
 
@@ -737,7 +736,7 @@ public final class Simulator {
         return new InitialState(session, amount);
     }
 
-    public LinkedHashMap<SigningKey, ReturnState> successfulRun(
+    public Map<SigningKey, ReturnState> successfulRun(
             SessionIdentifier session,
             int numPlayers,
             long amount,
@@ -753,7 +752,7 @@ public final class Simulator {
         return init.run();
     }
 
-    public LinkedHashMap<SigningKey, ReturnState> insufficientFundsRun(
+    public Map<SigningKey, ReturnState> insufficientFundsRun(
             SessionIdentifier session,
             int numPlayers,
             int[] deadbeats, // Players who put no money in their address. 
@@ -786,7 +785,7 @@ public final class Simulator {
         return init.run();
     }
 
-    public LinkedHashMap<SigningKey, ReturnState> doubleSpendingRun(
+    public Map<SigningKey, ReturnState> doubleSpendingRun(
             SessionIdentifier session,
             Set<MockCoin> coinNets,
             List<MockCoin> coinNetList,
@@ -810,7 +809,7 @@ public final class Simulator {
         return init.run();
     }
 
-    public LinkedHashMap<SigningKey, ReturnState> runWithReplacements(
+    public Map<SigningKey, ReturnState> runWithReplacements(
             SessionIdentifier session,
             int numPlayers,
             long amount,
