@@ -4,4 +4,4 @@
 /.idea
 /.gradle
 /shuffler/build
-/logs
+**/logs
