@@ -8,6 +8,8 @@ import com.shuffle.bitcoin.EncryptionKey;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
+import com.sun.org.apache.xml.internal.security.Init;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -188,7 +190,7 @@ public final class Simulator {
 
             @Override
             public SignedPacket replace(SignedPacket sigPacket) {
-                Packet packet = sigPacket.packet;
+                Packet packet = sigPacket.payload;
 
                 if (packet.phase == Phase.Announcement && others.contains(packet.recipient)) {
                     Message message = packet.message.copy();
@@ -243,17 +245,17 @@ public final class Simulator {
 
             @Override
             public SignedPacket replace(SignedPacket packet) {
-                if (packet.packet.phase == Phase.BroadcastOutput && others.contains(packet.packet.recipient)) {
+                if (packet.payload.phase == Phase.BroadcastOutput && others.contains(packet.payload.recipient)) {
                     if (alternate == null) {
                         // Reshuffle the packet we just got.
                         try {
-                            alternate = shuffle.shuffle(packet.packet.message);
+                            alternate = shuffle.shuffle(packet.payload.message);
                         } catch (FormatException e) {
                             e.printStackTrace();
                         }
                     }
 
-                    Packet newPacket = new Packet(alternate, packet.packet.session, packet.packet.phase, packet.packet.signer, packet.packet.recipient);
+                    Packet newPacket = new Packet(alternate, packet.payload.session, packet.payload.phase, packet.payload.signer, packet.payload.recipient);
                     return new SignedPacket(newPacket, sk.makeSignature(newPacket));
                 }
 
@@ -271,7 +273,7 @@ public final class Simulator {
 
             @Override
             public SignedPacket replace(SignedPacket sigPacket) throws FormatException {
-                Packet packet = sigPacket.packet;
+                Packet packet = sigPacket.payload;
 
                 if (packet.phase == Phase.Shuffling) {
                     // drop a random address from the packet.
@@ -308,7 +310,7 @@ public final class Simulator {
 
             @Override
             public SignedPacket replace(SignedPacket sigPacket) throws FormatException {
-                Packet packet = sigPacket.packet;
+                Packet packet = sigPacket.payload;
 
                 if (packet.phase == Phase.Shuffling) {
                     // drop a random address from the packet.
@@ -348,7 +350,7 @@ public final class Simulator {
 
             @Override
             public SignedPacket replace(SignedPacket sigPacket) throws FormatException {
-                Packet packet = sigPacket.packet;
+                Packet packet = sigPacket.payload;
                 if (packet.phase == Phase.Shuffling) {
                     // drop a random address from the packet.
                     List<Address> addresses = new LinkedList<>();
@@ -392,7 +394,7 @@ public final class Simulator {
 
         public void deliver(SignedPacket packet) throws InterruptedException {
             // Part way through the protocol, send the malicious bitcoin transaction. 
-            if (packet.packet.phase == Phase.EquivocationCheck && !transactionSent && t != null) {
+            if (packet.payload.phase == Phase.EquivocationCheck && !transactionSent && t != null) {
                 t.send();
                 transactionSent = true;
             }
@@ -562,6 +564,7 @@ public final class Simulator {
         private final long amount;
         private final Deque<Player> players = new LinkedList<>();
         private MockCoin defaultCoin = null;
+        private List<MockCoin> coins;
 
         private class Player {
             long initialAmount = 0;
@@ -592,6 +595,14 @@ public final class Simulator {
                     return null;
                 }
 
+                List<MockCoin> coins;
+                if (InitialState.this.coins != null) {
+                    coins = InitialState.this.coins;
+                } else {
+                    coins = new LinkedList<>();
+                    coins.add(newcoin);
+                }
+
                 SortedSet<VerificationKey> identities = new TreeSet<>();
 
                 for (SigningKey key : keys.values()) {
@@ -605,15 +616,20 @@ public final class Simulator {
                 // Set up the player's initial funds.
                 if (initialAmount > 0) {
                     Address previousAddress = crypto.makeSigningKey().VerificationKey().address();
-                    newcoin.put(previousAddress, initialAmount);
-                    newcoin.spend(previousAddress, address, initialAmount).send();
 
-                    // Plot twist! We spend it all!
-                    if (spend > 0) {
-                        newcoin.spend(address, crypto.makeSigningKey().VerificationKey().address(), spend).send();
-                    } else if(doubleSpend > 0) {
+                    for (MockCoin coin : coins) {
+                        coin.put(previousAddress, initialAmount);
+                        coin.spend(previousAddress, address, initialAmount).send();
+
+                        // Plot twist! We spend it all!
+                        if (spend > 0) {
+                            coin.spend(address, crypto.makeSigningKey().VerificationKey().address(), spend).send();
+                        }
+                    }
+
+                    if (doubleSpend > 0) {
                         // is he going to double spend? If so, make a new transaction for him.
-                        doubleSpendTrans = coin.spend(address, crypto.makeSigningKey().VerificationKey().address(), doubleSpend);
+                        doubleSpendTrans = newcoin.spend(address, crypto.makeSigningKey().VerificationKey().address(), doubleSpend);
                     }
                 }
 
@@ -647,6 +663,11 @@ public final class Simulator {
 
         public InitialState defaultCoin(MockCoin coin) {
             defaultCoin = coin;
+            return this;
+        }
+
+        public InitialState coins(List<MockCoin> coins) {
+            this.coins = coins;
             return this;
         }
 

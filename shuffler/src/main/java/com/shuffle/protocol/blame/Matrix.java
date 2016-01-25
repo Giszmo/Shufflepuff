@@ -24,8 +24,9 @@ public class Matrix {
     Map<VerificationKey, Map<VerificationKey, Evidence>> blame = new HashMap<>();
 
     public void put(VerificationKey accuser, VerificationKey accused, Evidence evidence) {
-        if(evidence != null) {
+        if(evidence == null) {
             log.warn("null blame evidence given for " + accuser.toString() + " to " + accused.toString());
+            new NullPointerException().printStackTrace();
         }
 
         Map<VerificationKey, Evidence> blames = blame.get(accuser);

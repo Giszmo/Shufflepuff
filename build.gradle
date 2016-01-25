@@ -26,3 +26,4 @@ task clean(type: Delete) {
 task wrapper(type: Wrapper) {
     gradleVersion = '2.10'
 }
+

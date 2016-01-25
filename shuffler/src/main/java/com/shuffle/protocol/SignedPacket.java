@@ -8,27 +8,27 @@ import com.shuffle.bitcoin.Signature;
  * Created by Daniel Krawisz on 1/22/16.
  */
 public class SignedPacket {
-    public final Packet packet;
+    public final Packet payload;
     public final Signature signature;
 
-    public SignedPacket(Packet packet, Signature signature) {
-        if (packet == null || signature == null) {
+    public SignedPacket(Packet payload, Signature signature) {
+        if (payload == null || signature == null) {
             throw new NullPointerException();
         }
-        this.packet = packet;
+        this.payload = payload;
         this.signature = signature;
     }
 
     public boolean verify() {
-        return packet.signer.verify(packet, signature);
+        return payload.signer.verify(payload, signature);
     }
 
     public SignedPacket copy() {
-        return new SignedPacket(packet.copy(), signature.copy());
+        return new SignedPacket(payload.copy(), signature.copy());
     }
 
     @Override
     public String toString() {
-        return packet.toString() + "[" + signature.toString() + "]";
+        return payload.toString() + "[" + signature.toString() + "]";
     }
 }

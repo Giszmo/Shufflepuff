@@ -15,7 +15,6 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -77,7 +76,7 @@ public class TestShuffleMachine {
 
         @Override
         public SignedPacket replace(SignedPacket sigPacket) throws FormatException {
-            Packet packet = sigPacket.packet;
+            Packet packet = sigPacket.payload;
             if (packet.phase == Phase.VerificationAndSubmission) {
                 if (packet.message instanceof MockMessage && packet.signer instanceof MockVerificationKey) {
                     MockMessage mockMessage = (MockMessage)packet.message;
@@ -172,6 +171,8 @@ public class TestShuffleMachine {
             }
 
             log.info("Checking test case: " + (description != null ? " " + description + "; " : "") + "case number = " + id);
+            log.info("expected " + expected.toString());
+            log.info("results  " + results.toString());
 
             // Check that the map of error states returned matches that which was expected.
             for (Map.Entry<SigningKey, ReturnState> ex : expected.entrySet()) {
@@ -385,7 +386,7 @@ public class TestShuffleMachine {
             }
         }
 
-        log.info("Running equivocation test.");
+        log.info("Announcement equivocation test case: " + Arrays.toString(equivocators));
 
         TestCase test = new TestCase(session, amount, "Announcement phase equivocation test case.", caseNo);
         Map<SigningKey, ReturnState> results = init.run();
@@ -420,7 +421,7 @@ public class TestShuffleMachine {
                     for (SigningKey k : results.keySet()) {
                         if (malicious.contains(j)) {
                             bm.put(j.VerificationKey(), k.VerificationKey(), anyReason);
-                        } else if (malicious.contains(k)) {
+                        } else if (j.equals(i) && malicious.contains(k)) {
                             bm.put(j.VerificationKey(), k.VerificationKey(),
                                     new Evidence(Reason.EquivocationFailure, true));
                         }
@@ -481,7 +482,7 @@ public class TestShuffleMachine {
                     for (SigningKey k : results.keySet()) {
                         if (j.equals(malicious)) {
                             bm.put(j.VerificationKey(), k.VerificationKey(), anyReason);
-                        } else if (k.equals(malicious)){
+                        } else if (k.equals(malicious) && j.equals(i)){
                             bm.put(j.VerificationKey(), k.VerificationKey(),
                                     new Evidence(Reason.EquivocationFailure, true));
                         }
@@ -499,7 +500,6 @@ public class TestShuffleMachine {
         return test;
     }
 
-    // TODO deal with ordering of players.
     public TestCase DifferentTransactionSignature(int caseNo, int numPlayers, int[] weirdos, Simulator sim) {
         Set<Integer> class2 = new HashSet<>();
 
@@ -510,9 +510,13 @@ public class TestShuffleMachine {
         MockCoin coin1 = new MockCoin().setZ(1);
         MockCoin coin2 = new MockCoin().setZ(2);
 
+        List<Simulator.MockCoin> coins = new LinkedList<>();
+        coins.add(coin1);
+        coins.add(coin2);
+
         long amount = 17;
         SessionIdentifier session = new MockSessionIdentifier("sig" + caseNo);
-        Simulator.InitialState init = sim.initialize(session, amount);
+        Simulator.InitialState init = sim.initialize(session, amount).coins(coins);
 
         for (int i = 1; i <= numPlayers; i ++) {
             if (class2.contains(i)) {
@@ -552,13 +556,13 @@ public class TestShuffleMachine {
                 }
             }
 
-            test.put(i, returnState, new ReturnState(false, session, Phase.VerificationAndSubmission, null, bm));
+            test.put(i, new ReturnState(false, session, Phase.Blame, null, bm), returnState);
         }
 
         return test;
     }
 
-    /*@Test
+    @Test
     // Tests for successful runs of the protocol.
     public void testSuccess() {
         MockCrypto crypto = new MockCrypto(45);
@@ -615,7 +619,7 @@ public class TestShuffleMachine {
         EquivocateOutput(caseNo++, 4, new int[]{1}, sim).check();
         EquivocateOutput(caseNo++, 4, new int[]{1, 2}, sim).check();
         EquivocateOutput(caseNo, 10, new int[]{3, 5, 7}, sim).check();
-    }*/
+    }
 
     @Test
     public void testEquivocationAnnounce() {
@@ -632,8 +636,8 @@ public class TestShuffleMachine {
                         new Equivocation(2, new int[]{4, 5})}, sim).check();
         EquivocateAnnouncement(caseNo++, 10,
                 new Equivocation[]{
-                        new Equivocation(5, new int[]{1, 10}),
-                        new Equivocation(7, new int[]{2, 8})}, sim).check();
+                        new Equivocation(2, new int[]{4, 10}),
+                        new Equivocation(5, new int[]{7, 8})}, sim).check();
         EquivocateAnnouncement(caseNo, 10,
                 new Equivocation[]{
                         new Equivocation(2, new int[]{3}),
@@ -641,7 +645,7 @@ public class TestShuffleMachine {
                         new Equivocation(8, new int[]{9})}, sim).check();
     }
 
-    /*@Test
+    @Test
     public void testTransactionDisagreement() {
         MockCrypto crypto = new MockCrypto(99999);
         Simulator sim = new Simulator(new MockMessageFactory(), crypto);
@@ -668,7 +672,7 @@ public class TestShuffleMachine {
         DoubleSpend(caseNo++, new int[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1}, new int[]{1, 7, 8}, sim).check();
         DoubleSpend(caseNo, new int[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1}, new int[]{4, 6, 7, 8}, sim).check();
 
-    }*/
+    }
 
     @Test
     // Tests for failures during the shuffle phase.

@@ -146,7 +146,7 @@ final class CoinShuffle {
                 }
 
                 // Now we wait to receive similar key from everyone else.
-                Map<VerificationKey, Message> announcement = null;
+                Map<VerificationKey, Message> announcement;
                 try {
                     announcement = mailbox.receiveFromMultiple(playerSet(2, N), phase, true);
                 } catch (BlameException e) {
@@ -223,7 +223,7 @@ final class CoinShuffle {
                     // encryption keys to different players.
                     phase = Phase.EquivocationCheck;
 
-                    matrix = equivocationCheck(encryptionKeys, vk);
+                    matrix = equivocationCheck(encryptionKeys, newAddresses);
                     if (matrix != null) {
                         return matrix;
                     }
@@ -358,10 +358,9 @@ final class CoinShuffle {
             // message has already been sent.
             boolean equivocationCheckSent = false;
 
-            // There is an error case in which we have to do an equivocation check, so this phase is in a separate function.
-            private Matrix equivocationCheck(
+            private Message equivocationCheckHash(
                     Map<VerificationKey, EncryptionKey> encryptonKeys,
-                    VerificationKey vk) throws InterruptedException, ValueException, FormatException, ProtocolException, BlameException {
+                    Queue<Address> newAddresses) {
 
                 // Put all temporary encryption keys into a list and hash the result.
                 Message equivocationCheck = messages.make();
@@ -369,17 +368,36 @@ final class CoinShuffle {
                     equivocationCheck.attach(encryptonKeys.get(players.get(i)));
                 }
 
-                equivocationCheck = crypto.hash(equivocationCheck);
+                if (newAddresses != null) {
+                    for (Address address : newAddresses) {
+                        equivocationCheck.attach(address);
+                    }
+                }
+
+                return crypto.hash(equivocationCheck);
+            }
+
+            // There is an error case in which we have to do an equivocation check, so this phase is in a separate function.
+            private Matrix equivocationCheck(
+                    Map<VerificationKey, EncryptionKey> encryptonKeys,
+                    Queue<Address> newAddresses) throws InterruptedException, ValueException, FormatException, ProtocolException, BlameException {
+
+                Message equivocationCheck = equivocationCheckHash(encryptonKeys, newAddresses);
+
                 if (!equivocationCheckSent) {
                     mailbox.broadcast(equivocationCheck, phase);
                     equivocationCheckSent = true;
                 }
 
                 // Wait for a similar message from everyone else and check that the result is the name.
-                Map<VerificationKey, Message> hashes = mailbox.receiveFromMultiple(playerSet(1, players.size()), phase, true);
+                Map<VerificationKey, Message> hashes = mailbox.receiveFromMultiple(playerSet(1, players.size()), phase, false);
                 hashes.put(vk, equivocationCheck);
 
                 if (areEqual(hashes.values())) {
+                    if (mailbox.blameReceived()) {
+                        fillBlameMatrix(new Matrix());
+                    }
+
                     return null;
                 }
 
@@ -441,7 +459,7 @@ final class CoinShuffle {
             private Matrix blameShuffleMisbehavior(DecryptionKey dk) throws InterruptedException, FormatException, ValueException, ProtocolException, BlameException {
                 // First skip to phase 4 and do an equivocation check.
                 phase = Phase.EquivocationCheck;
-                Matrix matrix = equivocationCheck(encryptionKeys, vk);
+                Matrix matrix = equivocationCheck(encryptionKeys, null);
 
                 // If we get a blame matrix back, that means that the culprit was found.
                 if (matrix != null) {
@@ -472,13 +490,13 @@ final class CoinShuffle {
                 List<SignedPacket> hashMessages = mailbox.getPacketsByPhase(Phase.EquivocationCheck);
                 Map<VerificationKey, Message> hashes = new HashMap<>();
                 for (SignedPacket packet : hashMessages) {
-                    hashes.put(packet.packet.signer, packet.packet.message);
+                    hashes.put(packet.payload.signer, packet.payload.message);
                 }
 
                 // The messages sent in the broadcast phase by the last player to all the other players.
                 Map<VerificationKey, Packet> outputVectors = new HashMap<>();
 
-                // The encryption keys history from every player to every other.
+                // The encryption keys sent from every player to every other.
                 Map<VerificationKey, Map<VerificationKey, EncryptionKey>> sentKeys = new HashMap<>();
 
                 // The list of messages history in phase 2.
@@ -527,19 +545,13 @@ final class CoinShuffle {
                                     Map<VerificationKey, EncryptionKey> receivedKeys = new HashMap<>();
                                     fillBlameMatrixCollectHistory(vk, from, blame.packets, matrix, outputVectors, shuffleMessages, receivedKeys, sentKeys);
 
-                                    // Check on whether this player correctly reported the hash that he did.
-                                    Message equivocationCheck = messages.make();
-                                    for (int i = 2; i <= players.size(); i++) {
-                                        EncryptionKey received = receivedKeys.get(players.get(i));
-                                        if (received == null) {
-                                            matrix.put(vk, from, null /* TODO */);
-                                            continue;
-                                        }
-
-                                        equivocationCheck.attach(received);
+                                    Queue<Address> addresses = new LinkedList<>();
+                                    Message output = outputVectors.get(from).message.copy();
+                                    while (!output.isEmpty()) {
+                                        addresses.add(output.readAddress());
                                     }
 
-                                    if (!hashes.get(packet.signer).equals(crypto.hash(equivocationCheck))) {
+                                    if (!hashes.get(packet.signer).equals(equivocationCheckHash(receivedKeys, addresses))) {
                                         matrix.put(vk, from, null /* TODO */);
                                     }
 
@@ -625,7 +637,7 @@ final class CoinShuffle {
 
                         Map<VerificationKey, EncryptionKey> sent = sentKeys.get(from);
 
-                        if (sent == null || i != me) {
+                        if (sent == null) {
                             // This should not really happen.
                             continue;
                         }
@@ -659,7 +671,7 @@ final class CoinShuffle {
                 if (decryptionKeys.size() > 0) {
                     // We should have one decryption key for every player except the first.
                     Set<VerificationKey> leftover = playerSet(1, players.size() - 1);
-                    leftover.removeAll(outputVectors.keySet());
+                    leftover.removeAll(decryptionKeys.keySet());
                     if (leftover.size() > 0) {
                         log.warn("leftover");
                         // TODO blame someone.
@@ -953,18 +965,20 @@ final class CoinShuffle {
     ) throws FormatException {
 
         if(packets == null) {
+            log.error("Player " + vk.toString() + " null blames " + from.toString() + ", case J");
             matrix.put(vk, from, null /* TODO */);
             return;
         }
 
         // Collect all packets received in the appropriate place.
         for (SignedPacket received : packets) {
-            Packet packet = received.packet;
+            Packet packet = received.payload;
             switch (packet.phase) {
                 case BroadcastOutput:
                     if (outputVectors.containsKey(from)) {
                         // We should only ever receive one such message from each player.
-                        if (outputVectors.containsKey(from) && !outputVectors.get(from).equals(received.packet)) {
+                        if (outputVectors.containsKey(from) && !outputVectors.get(from).equals(received.payload)) {
+                            log.error("Player " + vk.toString() + " null blames " + from.toString() + ", case A; " + outputVectors.get(from).toString() + " != " + received.payload.toString());
                             matrix.put(vk, from, null /*TODO*/);
                         }
                     }
@@ -989,6 +1003,7 @@ final class CoinShuffle {
                     break;
                 default:
                     // TODO this case should never happen. It's not malicious but it's not allowed either.
+                    log.error("Player " + vk.toString() + " null blames " + from.toString() + ", case C");
                     matrix.put(vk, from, null /*TODO*/);
                     break;
             }

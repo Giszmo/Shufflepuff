@@ -75,7 +75,7 @@ public class Mailbox {
             Iterator<SignedPacket> i = delivered.iterator();
             while (i.hasNext()) {
                 SignedPacket next = i.next();
-                Packet packet = next.packet;
+                Packet packet = next.payload;
 
                 // Return any that matches what we're looking for.
                 if (expectedPhase == packet.phase) {
@@ -90,7 +90,7 @@ public class Mailbox {
         if (found == null) {
             while (true) {
                 SignedPacket next = network.receive();
-                Packet packet = next.packet;
+                Packet packet = next.payload;
                 Phase phase = packet.phase;
 
                 // Check that this is someone in the same session of this protocol as us.
@@ -113,10 +113,10 @@ public class Mailbox {
         }
 
         history.add(found.copy());
-        if (found.packet.phase == Phase.Blame) {
+        if (found.payload.phase == Phase.Blame) {
             blameReceived = true;
         }
-        return found.packet;
+        return found.payload;
     }
 
     // Get all packets history or received by phase. Used during blame phase.
@@ -124,13 +124,13 @@ public class Mailbox {
         List<SignedPacket> selection = new LinkedList<>();
 
         for (SignedPacket packet : history) {
-            if (packet.packet.phase == phase) {
+            if (packet.payload.phase == phase) {
                 selection.add(packet);
             }
         }
 
         for (SignedPacket packet : delivered) {
-            if (packet.packet.phase == phase) {
+            if (packet.payload.phase == phase) {
                 selection.add(packet);
             }
         }
@@ -203,8 +203,8 @@ public class Mailbox {
 
         // First get the blame messages in history too.
         for (SignedPacket packet : history) {
-            if (packet.packet.phase == Phase.Blame) {
-                blame.get(sk.VerificationKey()).add(packet.packet);
+            if (packet.payload.phase == Phase.Blame) {
+                blame.get(sk.VerificationKey()).add(packet.payload);
             }
         }
 
