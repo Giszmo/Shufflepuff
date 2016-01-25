@@ -8,7 +8,6 @@ import com.shuffle.bitcoin.EncryptionKey;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
-import com.sun.org.apache.xml.internal.security.Init;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;

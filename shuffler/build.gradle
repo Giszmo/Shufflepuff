@@ -15,9 +15,3 @@ dependencies {
 
 project.pmd.ignoreFailures = true
 project.findbugs.ignoreFailures = true
-
-tasks.findByName("assembleDebug").dependsOn("copyTestResources")
-task copyTestResources(type: Copy) {
-    from "${projectDir}/src/test/resources"
-    into "${buildDir}/test-classes/debug/resources"
-}
