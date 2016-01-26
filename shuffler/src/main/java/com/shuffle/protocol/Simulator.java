@@ -36,11 +36,13 @@ import java.util.concurrent.TimeUnit;
  * Created by Daniel Krawisz on 12/6/15.
  */
 public final class Simulator {
+    private static Logger log= LogManager.getLogger(Simulator.class);
     ConcurrentMap<VerificationKey, BlackBox> machines;
     //long amount;
     final MessageFactory messages;
     final Crypto crypto;
-    private static Logger log= LogManager.getLogger(Simulator.class);
+
+    final Map<Phase, Map<VerificationKey, Map<VerificationKey, Packet>>> sent = new HashMap<>();
 
     public interface MockCoin extends Coin {
         void put(Address addr, long value);
@@ -500,6 +502,20 @@ public final class Simulator {
     }
 
     public void sendTo(VerificationKey to, SignedPacket packet) throws InvalidImplementationError, InterruptedException {
+        Map<VerificationKey, Map<VerificationKey, Packet>> byPacket = sent.get(packet.payload.phase);
+        if(byPacket == null) {
+            byPacket = new HashMap<>();
+            sent.put(packet.payload.phase, byPacket);
+        }
+
+        Map<VerificationKey, Packet> bySender = byPacket.get(packet.payload.signer);
+        if (bySender == null) {
+            bySender = new HashMap<>();
+            byPacket.put(packet.payload.signer, bySender);
+        }
+
+        bySender.put(packet.payload.recipient, packet.payload.copy());
+
         machines.get(to).deliver(packet);
     }
 
