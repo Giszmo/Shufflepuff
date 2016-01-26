@@ -83,7 +83,7 @@ public class Evidence {
             throw new NullPointerException();
         }
         this.reason = reason;
-        this.credible = true;
+        this.credible = credible;
     }
 
     public Evidence(Reason reason, boolean credible, Transaction t) {
@@ -126,7 +126,7 @@ public class Evidence {
 
     @Override
     public String toString() {
-        String str = reason.toString();
+        String str = reason.toString() + ":" + credible;
         if (t != null) {
             str += ":" + t.toString();
         }

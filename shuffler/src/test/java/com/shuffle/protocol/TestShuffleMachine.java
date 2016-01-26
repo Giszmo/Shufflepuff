@@ -549,9 +549,10 @@ public class TestShuffleMachine {
 
             for (SigningKey j : results.keySet()) {
                 for(SigningKey k : results.keySet()) {
-                    if (keyClass2.contains(j) != keyClass2.contains(k)) {
+                    boolean inClass2 = keyClass2.contains(j);
+                    if (inClass2 != keyClass2.contains(k)) {
                         bm.put(j.VerificationKey(),k.VerificationKey(),
-                                new Evidence(Reason.InvalidSignature, true));
+                                new Evidence(Reason.InvalidSignature, inClass2 == keyClass2.contains(i)));
                     }
                 }
             }

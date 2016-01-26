@@ -292,6 +292,7 @@ final class CoinShuffle {
                     Matrix bm = new Matrix();
                     Message blameMessage = messages.make();
                     blameMessage.attach(Blame.InvalidSignature(invalid));
+                    mailbox.broadcast(blameMessage, phase);
 
                     for(Map.Entry<VerificationKey, Signature> bad : invalid.entrySet()) {
                         VerificationKey key = bad.getKey();
@@ -485,6 +486,7 @@ final class CoinShuffle {
             // out what's going on.
             private Matrix fillBlameMatrix(Matrix matrix) throws InterruptedException, FormatException, ValueException {
                 Map<VerificationKey, List<Packet>> blameMessages = mailbox.receiveAllBlame();
+                log.info("Player " + sk.toString() + " gets blame messages " + blameMessages.toString());
 
                 // Get all hashes received in phase 4 so that we can check that they were reported correctly.
                 List<SignedPacket> hashMessages = mailbox.getPacketsByPhase(Phase.EquivocationCheck);
@@ -596,7 +598,7 @@ final class CoinShuffle {
                                     for (Map.Entry<VerificationKey, Signature> invalid : blame.invalid.entrySet()) {
                                         // Is the evidence included sufficient?
                                         credible = t != null && !invalid.getKey().verify(t, invalid.getValue());
-                                        matrix.put(from, blame.accused,
+                                        matrix.put(from, invalid.getKey(),
                                                 Evidence.InvalidSignature(credible, invalid.getValue()));
                                     }
                                     break;
