@@ -14,6 +14,10 @@ public class MockAddress implements Address {
 
     @Override
     public boolean equals(Object o) {
+        if (o == null) {
+            return false;
+        }
+
         if (!(o instanceof MockAddress)) {
             return false;
         }

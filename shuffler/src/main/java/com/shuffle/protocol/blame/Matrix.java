@@ -8,6 +8,7 @@ import com.shuffle.protocol.Packet;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -29,7 +30,8 @@ public class Matrix {
         }
 
         if(evidence == null) {
-            log.warn("null blame evidence given for " + accuser.toString() + " to " + accused.toString() + " " + new Throwable().getStackTrace());
+            log.warn("null blame evidence given for " + accuser.toString() + " to " + accused.toString() + " " + Arrays.toString(
+            new Throwable().getStackTrace()));
         }
 
         Map<VerificationKey, Evidence> blames = blame.get(accuser);
@@ -102,13 +104,7 @@ public class Matrix {
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof Matrix)) {
-            return false;
-        }
-
-        Matrix bm = (Matrix)o;
-
-        return blame.equals(bm.blame);
+        return o != null && o instanceof Matrix && blame.equals(((Matrix)o).blame);
     }
 
     @Override

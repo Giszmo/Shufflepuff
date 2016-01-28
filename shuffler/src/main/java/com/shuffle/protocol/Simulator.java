@@ -30,8 +30,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 /**
- * A simulator for running integration tests on the protocol. Right now it only does positive tests,
- * but eventually it will also simulate malicious players.
+ * A simulator for running integration tests on the protocol.
  *
  * Created by Daniel Krawisz on 12/6/15.
  */
@@ -101,11 +100,15 @@ public final class Simulator {
 
         @Override
         public SignedPacket receive() throws TimeoutError, InterruptedException {
-            SignedPacket next = inbox.poll(1, TimeUnit.SECONDS);
-            if (next == null) {
-                throw new TimeoutError();
+            for (int i = 0; i < 5; i ++) {
+                SignedPacket next = inbox.poll(1, TimeUnit.SECONDS);
+
+                if (next != null) {
+                    return next;
+                }
             }
-            return next;
+
+            throw new TimeoutError();
         }
 
         public void deliver(SignedPacket packet) throws InterruptedException {
@@ -166,6 +169,7 @@ public final class Simulator {
         }
 
         // A player sends different encryption keys to different players.
+        // TODO malicious player needs to eqivocate again in phase 4 to stay consistent.
         public class EquivocateEncryptionKeys implements MessageReplacement {
             final Set<VerificationKey> others;
             final EncryptionKey alternate;
@@ -222,6 +226,7 @@ public final class Simulator {
         }
 
         // Send different output address to different players.
+        // TODO malicious player needs to eqivocate again in phase 4 to stay consistent.
         public class EquivocateOutputVector implements MessageReplacement {
             Set<VerificationKey> others;
             Message alternate;

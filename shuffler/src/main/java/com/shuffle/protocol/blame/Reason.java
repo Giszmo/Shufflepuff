@@ -12,4 +12,5 @@ public enum Reason {
     ShuffleAndEquivocationFailure,
     InvalidSignature,
     MissingOutput,
+    Liar,
 }

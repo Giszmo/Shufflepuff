@@ -31,4 +31,24 @@ public class SignedPacket {
     public String toString() {
         return payload.toString() + "[" + signature.toString() + "]";
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null) {
+            return false;
+        }
+
+        if (!(o instanceof SignedPacket)) {
+            return false;
+        }
+
+        SignedPacket sp = (SignedPacket)o;
+
+        return payload.equals(sp.payload) && signature.equals(sp.signature);
+    }
+
+    @Override
+    public int hashCode() {
+        return payload.hashCode() + signature.hashCode();
+    }
 }

@@ -157,7 +157,7 @@ public class TestMailbox {
     }
 
     @Test(expected = TimeoutError.class)
-    public void testReceiveFrom() throws InvalidParticipantSetException, InterruptedException, BlameException, ValueException, FormatException {
+    public void testReceiveFrom() throws InvalidParticipantSetException, InterruptedException, BlameException, ValueException, FormatException, SignatureException {
         receiveFromTestCase tests[] = new receiveFromTestCase[]{
                 // time out exception test case.
                 new receiveFromTestCase(new int []{1,2,3}, 2, Phase.Shuffling, null, new TimeoutError()),
@@ -216,7 +216,7 @@ public class TestMailbox {
     }
 
     @Test
-    public void testReceiveFromMultiple() throws InvalidParticipantSetException, InterruptedException, BlameException, ValueException, FormatException, ProtocolException {
+    public void testReceiveFromMultiple() throws InvalidParticipantSetException, InterruptedException, BlameException, ValueException, FormatException, ProtocolException, SignatureException {
 
         receiveFromMultipleTestCase tests[] = new receiveFromMultipleTestCase[]{
                 // Very simple test case.

@@ -3,6 +3,7 @@ package com.shuffle.protocol;
 import com.shuffle.bitcoin.CryptographyError;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.Transaction;
+import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.protocol.blame.Matrix;
 import com.shuffle.protocol.blame.Evidence;
 import com.shuffle.protocol.blame.Reason;
@@ -138,6 +139,57 @@ public class TestShuffleMachine {
     MatrixPatternAny anyMatrix = new MatrixPatternAny();
     BlameEvidencePatternAny anyReason = new BlameEvidencePatternAny();
 
+    public void analyseSentMessages(Simulator sim) {
+
+        Map<Phase, Map<VerificationKey, Map<VerificationKey, Packet>>> sent = sim.sent;
+        Map<VerificationKey, Map<VerificationKey, Packet>> announceMsgs = sent.get(Phase.Announcement);
+
+        int count = 0;
+        for (Map<VerificationKey, Packet> map : announceMsgs.values()) {
+            count += map.size();
+        }
+
+        log.info("%%% there were " + count + " announcement messages. ");
+
+        Map<VerificationKey, Map<VerificationKey, Packet>> shuffleMsgs = sent.get(Phase.Shuffling);
+
+        count = 0;
+        for (Map<VerificationKey, Packet> map : shuffleMsgs.values()) {
+            count += map.size();
+        }
+
+        log.info("%%% there were " + count + " shuffle messages. ");
+
+        Map<VerificationKey, Map<VerificationKey, Packet>> broadcastMsgs = sent.get(Phase.BroadcastOutput);
+
+        count = 0;
+        for (Map<VerificationKey, Packet> map : broadcastMsgs.values()) {
+            count += map.size();
+        }
+
+        log.info("%%% there were " + count + " broadcast messages. ");
+
+        Map<VerificationKey, Map<VerificationKey, Packet>> equivocateMsgs = sent.get(Phase.EquivocationCheck);
+
+        count = 0;
+        for (Map<VerificationKey, Packet> map : equivocateMsgs.values()) {
+            count += map.size();
+        }
+
+        log.info("%%% there were " + count + " equivocate messages. ");
+
+        Map<VerificationKey, Map<VerificationKey, Packet>> blameMsgs = sent.get(Phase.Blame);
+
+        count = 0;
+        for (Map<VerificationKey, Packet> map : blameMsgs.values()) {
+            count += map.size();
+        }
+
+        log.info("%%% there were " + count + " blame messages. ");
+
+        log.info("%%% blame: " + blameMsgs.toString());
+    }
+
     public class TestCase {
 
         String description = null;
@@ -268,7 +320,7 @@ public class TestShuffleMachine {
                                     new Evidence(Reason.NoFundsAtAll, true));
                         } else if(offenders.containsKey(k)) {
                             bm.put(j.VerificationKey(), k.VerificationKey(),
-                                    new Evidence(Reason.InsufficientFunds, true, offenders.get(k)));
+                                    Evidence.InsufficientFunds(true, offenders.get(k)));
                         }
                     }
                 }
@@ -347,7 +399,7 @@ public class TestShuffleMachine {
                                 // Only include the transaction if the player has the same view
                                 // of the network as the double spender.
                                 bm.put(j.VerificationKey(), k.VerificationKey(),
-                                        new Evidence(Reason.DoubleSpend, true, offenders.get(k)));
+                                        Evidence.DoubleSpend(true, offenders.get(k)));
                             }
                         }
                     }
@@ -393,6 +445,8 @@ public class TestShuffleMachine {
         SortedSet<SigningKey> players = new TreeSet<>();
         players.addAll(results.keySet());
         Set<SigningKey> malicious = new HashSet<>();
+
+        analyseSentMessages(sim);
 
         eq = 0;
         int index = 1;

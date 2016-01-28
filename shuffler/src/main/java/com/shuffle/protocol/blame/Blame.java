@@ -91,6 +91,26 @@ public class Blame {
         }
         return str + reason.toString() + "]";
     }
+    
+    @Override
+    public boolean equals(Object o) {
+        if (o == null) {
+            return false;
+        }
+        
+        if(!(o instanceof Blame)) {
+            return false;
+        }
+        
+        Blame blame = (Blame)o;
+        
+        return (reason == blame.reason) &&
+                (accused == blame.accused || accused != null && accused.equals(blame.accused)) &&
+                (t == blame.t || t != null && t.equals(blame.t)) &&
+                (packets == blame.packets || packets != null && packets.equals(blame.packets)) &&
+                (privateKey == blame.privateKey || privateKey != null && privateKey.equals(blame.privateKey)) &&
+                (invalid == blame.invalid || invalid != null && invalid.equals(blame.invalid));
+    }
 
     public Blame copy() {
         List<SignedPacket> packets = null;

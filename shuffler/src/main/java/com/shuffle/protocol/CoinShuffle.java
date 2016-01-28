@@ -92,6 +92,9 @@ final class CoinShuffle {
             // This will contain the new encryption public keys.
             final Map<VerificationKey, EncryptionKey> encryptionKeys = new HashMap<>();
 
+            // The set of new addresses into which the coins will be deposited.
+            Queue<Address> newAddresses = null;
+
             final Address change; // My change address. (may be null).
 
             final Map<VerificationKey, Signature> signatures = new HashMap<>();
@@ -107,7 +110,7 @@ final class CoinShuffle {
                     CryptographyError,
                     InvalidImplementationError,
                     ValueException,
-                    InterruptedException, ProtocolException {
+                    InterruptedException, ProtocolException, SignatureException {
 
                 if (amount <= 0) {
                     throw new IllegalArgumentException();
@@ -163,9 +166,6 @@ final class CoinShuffle {
                 // at a random location, which is sufficient to ensure randomness of the whole thing
                 // to all participants.
                 phase = Phase.Shuffling;
-
-                // The set of new addresses into which the coins will be deposited.
-                Queue<Address> newAddresses = null;
 
                 try {
 
@@ -359,31 +359,15 @@ final class CoinShuffle {
             // message has already been sent.
             boolean equivocationCheckSent = false;
 
-            private Message equivocationCheckHash(
-                    Map<VerificationKey, EncryptionKey> encryptonKeys,
-                    Queue<Address> newAddresses) {
-
-                // Put all temporary encryption keys into a list and hash the result.
-                Message equivocationCheck = messages.make();
-                for (int i = 2; i <= players.size(); i++) {
-                    equivocationCheck.attach(encryptonKeys.get(players.get(i)));
-                }
-
-                if (newAddresses != null) {
-                    for (Address address : newAddresses) {
-                        equivocationCheck.attach(address);
-                    }
-                }
-
-                return crypto.hash(equivocationCheck);
-            }
-
             // There is an error case in which we have to do an equivocation check, so this phase is in a separate function.
             private Matrix equivocationCheck(
                     Map<VerificationKey, EncryptionKey> encryptonKeys,
-                    Queue<Address> newAddresses) throws InterruptedException, ValueException, FormatException, ProtocolException, BlameException {
+                    Queue<Address> newAddresses)
+                    throws InterruptedException, ValueException,
+                    FormatException, ProtocolException,
+                    BlameException, SignatureException {
 
-                Message equivocationCheck = equivocationCheckHash(encryptonKeys, newAddresses);
+                Message equivocationCheck = equivocationCheckHash(players, encryptonKeys, newAddresses);
 
                 if (!equivocationCheckSent) {
                     mailbox.broadcast(equivocationCheck, phase);
@@ -415,7 +399,7 @@ final class CoinShuffle {
             }
 
             // Check for players with insufficient funds. This happens in phase 1 and phase 5.
-            private Matrix blameInsufficientFunds() throws InterruptedException, FormatException, ValueException {
+            private Matrix blameInsufficientFunds() throws InterruptedException, FormatException, ValueException, SignatureException {
                 List<VerificationKey> offenders = new LinkedList<>();
 
                 // Check that each participant has the required amounts.
@@ -457,7 +441,13 @@ final class CoinShuffle {
             }
 
             // Some misbehavior that has occurred during the shuffle phase.
-            private Matrix blameShuffleMisbehavior(DecryptionKey dk) throws InterruptedException, FormatException, ValueException, ProtocolException, BlameException {
+            private Matrix blameShuffleMisbehavior(DecryptionKey dk)
+                    throws InterruptedException,
+                    FormatException,
+                    ValueException,
+                    ProtocolException,
+                    BlameException,
+                    SignatureException {
                 // First skip to phase 4 and do an equivocation check.
                 phase = Phase.EquivocationCheck;
                 Matrix matrix = equivocationCheck(encryptionKeys, null);
@@ -484,19 +474,27 @@ final class CoinShuffle {
 
             // When we know we'll receive a bunch of blame messages, we have to go through them all to figure
             // out what's going on.
-            private Matrix fillBlameMatrix(Matrix matrix) throws InterruptedException, FormatException, ValueException {
-                Map<VerificationKey, List<Packet>> blameMessages = mailbox.receiveAllBlame();
+            private Matrix fillBlameMatrix(Matrix matrix) throws
+                    InterruptedException,
+                    FormatException,
+                    ValueException,
+                    SignatureException {
+                Map<VerificationKey, List<SignedPacket>> blameMessages = mailbox.receiveAllBlame();
                 log.info("Player " + sk.toString() + " gets blame messages " + blameMessages.toString());
 
                 // Get all hashes received in phase 4 so that we can check that they were reported correctly.
-                List<SignedPacket> hashMessages = mailbox.getPacketsByPhase(Phase.EquivocationCheck);
                 Map<VerificationKey, Message> hashes = new HashMap<>();
-                for (SignedPacket packet : hashMessages) {
-                    hashes.put(packet.payload.signer, packet.payload.message);
+                {
+                    List<SignedPacket> hashMessages = mailbox.getPacketsByPhase(Phase.EquivocationCheck);
+                    for (SignedPacket packet : hashMessages) {
+                        hashes.put(packet.payload.signer, packet.payload.message);
+                        // Include my own hash.
+                        hashes.put(vk, equivocationCheckHash(players, encryptionKeys, newAddresses));
+                    }
                 }
 
                 // The messages sent in the broadcast phase by the last player to all the other players.
-                Map<VerificationKey, Packet> outputVectors = new HashMap<>();
+                Map<VerificationKey, SignedPacket> outputVectors = new HashMap<>();
 
                 // The encryption keys sent from every player to every other.
                 Map<VerificationKey, Map<VerificationKey, EncryptionKey>> sentKeys = new HashMap<>();
@@ -508,20 +506,17 @@ final class CoinShuffle {
                 Map<VerificationKey, DecryptionKey> decryptionKeys = new HashMap<>();
 
                 // Determine who is being blamed and by whom.
-                for (Map.Entry<VerificationKey, List<Packet>> entry : blameMessages.entrySet()) {
+                for (Map.Entry<VerificationKey, List<SignedPacket>> entry : blameMessages.entrySet()) {
                     VerificationKey from = entry.getKey();
-                    List<Packet> responses = entry.getValue();
-                    for (Packet packet : responses) {
-                        Message message = packet.message;
+                    List<SignedPacket> responses = entry.getValue();
+                    for (SignedPacket packet : responses) {
+                        Message message = packet.payload.message;
 
                         while (!message.isEmpty()) {
                             Blame blame = message.readBlame();
                             boolean credible;
                             switch (blame.reason) {
                                 case NoFundsAtAll: {
-                                    if (from.equals(vk)) {
-                                        break; // Skip, this is mine.
-                                    }
                                     // Do we already know about this? The evidence is not credible if we don't.
                                     credible = matrix.blameExists(vk, blame.accused, Reason.NoFundsAtAll);
                                     matrix.put(from, blame.accused,
@@ -529,32 +524,45 @@ final class CoinShuffle {
                                     break;
                                 }
                                 case InsufficientFunds: {
-                                    if (from.equals(vk)) {
-                                        break; // Skip, this is mine.
-                                    }
                                     if (blame.t == null) {
+                                        // A transaction must be included to claim insufficient funds.
                                         matrix.put(vk, from, null /* TODO */);
                                         break;
                                     }
                                     // Is the evidence included sufficient?
                                     credible = coin.spendsFrom(blame.accused.address(), amount, blame.t);
                                     matrix.put(from, blame.accused,
-                                            new Evidence(Reason.InsufficientFunds, credible, blame.t));
+                                            Evidence.InsufficientFunds(credible, blame.t));
                                     break;
                                 }
                                 case EquivocationFailure: {
-                                    // These are the keys received by everyone in the announcement phase.
+                                    // These are the keys received by this player in the announcement phase.
                                     Map<VerificationKey, EncryptionKey> receivedKeys = new HashMap<>();
                                     fillBlameMatrixCollectHistory(vk, from, blame.packets, matrix, outputVectors, shuffleMessages, receivedKeys, sentKeys);
 
                                     Queue<Address> addresses = new LinkedList<>();
-                                    Message output = outputVectors.get(from).message.copy();
-                                    while (!output.isEmpty()) {
-                                        addresses.add(output.readAddress());
+
+                                    // The last player will not have received a separate set of addresses for
+                                    // us to check, so we insert our own.
+                                    if (from.equals(players.get(N))) {
+                                        addresses = newAddresses;
+                                    } else {
+
+                                        Message output = outputVectors.get(from).payload.message;
+                                        while (!output.isEmpty()) {
+                                            addresses.add(output.readAddress());
+                                        }
                                     }
 
-                                    if (!hashes.get(packet.signer).equals(equivocationCheckHash(receivedKeys, addresses))) {
-                                        matrix.put(vk, from, null /* TODO */);
+                                    // If the sender is not player one, we add the keys he sent us,
+                                    // as he would not have received any set of keys from himself.
+                                    if (!from.equals(players.get(1))) {
+                                        receivedKeys.put(from, encryptionKeys.get(from));
+                                    }
+
+                                    // Check if this player correctly reported the hash previously sent to us.
+                                    if (!hashes.get(from).equals(equivocationCheckHash(players, receivedKeys, addresses))) {
+                                        matrix.put(vk, from, Evidence.Liar(packet));
                                     }
 
                                     break;
@@ -578,9 +586,6 @@ final class CoinShuffle {
                                     break;
                                 }
                                 case DoubleSpend: {
-                                    if (from.equals(vk)) {
-                                        break; // Skip, this is mine.
-                                    }
                                     // Is the evidence included sufficient?
                                     credible = coin.spendsFrom(blame.accused.address(), amount, blame.t);
                                     matrix.put(from, blame.accused,
@@ -588,9 +593,6 @@ final class CoinShuffle {
                                     break;
                                 }
                                 case InvalidSignature: {
-                                    if (from.equals(vk)) {
-                                        break; // Skip, this is mine.
-                                    }
                                     if (blame.invalid == null) {
                                         matrix.put(vk, from, null /* TODO */);
                                         break;
@@ -611,9 +613,10 @@ final class CoinShuffle {
                 }
 
                 if (outputVectors.size() > 0) {
-                    // We should have one output vector for every player except the last.
-                    Set<VerificationKey> leftover = playerSet(1, players.size() - 1);
+                    // We should have one output vector for every player except the last and ourselves.
+                    Set<VerificationKey> leftover = playerSet(1, N - 1);
                     leftover.removeAll(outputVectors.keySet());
+                    leftover.remove(vk);
                     if (leftover.size() > 0) {
                         for (VerificationKey key : leftover) {
                             matrix.put(vk, key, null /*TODO*/);
@@ -621,8 +624,8 @@ final class CoinShuffle {
                     }
 
                     List<Message> outputMessages = new LinkedList<>();
-                    for (Packet packet : outputVectors.values()) {
-                        outputMessages.add(packet.message);
+                    for (SignedPacket packet : outputVectors.values()) {
+                        outputMessages.add(packet.payload.message);
                     }
 
                     // If they are not all equal, blame the last player for equivocating.
@@ -635,6 +638,10 @@ final class CoinShuffle {
                 // Check that we have all the required announcement messages.
                 if (sentKeys.size() > 0) {
                     for (int i = 2; i < players.size(); i++) {
+                        if (i == me) {
+                            continue;
+                        }
+
                         VerificationKey from = players.get(i);
 
                         Map<VerificationKey, EncryptionKey> sent = sentKeys.get(from);
@@ -645,8 +652,8 @@ final class CoinShuffle {
                         }
 
                         EncryptionKey key = null;
-                        for (int j = 1; j <= players.size(); j++) {
-                            if (j == i) {
+                        for (int j = 2; j <= players.size(); j++) {
+                            if (j == i || j == me) {
                                 continue;
                             }
 
@@ -656,7 +663,9 @@ final class CoinShuffle {
 
                             if (next == null) {
                                 // blame player to. He should have sent us this.
-                                matrix.put(vk, to, null /*TODO*/);
+                                log.info("About to make null blame entry. i = " + i + "; j = " + j + "; to = " + to.toString());
+
+                                matrix.put(vk, to, null /*TODO*/); // <--------- And this one.
                                 continue;
                             }
 
@@ -762,6 +771,29 @@ final class CoinShuffle {
             }
         }
 
+        // Generate the message sent during the equivocation check phase.
+        // This message hashes some information that the player has received.
+        // It is used to check that other players have received the same information.
+        private Message equivocationCheckHash(
+                Map<Integer, VerificationKey> players,
+                Map<VerificationKey, EncryptionKey> encryptionKeys,
+                Queue<Address> newAddresses) {
+
+            // Put all temporary encryption keys into a list and hash the result.
+            Message equivocationCheck = messages.make();
+            for (int i = 2; i <= players.size(); i++) {
+                equivocationCheck.attach(encryptionKeys.get(players.get(i)));
+            }
+
+            if (newAddresses != null) {
+                for (Address address : newAddresses) {
+                    equivocationCheck.attach(address);
+                }
+            }
+
+            return crypto.hash(equivocationCheck);
+        }
+
         // Run the protocol. This function manages retries and (nonmalicious) error cases.
         // The core loop is in the function protocolDefinition above.
         ReturnState run(Network network) throws InvalidImplementationError, InterruptedException {
@@ -809,6 +841,10 @@ final class CoinShuffle {
                     } catch (TimeoutError e) {
                         // TODO We have to go into "suspect" mode at this point to determine why the timeout occurred.
                         log.warn("player " + sk.toString() + " received a time out: ", e);
+                        return new ReturnState(false, session, currentPhase(), e, null);
+                    } catch (SignatureException e) {
+                        log.warn("player " + sk.toString() + " received invalid signature: " + e.packet.toString());
+                        log.warn("player " + sk.toString() + " checks signature: " + e.packet.verify());
                         return new ReturnState(false, session, currentPhase(), e, null);
                     }
 
@@ -957,7 +993,7 @@ final class CoinShuffle {
             List<SignedPacket> packets,
             Matrix matrix,
             // The messages sent in the broadcast phase by the last player to all the other players.
-            Map<VerificationKey, Packet> outputVectors,
+            Map<VerificationKey, SignedPacket> outputVectors,
              // The list of messages history in phase 2.
             Map<VerificationKey, Message> shuffleMessages,
             // The keys received by everyone in the announcement phase.
@@ -979,12 +1015,12 @@ final class CoinShuffle {
                 case BroadcastOutput:
                     if (outputVectors.containsKey(from)) {
                         // We should only ever receive one such message from each player.
-                        if (outputVectors.containsKey(from) && !outputVectors.get(from).equals(received.payload)) {
+                        if (outputVectors.containsKey(from) && !outputVectors.get(from).equals(received)) {
                             log.error("Player " + vk.toString() + " null blames " + from.toString() + ", case A; " + outputVectors.get(from).toString() + " != " + received.payload.toString());
                             matrix.put(vk, from, null /*TODO*/);
                         }
                     }
-                    outputVectors.put(from, packet);
+                    outputVectors.put(from, received);
                     break;
                 case Announcement:
                     Map<VerificationKey, EncryptionKey> map = sentKeys.get(packet.signer);

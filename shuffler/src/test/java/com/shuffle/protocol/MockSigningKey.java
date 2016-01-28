@@ -33,6 +33,10 @@ public class MockSigningKey extends SigningKey {
 
     @Override
     public boolean equals(Object o) {
+        if (o == null) {
+            return false;
+        }
+
         if (!(o instanceof MockSigningKey)) {
             return false;
         }

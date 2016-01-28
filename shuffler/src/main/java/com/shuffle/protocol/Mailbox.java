@@ -27,7 +27,8 @@ public class Mailbox {
     final private Collection<VerificationKey> players; // The keys representing all the players.
 
     final private Queue<SignedPacket> delivered = new LinkedList<>(); // A queue of messages that has been delivered that we aren't ready to look at yet.
-    final private Queue<SignedPacket> history = new LinkedList<>(); // All messages sent or received (does not include those in delivered).
+    final private Queue<SignedPacket> history = new LinkedList<>(); // All messages received (does not include those in delivered).
+    final private Queue<SignedPacket> sent = new LinkedList<>();
     private boolean blameReceived = false;
 
     Mailbox(SessionIdentifier session, SigningKey sk, Collection<VerificationKey> players, Network network) {
@@ -57,16 +58,16 @@ public class Mailbox {
         // Don't send anything to ourselves or to a nonexistent player.
         if (!packet.recipient.equals(sk.VerificationKey()) && players.contains(packet.recipient)) {
             network.sendTo(packet.recipient, signed);
+            sent.add(signed.copy());
         }
-        history.add(signed.copy());
     }
 
     // Get the next message from the phase we're in. It's possible for other players to get
     // ahead under some circumstances, so we have to keep their messages to look at later.
     // It always returns a blame packet if encountered.
-    Packet receiveNextPacket(Phase expectedPhase)
+    SignedPacket receiveNextPacket(Phase expectedPhase)
             throws FormatException, CryptographyError,
-            InterruptedException, TimeoutError, InvalidImplementationError, ValueException {
+            InterruptedException, TimeoutError, InvalidImplementationError, ValueException, SignatureException {
 
         SignedPacket found = null;
 
@@ -93,6 +94,10 @@ public class Mailbox {
                 Packet packet = next.payload;
                 Phase phase = packet.phase;
 
+                if (!next.verify()) {
+                    throw new SignatureException(next);
+                }
+
                 // Check that this is someone in the same session of this protocol as us.
                 if (!session.equals(packet.session)) {
                     throw new ValueException(ValueException.Values.session, session.toString(), packet.session.toString());
@@ -116,7 +121,7 @@ public class Mailbox {
         if (found.payload.phase == Phase.Blame) {
             blameReceived = true;
         }
-        return found.payload;
+        return found;
     }
 
     // Get all packets history or received by phase. Used during blame phase.
@@ -125,13 +130,13 @@ public class Mailbox {
 
         for (SignedPacket packet : history) {
             if (packet.payload.phase == phase) {
-                selection.add(packet);
+                selection.add(packet.copy());
             }
         }
 
         for (SignedPacket packet : delivered) {
             if (packet.payload.phase == phase) {
-                selection.add(packet);
+                selection.add(packet.copy());
             }
         }
 
@@ -140,10 +145,16 @@ public class Mailbox {
 
     // Wait to receive a message from a given player.
     public Message receiveFrom(VerificationKey from, Phase expectedPhase)
-            throws TimeoutError, CryptographyError, FormatException, ValueException,
-            InvalidImplementationError, InterruptedException, BlameException {
+            throws TimeoutError,
+            CryptographyError,
+            FormatException,
+            ValueException,
+            InvalidImplementationError,
+            InterruptedException,
+            BlameException,
+            SignatureException {
 
-        Packet packet = receiveNextPacket(expectedPhase);
+        Packet packet = receiveNextPacket(expectedPhase).payload;
 
         if (packet.phase == Phase.Blame && expectedPhase != Phase.Blame) {
             throw new BlameException(packet.signer, packet);
@@ -164,7 +175,8 @@ public class Mailbox {
             boolean blameInterrupt // Whether to stop if a blame message is received.
     )
             throws TimeoutError, CryptographyError, FormatException,
-            InvalidImplementationError, ValueException, InterruptedException, ProtocolException, BlameException {
+            InvalidImplementationError, ValueException, InterruptedException,
+            ProtocolException, BlameException, SignatureException {
 
         // Collect the messages in here.
         Map<VerificationKey, Message> broadcasts = new HashMap<>();
@@ -173,7 +185,7 @@ public class Mailbox {
         from.remove(sk.VerificationKey());
 
         while (from.size() > 0) {
-            Packet packet = receiveNextPacket(expectedPhase);
+            Packet packet = receiveNextPacket(expectedPhase).payload;
             if (expectedPhase != Phase.Blame && packet.phase == Phase.Blame) {
                 if (blameInterrupt) {
                     throw new BlameException(packet.signer, packet);
@@ -195,24 +207,28 @@ public class Mailbox {
     // When the blame phase it reached, there may be a lot of blame going around. This function
     // waits to receive all blame messages until a timeout exception is caught, and then returns
     // the list of blame messages, organized by player.
-    public Map<VerificationKey, List<Packet>> receiveAllBlame() throws InterruptedException, FormatException, ValueException {
-        Map<VerificationKey, List<Packet>> blame = new HashMap<>();
+    public Map<VerificationKey, List<SignedPacket>> receiveAllBlame() throws
+            InterruptedException,
+            FormatException,
+            ValueException,
+            SignatureException {
+        Map<VerificationKey, List<SignedPacket>> blame = new HashMap<>();
         for (VerificationKey player : players) {
-            blame.put(player, new LinkedList<Packet>());
+            blame.put(player, new LinkedList<SignedPacket>());
         }
 
-        // First get the blame messages in history too.
+        // First get the blame messages in history.
         for (SignedPacket packet : history) {
             if (packet.payload.phase == Phase.Blame) {
-                blame.get(sk.VerificationKey()).add(packet.payload);
+                blame.get(sk.VerificationKey()).add(packet);
             }
         }
 
         // Then receive any more blame messages until there are no more.
         while(true) {
             try {
-                Packet next = receiveNextPacket(Phase.Blame);
-                blame.get(next.signer).add(next);
+                SignedPacket next = receiveNextPacket(Phase.Blame);
+                blame.get(next.payload.signer).add(next);
             } catch (TimeoutError e) {
                 break;
             }

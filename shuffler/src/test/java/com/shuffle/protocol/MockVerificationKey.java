@@ -42,6 +42,10 @@ public class MockVerificationKey implements VerificationKey {
 
     @Override
     public boolean equals(Object vk) {
+        if (vk == null) {
+            return false;
+        }
+
         if(!(vk instanceof MockVerificationKey)) {
             return false;
         }

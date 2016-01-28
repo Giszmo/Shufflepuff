@@ -42,6 +42,10 @@ public class MockMessage implements Message {
         }
 
         public boolean equals(Object o) {
+            if (o == null) {
+                return false;
+            }
+
             if (!(o instanceof Hash)) {
                 return false;
             }
@@ -91,6 +95,10 @@ public class MockMessage implements Message {
 
         @Override
         public boolean equals(Object o) {
+            if (o == null) {
+                return false;
+            }
+
             if (!(o instanceof Atom)) {
                 return false;
             }
@@ -337,6 +345,10 @@ public class MockMessage implements Message {
 
     @Override
     public boolean equals(Object o) {
+        if (o == null) {
+            return false;
+        }
+
         if (!(o instanceof MockMessage)) {
             return false;
         }

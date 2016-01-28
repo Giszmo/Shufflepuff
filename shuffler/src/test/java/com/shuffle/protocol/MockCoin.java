@@ -34,6 +34,10 @@ public class MockCoin implements Simulator.MockCoin {
 
         @Override
         public boolean equals(Object o) {
+            if (o == null) {
+                return false;
+            }
+
             if (!(o instanceof Output)) {
                return false;
             }

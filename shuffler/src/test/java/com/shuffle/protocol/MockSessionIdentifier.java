@@ -13,6 +13,10 @@ public class MockSessionIdentifier implements SessionIdentifier {
 
     @Override
     public boolean equals(Object o) {
+        if (o == null) {
+            return false;
+        }
+
         if (!(o instanceof MockSessionIdentifier)) {
             return false;
         }

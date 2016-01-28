@@ -38,6 +38,10 @@ public class MockNetwork implements Network {
 
         @Override
         public boolean equals(Object o) {
+            if (o == null) {
+                return false;
+            }
+
             if (!(o instanceof SentMessage)) {
                 return false;
             }

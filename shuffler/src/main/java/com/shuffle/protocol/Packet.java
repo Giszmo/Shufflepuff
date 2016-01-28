@@ -32,13 +32,19 @@ public class Packet {
 
     @Override
     public boolean equals(Object o) {
+        if (o == null) {
+            return false;
+        }
+
         if (!(o instanceof Packet)) {
             return false;
         }
 
         Packet packet = ((Packet)o);
 
-        return session.equals(packet.session) && phase == packet.phase && signer.equals(packet.signer) && message.equals(packet.message);
+        return session.equals(packet.session) && phase == packet.phase
+                && signer.equals(packet.signer) && recipient.equals(packet.recipient)
+                && message.equals(packet.message);
     }
 
     @Override
@@ -52,7 +58,7 @@ public class Packet {
 
     @Override
     public String toString() {
-        return "{" + message.toString() + ", " + session.toString() + ", " + phase.toString() + ", " + signer.toString() + "}";
+        return "{" + message.toString() + ", " + session.toString() + ", " + phase.toString() + ", " + recipient.toString() + ", " + signer.toString() + "}";
     }
 
     public Packet copy() {

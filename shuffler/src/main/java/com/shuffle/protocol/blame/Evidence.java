@@ -5,6 +5,7 @@ import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.protocol.Packet;
+import com.shuffle.protocol.SignedPacket;
 
 import java.util.Map;
 
@@ -19,7 +20,7 @@ public class Evidence {
     boolean credible; // Do we believe this evidence?
     Transaction t = null;
     Signature signature = null;
-    Map<VerificationKey, Packet> output = null;
+    Map<VerificationKey, SignedPacket> output = null;
     Map<VerificationKey, EncryptionKey> sent = null;
 
     private Evidence(
@@ -27,8 +28,9 @@ public class Evidence {
             boolean credible,
             Transaction t,
             Signature signature,
-            Map<VerificationKey, Packet> output,
-            Map<VerificationKey, EncryptionKey> sent) {
+            Map<VerificationKey, SignedPacket> output,
+            Map<VerificationKey, EncryptionKey> sent,
+            SignedPacket packet) {
 
         if (reason == null) {
             throw new IllegalArgumentException();
@@ -67,6 +69,15 @@ public class Evidence {
                 }
                 break;
             }
+            case Liar: {
+                if (packet == null) {
+                    throw new IllegalArgumentException();
+                }
+                break;
+            }
+            default: {
+                throw new IllegalArgumentException();
+            }
         }
 
         this.reason = reason;
@@ -86,14 +97,14 @@ public class Evidence {
         this.credible = credible;
     }
 
-    public Evidence(Reason reason, boolean credible, Transaction t) {
+    /*public Evidence(Reason reason, boolean credible, Transaction t) {
         if (t == null) {
             throw new NullPointerException();
         }
         this.reason = reason;
         this.credible = true;
         this.t = t;
-    }
+    }*/
 
     protected Evidence() {
 
@@ -101,6 +112,10 @@ public class Evidence {
 
     @Override
     public boolean equals(Object o) {
+        if (o == null) {
+            return false;
+        }
+
         if (!(o instanceof Evidence)) {
             return false;
         }
@@ -134,26 +149,30 @@ public class Evidence {
     }
 
     static public Evidence NoFundsAtAll(boolean credible) {
-        return new Evidence(Reason.NoFundsAtAll, credible, null, null, null, null);
+        return new Evidence(Reason.NoFundsAtAll, credible, null, null, null, null, null);
     }
 
     static public Evidence InsufficientFunds(boolean credible, Transaction t) {
-        return new Evidence(Reason.InsufficientFunds, credible, t, null, null, null);
+        return new Evidence(Reason.InsufficientFunds, credible, t, null, null, null, null);
     }
 
     static public Evidence DoubleSpend(boolean credible, Transaction t) {
-        return new Evidence(Reason.DoubleSpend, credible, t, null, null, null);
+        return new Evidence(Reason.DoubleSpend, credible, t, null, null, null, null);
     }
 
     static public Evidence InvalidSignature(boolean credible, Signature signature) {
-        return new Evidence(Reason.InvalidSignature, credible, null, signature, null, null);
+        return new Evidence(Reason.InvalidSignature, credible, null, signature, null, null, null);
     }
 
     static public Evidence EquivocationFailureAnnouncement(Map<VerificationKey, EncryptionKey> sent) {
-        return new Evidence(Reason.EquivocationFailure, true, null, null, null, sent);
+        return new Evidence(Reason.EquivocationFailure, true, null, null, null, sent, null);
     }
 
-    static public Evidence EquivocationFailureBroadcast(Map<VerificationKey, Packet> output) {
-        return new Evidence(Reason.EquivocationFailure, true, null, null, output, null);
+    static public Evidence EquivocationFailureBroadcast(Map<VerificationKey, SignedPacket> output) {
+        return new Evidence(Reason.EquivocationFailure, true, null, null, output, null, null);
+    }
+
+    static public Evidence Liar(SignedPacket packet) {
+        return new Evidence(Reason.Liar, true, null, null, null, null, packet);
     }
 }

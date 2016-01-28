@@ -36,11 +36,19 @@ public class MockSignature implements Signature {
 
     @Override
     public boolean equals(Object o) {
+        if (o == null) {
+            return false;
+        }
+
         if (!(o instanceof MockSignature)) {
             return false;
         }
 
-        return (key.equals((MockSignature)o));
+        MockSignature sig = (MockSignature)o;
+
+        return (t == sig.t || t != null && t.equals(sig.t)) &&
+                (packet == sig.packet || packet != null && packet.equals(sig.packet)) &&
+                (key == sig.key || key != null && key.equals(sig.key));
     }
 
     @Override
