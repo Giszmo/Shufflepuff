@@ -23,14 +23,14 @@ public class Blame {
     final public Transaction t;
     final public List<SignedPacket> packets;
     final public DecryptionKey privateKey;
-    final public Map<VerificationKey, Signature> invalid;
+    final public Signature invalid;
 
     Blame(Reason reason,
           VerificationKey accused,
           Transaction t,
           DecryptionKey privateKey,
           List<SignedPacket> packets,
-          Map<VerificationKey, Signature> invalid) {
+          Signature invalid) {
 
         if (reason == null) {
             throw new IllegalArgumentException();
@@ -65,7 +65,7 @@ public class Blame {
                 break;
             }
             case InvalidSignature: {
-                if (invalid == null) {
+                if (invalid == null || accused == null) {
                     throw new IllegalArgumentException();
                 }
                 break;
@@ -148,8 +148,8 @@ public class Blame {
     }
 
     // Sent when a player makes an invalid signature to the transaction.
-    public static Blame InvalidSignature(Map<VerificationKey, Signature> invalid) {
-        return new Blame(Reason.InvalidSignature, null, null, null, null, invalid);
+    public static Blame InvalidSignature(VerificationKey accused, Signature invalid) {
+        return new Blame(Reason.InvalidSignature, accused, null, null, null, invalid);
     }
 
     // Sent when something goes wrong in phase 4.

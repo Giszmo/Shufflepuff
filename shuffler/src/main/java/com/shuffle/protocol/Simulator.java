@@ -100,7 +100,7 @@ public final class Simulator {
 
         @Override
         public SignedPacket receive() throws TimeoutError, InterruptedException {
-            for (int i = 0; i < 5; i ++) {
+            for (int i = 0; i < 2; i ++) {
                 SignedPacket next = inbox.poll(1, TimeUnit.SECONDS);
 
                 if (next != null) {
@@ -530,18 +530,16 @@ public final class Simulator {
     }
 
     private synchronized Map<SigningKey, ReturnState> runSimulation(
-            long amount,
             List<Adversary> init)  {
         if (init == null ) throw new NullPointerException();
 
         machines = new ConcurrentHashMap<>();
+        sent.clear();
 
-        int i = 0;
         try {
             for (Adversary in : init) {
                 machines.put(in.identity().VerificationKey(),
                         new BlackBox(in));
-                i++;
             }
         } catch (CryptographyError e) {
             log.error("Some Crypto error happened",e);
@@ -769,7 +767,7 @@ public final class Simulator {
                 adversaries.add(adversary);
             }
 
-            return Simulator.this.runSimulation(amount, adversaries);
+            return Simulator.this.runSimulation(adversaries);
         }
     }
 
@@ -885,6 +883,6 @@ public final class Simulator {
             }
         }
 
-        return runSimulation(amount, init);
+        return runSimulation(init);
     }
 }

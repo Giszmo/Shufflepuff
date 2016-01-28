@@ -83,25 +83,25 @@ final class CoinShuffle {
         // several failed rounds until they have eliminated malicious players.
         class Round {
 
-            final private int me; // Which player am I?
+            final public int me; // Which player am I?
 
-            final private Map<Integer, VerificationKey> players; // The keys representing all the players.
+            final public Map<Integer, VerificationKey> players; // The keys representing all the players.
 
-            final private int N; // The number of players.
+            final public int N; // The number of players.
 
             // This will contain the new encryption public keys.
-            final Map<VerificationKey, EncryptionKey> encryptionKeys = new HashMap<>();
+            final public Map<VerificationKey, EncryptionKey> encryptionKeys = new HashMap<>();
 
             // The set of new addresses into which the coins will be deposited.
-            Queue<Address> newAddresses = null;
+            public Queue<Address> newAddresses = null;
 
-            final Address change; // My change address. (may be null).
+            final public Address change; // My change address. (may be null).
 
-            final Map<VerificationKey, Signature> signatures = new HashMap<>();
+            final public Map<VerificationKey, Signature> signatures = new HashMap<>();
 
-            Transaction t = null;
+            public Transaction t = null;
 
-            final private Mailbox mailbox;
+            final public Mailbox mailbox;
 
             Matrix protocolDefinition(
             ) throws
@@ -291,20 +291,16 @@ final class CoinShuffle {
                     phase = Phase.Blame;
                     Matrix bm = new Matrix();
                     Message blameMessage = messages.make();
-                    blameMessage.attach(Blame.InvalidSignature(invalid));
-                    mailbox.broadcast(blameMessage, phase);
 
                     for(Map.Entry<VerificationKey, Signature> bad : invalid.entrySet()) {
                         VerificationKey key = bad.getKey();
                         Signature signature = bad.getValue();
-                        bm.put(vk, key, Evidence.InvalidSignature(true, signature));
-                    }
-                    return fillBlameMatrix(bm);
-                }
 
-                if (mailbox.blameReceived()) {
-                    phase = Phase.Blame;
-                    return fillBlameMatrix(new Matrix());
+                        bm.put(vk, key, Evidence.InvalidSignature(true, signature));
+                        blameMessage.attach(Blame.InvalidSignature(key, signature));
+                    }
+                    mailbox.broadcast(blameMessage, phase);
+                    return fillBlameMatrix(bm);
                 }
 
                 // Send the transaction into the net.
@@ -480,7 +476,6 @@ final class CoinShuffle {
                     ValueException,
                     SignatureException {
                 Map<VerificationKey, List<SignedPacket>> blameMessages = mailbox.receiveAllBlame();
-                log.info("Player " + sk.toString() + " gets blame messages " + blameMessages.toString());
 
                 // Get all hashes received in phase 4 so that we can check that they were reported correctly.
                 Map<VerificationKey, Message> hashes = new HashMap<>();
@@ -593,16 +588,16 @@ final class CoinShuffle {
                                     break;
                                 }
                                 case InvalidSignature: {
-                                    if (blame.invalid == null) {
+                                    if (blame.invalid == null || blame.accused == null) {
                                         matrix.put(vk, from, null /* TODO */);
                                         break;
                                     }
-                                    for (Map.Entry<VerificationKey, Signature> invalid : blame.invalid.entrySet()) {
-                                        // Is the evidence included sufficient?
-                                        credible = t != null && !invalid.getKey().verify(t, invalid.getValue());
-                                        matrix.put(from, invalid.getKey(),
-                                                Evidence.InvalidSignature(credible, invalid.getValue()));
-                                    }
+
+                                    // Is the evidence included sufficient?
+                                    credible = t != null && !blame.accused.verify(t, blame.invalid);
+                                    matrix.put(from, blame.accused,
+                                            Evidence.InvalidSignature(credible, blame.invalid));
+
                                     break;
                                 }
                                 default:

@@ -75,6 +75,8 @@ public class Evidence {
                 }
                 break;
             }
+            case NoFundsAtAll:
+                break;
             default: {
                 throw new IllegalArgumentException();
             }

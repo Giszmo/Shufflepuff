@@ -149,7 +149,7 @@ public class TestShuffleMachine {
             count += map.size();
         }
 
-        log.info("%%% there were " + count + " announcement messages. ");
+        log.info("%%% there were " + count + " announcement messages: " + announceMsgs.toString());
 
         Map<VerificationKey, Map<VerificationKey, Packet>> shuffleMsgs = sent.get(Phase.Shuffling);
 
@@ -223,8 +223,6 @@ public class TestShuffleMachine {
             }
 
             log.info("Checking test case: " + (description != null ? " " + description + "; " : "") + "case number = " + id);
-            log.info("expected " + expected.toString());
-            log.info("results  " + results.toString());
 
             // Check that the map of error states returned matches that which was expected.
             for (Map.Entry<SigningKey, ReturnState> ex : expected.entrySet()) {
@@ -446,8 +444,6 @@ public class TestShuffleMachine {
         players.addAll(results.keySet());
         Set<SigningKey> malicious = new HashSet<>();
 
-        analyseSentMessages(sim);
-
         eq = 0;
         int index = 1;
         for (SigningKey key : players) {
@@ -554,7 +550,7 @@ public class TestShuffleMachine {
         return test;
     }
 
-    public TestCase DifferentTransactionSignature(int caseNo, int numPlayers, int[] weirdos, Simulator sim) {
+    public TestCase InvalidTransactionSignature(int caseNo, int numPlayers, int[] weirdos, Simulator sim) {
         Set<Integer> class2 = new HashSet<>();
 
         for (int weirdo : weirdos) {
@@ -580,7 +576,7 @@ public class TestShuffleMachine {
             }
         }
 
-        TestCase test = new TestCase(session, amount, "Broadcast phase equivocation test case.", caseNo);
+        TestCase test = new TestCase(session, amount, "invalid signature test case.", caseNo);
         Map<SigningKey, ReturnState> results = init.run();
         SortedSet<SigningKey> players = new TreeSet<>();
         players.addAll(results.keySet());
@@ -599,14 +595,21 @@ public class TestShuffleMachine {
             SigningKey i = result.getKey();
             ReturnState returnState = result.getValue();
 
-            Matrix bm = new Matrix();
+            Matrix bm = null;
 
-            for (SigningKey j : results.keySet()) {
-                for(SigningKey k : results.keySet()) {
-                    boolean inClass2 = keyClass2.contains(j);
-                    if (inClass2 != keyClass2.contains(k)) {
-                        bm.put(j.VerificationKey(),k.VerificationKey(),
-                                new Evidence(Reason.InvalidSignature, inClass2 == keyClass2.contains(i)));
+            if (class2.contains(i)) {
+                bm = anyMatrix;
+            } else {
+
+                bm = new Matrix();
+
+                for (SigningKey j : results.keySet()) {
+                    for (SigningKey k : results.keySet()) {
+                        boolean inClass2 = keyClass2.contains(j);
+                        if (inClass2 != keyClass2.contains(k)) {
+                            bm.put(j.VerificationKey(), k.VerificationKey(),
+                                    new Evidence(Reason.InvalidSignature, inClass2 == keyClass2.contains(i)));
+                        }
                     }
                 }
             }
@@ -707,10 +710,10 @@ public class TestShuffleMachine {
         int caseNo = 0;
 
         // Player generates a different transaction signature to everyone else.
-        DifferentTransactionSignature(caseNo++, 2, new int[]{2}, sim).check();
-        DifferentTransactionSignature(caseNo++, 5, new int[]{2}, sim).check();
-        DifferentTransactionSignature(caseNo++, 5, new int[]{2, 3}, sim).check();
-        DifferentTransactionSignature(caseNo, 10, new int[]{2, 5, 6, 7}, sim).check();
+        InvalidTransactionSignature(caseNo++, 2, new int[]{2}, sim).check();
+        InvalidTransactionSignature(caseNo++, 5, new int[]{2}, sim).check();
+        InvalidTransactionSignature(caseNo++, 5, new int[]{2, 3}, sim).check();
+        InvalidTransactionSignature(caseNo, 10, new int[]{2, 5, 6, 7}, sim).check();
     }
 
     @Test

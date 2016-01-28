@@ -31,7 +31,7 @@ public class Matrix {
 
         if(evidence == null) {
             log.warn("null blame evidence given for " + accuser.toString() + " to " + accused.toString() + " " + Arrays.toString(
-            new Throwable().getStackTrace()));
+                new Throwable().getStackTrace()));
         }
 
         Map<VerificationKey, Evidence> blames = blame.get(accuser);
@@ -45,7 +45,7 @@ public class Matrix {
 
         if(blame != null) {
             // There is a warning rather than an exception because I don't know for certain that this should never happen.
-            log.warn("Overwriting blame matrix entry [" + accuser.toString() + ", " + accused.toString() + "]");
+            log.warn("Overwriting blame matrix entry " + blame.toString() + "at [" + accuser.toString() + ", " + accused.toString() + "]" + Arrays.toString(new Throwable().getStackTrace()));
         }
 
         blames.put(accused, evidence);

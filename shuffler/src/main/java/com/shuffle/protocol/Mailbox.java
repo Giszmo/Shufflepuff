@@ -220,7 +220,7 @@ public class Mailbox {
         // First get the blame messages in history.
         for (SignedPacket packet : history) {
             if (packet.payload.phase == Phase.Blame) {
-                blame.get(sk.VerificationKey()).add(packet);
+                blame.get(packet.payload.signer).add(packet);
             }
         }
 
