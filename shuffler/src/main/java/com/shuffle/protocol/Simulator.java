@@ -78,19 +78,18 @@ public final class Simulator {
 
         @Override
         public void sendTo(VerificationKey to, SignedPacket packet) throws InvalidImplementationError, TimeoutError {
-            SignedPacket copy = packet.copy();
 
             // Replace with malicious packet if necessary.
             if (malicious != null) {
                 try {
-                    copy = malicious.replace(copy);
+                    packet = malicious.replace(packet);
                 } catch (FormatException e) {
                     log.error("Error sending ", e);
                 }
             }
 
             try {
-                Simulator.this.sendTo(to, copy);
+                Simulator.this.sendTo(to, packet);
             } catch (InterruptedException e) {
                 // This means that the thread running the machine we are delivering to has been interrupted.
                 // This would look like a timeout if this were happening over a real network.
@@ -198,12 +197,12 @@ public final class Simulator {
                 Packet packet = sigPacket.payload;
 
                 if (packet.phase == Phase.Announcement && others.contains(packet.recipient)) {
-                    Message message = packet.message.copy();
+                    Message message = packet.message;
 
                     // Sometimes a change address is included with message 1.
                     Address change = null;
                     try {
-                        message.readEncryptionKey();
+                        message = message.rest();
                         if (!message.isEmpty()) {
                             change = message.readAddress();
                         }
@@ -211,10 +210,10 @@ public final class Simulator {
                         e.printStackTrace();
                     }
 
-                    message.attach(alternate);
+                    message = message.attach(alternate);
 
                     if (change != null) {
-                        message.attach(change);
+                        message = message.attach(change);
                     }
 
                     Packet newPacket = new Packet(message, packet.session, packet.phase, packet.signer, packet.recipient);
@@ -284,16 +283,17 @@ public final class Simulator {
                 if (packet.phase == Phase.Shuffling) {
                     // drop a random address from the packet.
                     List<Address> addresses = new LinkedList<>();
-                    Message message = packet.message.copy();
+                    Message message = packet.message;
 
                     while (!message.isEmpty()) {
                         addresses.add(message.readAddress());
+                        message = message.rest();
                     }
 
                     int i = 0;
                     for (Address address : addresses) {
                         if (i != drop) {
-                            message.attach(address);
+                            message = message.attach(address);
                         }
                     }
 
@@ -321,19 +321,20 @@ public final class Simulator {
                 if (packet.phase == Phase.Shuffling) {
                     // drop a random address from the packet.
                     List<Address> addresses = new LinkedList<>();
-                    Message message = packet.message.copy();
+                    Message message = packet.message;
 
                     while (!message.isEmpty()) {
                         addresses.add(message.readAddress());
+                        message = message.rest();
                     }
                     Address duplicate = addresses.get(this.duplicate);
 
                     int i = 0;
                     for (Address address : addresses) {
                         if (i != drop) {
-                            message.attach(address);
+                            message = message.attach(address);
                         } else {
-                            message.attach(duplicate);
+                            message = message.attach(duplicate);
                         }
                     }
 
@@ -360,7 +361,7 @@ public final class Simulator {
                 if (packet.phase == Phase.Shuffling) {
                     // drop a random address from the packet.
                     List<Address> addresses = new LinkedList<>();
-                    Message message = packet.message.copy();
+                    Message message = packet.message;
 
                     while (!message.isEmpty()) {
                         addresses.add(message.readAddress());
@@ -519,7 +520,7 @@ public final class Simulator {
             byPacket.put(packet.payload.signer, bySender);
         }
 
-        bySender.put(packet.payload.recipient, packet.payload.copy());
+        bySender.put(packet.payload.recipient, packet.payload);
 
         machines.get(to).deliver(packet);
     }

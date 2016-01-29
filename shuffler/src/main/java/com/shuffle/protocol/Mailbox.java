@@ -58,7 +58,7 @@ public class Mailbox {
         // Don't send anything to ourselves or to a nonexistent player.
         if (!packet.recipient.equals(sk.VerificationKey()) && players.contains(packet.recipient)) {
             network.sendTo(packet.recipient, signed);
-            sent.add(signed.copy());
+            sent.add(signed);
         }
     }
 
@@ -117,7 +117,7 @@ public class Mailbox {
             }
         }
 
-        history.add(found.copy());
+        history.add(found);
         if (found.payload.phase == Phase.Blame) {
             blameReceived = true;
         }
@@ -130,13 +130,13 @@ public class Mailbox {
 
         for (SignedPacket packet : history) {
             if (packet.payload.phase == phase) {
-                selection.add(packet.copy());
+                selection.add(packet);
             }
         }
 
         for (SignedPacket packet : delivered) {
             if (packet.payload.phase == phase) {
-                selection.add(packet.copy());
+                selection.add(packet);
             }
         }
 

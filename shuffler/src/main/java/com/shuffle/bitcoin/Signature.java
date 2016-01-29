@@ -6,5 +6,4 @@ package com.shuffle.bitcoin;
  * Created by Daniel Krawisz on 12/26/15.
  */
 public interface Signature {
-    Signature copy();
 }

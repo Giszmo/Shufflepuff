@@ -24,17 +24,6 @@ public class MockSignature implements Signature {
     }
 
     @Override
-    public Signature copy() {
-        if (packet != null) {
-            return new MockSignature(packet.copy(), key);
-        }
-        if (t != null) {
-            return new MockSignature(t, key);
-        }
-        return null;
-    }
-
-    @Override
     public boolean equals(Object o) {
         if (o == null) {
             return false;

@@ -10,6 +10,8 @@ import com.shuffle.protocol.blame.Blame;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.util.Arrays;
+import java.util.Deque;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Queue;
@@ -21,24 +23,22 @@ public class MockMessage implements Message {
     private static Logger log = LogManager.getLogger(TestShuffleMachine.class);
 
     public static class Hash {
-        public Queue<Atom> hashed;
+        public final Atom hashed;
 
-        public Hash(Queue<Atom> toHash) {
+        public Hash(Atom toHash) {
             hashed = toHash;
+        }
+
+        public Hash(Message message) {
+            if (!(message instanceof MockMessage)) {
+                throw new InvalidImplementationError();
+            }
+
+            hashed = ((MockMessage)message).atoms;
         }
 
         public String toString() {
             return "hashed[" + hashed + "]";
-        }
-
-        public Hash copy() {
-            Queue<Atom> newAtoms = new LinkedList<>();
-
-            for (Atom atom : hashed) {
-                newAtoms.add(atom.copy());
-            }
-
-            return new Hash(newAtoms);
         }
 
         public boolean equals(Object o) {
@@ -56,42 +56,111 @@ public class MockMessage implements Message {
         }
     }
 
-    public static class Atom {
-        public Address addr = null;
-        public EncryptionKey ek = null;
-        public Signature sig = null;
-        public Hash hash = null;
-        public Blame blame;
+    private static class Atom {
+        public final Address addr;
+        public final EncryptionKey ek;
+        public final Signature sig;
+        public final Hash hash;
+        public final Blame blame;
 
-        public Transaction t;
+        public final Transaction t;
         // Sometimes, we have blockchain send whole packets that we previously received.
-        public Packet packet;
+        public final Packet packet;
 
-        public Atom(Address addr) {
+        public final  Atom next;
+
+        private Atom(Address addr, EncryptionKey ek, Signature sig, Hash hash, Blame blame, Transaction t, Packet packet, Atom next) {
+            // Enforce the correct format.
+            format : {
+                if (addr != null) {
+                    if (ek != null || sig != null || hash != null || blame != null || t != null) {
+                        throw new IllegalArgumentException();
+                    }
+                    break format;
+                }
+
+                if (ek != null) {
+                    if (sig != null || hash != null || blame != null || t != null) {
+                        throw new IllegalArgumentException();
+                    }
+                    break format;
+                }
+
+                if (sig != null) {
+                    if (hash != null || blame != null || t != null) {
+                        throw new IllegalArgumentException();
+                    }
+                    break format;
+                }
+
+                if (hash != null) {
+                    if (blame != null || t != null) {
+                        throw new IllegalArgumentException();
+                    }
+                    break format;
+                }
+
+                if (blame != null) {
+                    if (t != null) {
+                        throw new IllegalArgumentException();
+                    }
+                    break format;
+                }
+
+                if (t != null) {
+                    break format;
+                }
+
+                throw new IllegalArgumentException();
+            }
+
             this.addr = addr;
-        }
-
-        public Atom(EncryptionKey ek) {
             this.ek = ek;
-        }
-
-        public Atom(Signature sig) {
             this.sig = sig;
-        }
-
-        public Atom(Hash hash) {
             this.hash = hash;
-        }
-
-        public Atom(Transaction t) {
+            this.blame = blame;
             this.t = t;
-        }
-
-        public Atom(Packet packet) {
             this.packet = packet;
+            this.next = next;
         }
 
-        public Atom(Blame blame) {this.blame = blame;}
+        public static Atom make(Object o, Atom next) {
+            if (o instanceof Address) {
+                return new Atom((Address)o, null, null, null, null, null, null, next);
+            }
+            if (o instanceof EncryptionKey) {
+                return new Atom(null, (EncryptionKey)o, null, null, null, null, null, next);
+            }
+            if (o instanceof Signature) {
+                return new Atom(null, null, (Signature)o, null, null, null, null, next);
+            }
+            if (o instanceof Hash) {
+                return new Atom(null, null, null, (Hash)o, null, null, null, next);
+            }
+            if (o instanceof Blame) {
+                return new Atom(null, null, null, null, (Blame)o, null, null, next);
+            }
+            if (o instanceof Transaction) {
+                return new Atom(null, null, null, null, null, (Transaction)o, null, next);
+            }
+            if (o instanceof Packet) {
+                return new Atom(null, null, null, null, null, null, (Packet)o, next);
+            }
+
+            throw new IllegalArgumentException();
+        }
+
+        public static Atom make(Object o) {
+            return make(o, null);
+        }
+
+        public static Atom attach(Atom a, Atom o) {
+            if (a == null) {
+                return o;
+            }
+
+            return new Atom(a.addr, a.ek, a.sig, a.hash, a.blame, a.t, a.packet, attach(a.next, o));
+        }
 
         @Override
         public boolean equals(Object o) {
@@ -111,7 +180,8 @@ public class MockMessage implements Message {
                      && ((a.t == null && t == null) || (a.t != null && t != null && t.equals(a.t))) &&
                     ((a.packet == null && packet == null) || (a.packet != null && packet != null && packet.equals(a.packet)))
                      && ((a.blame == null && blame == null) || (a.blame != null && blame != null && blame.equals(a.blame)))
-                     && ((a.hash == null && hash == null) || (a.hash != null && hash != null && hash.equals(a.hash)));
+                     && ((a.hash == null && hash == null) || (a.hash != null && hash != null && hash.equals(a.hash)))
+                     && ((a.next == null && next == null) || (next != null && next.equals(a.next)));
         }
 
         @Override
@@ -121,118 +191,85 @@ public class MockMessage implements Message {
             hash = hash * 15 + (sig == null ? 0 : sig.hashCode());
             hash = hash * 15 + (this.hash == null ? 0 : this.hash.hashCode());
             hash = hash * 15 + (blame == null ? 0 : blame.hashCode());
+            hash = hash * 15 + (next == null ? 0 : next.hashCode());
             return hash;
         }
 
         @Override
         public String toString() {
+            String str = "";
 
             if (addr != null) {
-                return addr.toString();
+                str += addr.toString();
             }
 
             if (ek != null) {
-                return ek.toString();
+                str += ek.toString();
             }
 
             if (sig != null) {
-                return sig.toString();
+                str += sig.toString();
             }
 
             if (hash != null) {
-                return hash.toString();
+                str += hash.toString();
             }
 
             if (t != null) {
-                return t.toString();
+                str += t.toString();
             }
 
             if (packet != null) {
-                return packet.toString();
+                str += packet.toString();
             }
 
             if (blame != null) {
-                return blame.toString();
+                str += blame.toString();
             }
 
-            return "";
-        }
-
-        public Atom copy() {
-
-            if (addr != null) {
-                return new Atom(addr);
+            if (next != null) {
+                str += "⊕" + next.toString();
             }
 
-            if (ek != null) {
-                return new Atom(ek);
-            }
-
-            if (sig != null) {
-                return new Atom(sig);
-            }
-
-            if (hash != null) {
-                return new Atom(hash.copy());
-            }
-
-            if (t != null) {
-                return new Atom(t);
-            }
-
-            if (packet != null) {
-                return new Atom(packet);
-            }
-
-            if (blame != null) {
-                return new Atom(blame.copy());
-            }
-
-            return null;
+            return str;
         }
     }
 
-    Queue<Atom> atoms;
+    final Atom atoms;
 
     public MockMessage() {
-        atoms = new LinkedList<>();
+        atoms = null;
     }
 
-    public MockMessage(Queue<Atom> atoms) {
-        this.atoms = atoms;
+    private MockMessage(Atom atom) {
+        atoms = atom;
+    }
+
+    public MockMessage(Deque atoms) {
+        Atom atom = null;
+
+        Iterator i = atoms.descendingIterator();
+
+        while(i.hasNext()) {
+            atom = Atom.make(i.next(), atom);
+        }
+
+        this.atoms = atom;
     }
 
     @Override
     public boolean isEmpty() {
-        return atoms.size() == 0;
+        return atoms == null;
     }
 
-
-    public Message attach(Atom atom) {
-        if (atom == null) {
+    public Message attachAddrs(Deque<Address> addrs) {
+        if (addrs == null) {
             throw new NullPointerException();
         }
-        atoms.add(atom);
-        return this;
-    }
 
-    public Message attach(Queue<Atom> atoms) {
-        if (atoms == null) {
-            throw new NullPointerException();
-        }
-        this.atoms.addAll(atoms);
-        return this;
-    }
+        MockMessage m = new MockMessage(addrs);
 
-    public Message attachAddrs(Queue<Address> addrs) {
-        if (addrs== null) {
-            throw new NullPointerException();
-        }
-        for (Address addr : addrs) {
-            attach(addr);
-        }
-
-        return this;
+        return new MockMessage(Atom.attach(atoms, m.atoms));
     }
 
     @Override
@@ -240,8 +277,8 @@ public class MockMessage implements Message {
         if (ek == null) {
             throw new NullPointerException();
         }
-        atoms.add(new Atom(ek));
-        return this;
+
+        return new MockMessage(Atom.attach(atoms, Atom.make(ek)));
     }
 
     @Override
@@ -249,8 +286,8 @@ public class MockMessage implements Message {
         if (addr == null) {
             throw new NullPointerException();
         }
-        atoms.add(new Atom(addr));
-        return this;
+
+        return new MockMessage(Atom.attach(atoms, Atom.make(addr)));
     }
 
     @Override
@@ -258,8 +295,8 @@ public class MockMessage implements Message {
         if (sig == null) {
             throw new NullPointerException();
         }
-        atoms.add(new Atom(sig));
-        return this;
+
+        return new MockMessage(Atom.attach(atoms, Atom.make(sig)));
     }
 
     @Override
@@ -267,16 +304,16 @@ public class MockMessage implements Message {
         if (blame == null) {
             throw new NullPointerException();
         }
-        atoms.add(new Atom(blame));
-        return this;
+
+        return new MockMessage(Atom.attach(atoms, Atom.make(blame)));
     }
 
     public Message attach(Hash hash) {
         if (hash == null) {
             throw new NullPointerException();
         }
-        atoms.add(new Atom(hash));
-        return this;
+
+        return new MockMessage(Atom.attach(atoms, Atom.make(hash)));
     }
 
     @Override
@@ -288,38 +325,34 @@ public class MockMessage implements Message {
             throw new InvalidImplementationError();
         }
 
-        atoms.addAll(((MockMessage) message).atoms);
-        return this;
+        return new MockMessage(Atom.attach(atoms, ((MockMessage)message).atoms));
     }
 
     @Override
     public EncryptionKey readEncryptionKey() throws FormatException {
-        Atom atom = atoms.peek();
-        if (atom == null || atom.ek == null) {
+        if (atoms == null || atoms.ek == null) {
             throw new FormatException();
         }
 
-        return atoms.remove().ek;
+        return atoms.ek;
     }
 
     @Override
     public Address readAddress() throws FormatException {
-        Atom atom = atoms.peek();
-        if (atom == null || atom.addr == null) {
+        if (atoms == null || atoms.addr == null) {
             throw new FormatException();
         }
 
-        return atoms.remove().addr;
+        return atoms.addr;
     }
 
     @Override
     public Blame readBlame() throws FormatException, CryptographyError {
-        Atom atom = atoms.peek();
-        if (atom == null || atom.blame == null) {
+        if (atoms == null || atoms.blame == null) {
             throw new FormatException();
         }
 
-        Blame blame = atoms.remove().blame;
+        Blame blame = atoms.blame;
 
         if (blame.packets != null) {
             for (SignedPacket packet : blame.packets) {
@@ -335,12 +368,21 @@ public class MockMessage implements Message {
 
     @Override
     public Signature readSignature() throws FormatException {
-        Atom atom = atoms.peek();
-        if (atom == null || atom.sig == null) {
+        if (atoms == null || atoms.sig == null) {
             throw new FormatException();
         }
 
-        return atoms.remove().sig;
+        return atoms.sig;
+    }
+
+    @Override
+    public Message rest() throws FormatException {
+
+        if (atoms == null) {
+            throw new FormatException();
+        }
+
+        return new MockMessage(atoms.next);
     }
 
     @Override
@@ -353,40 +395,16 @@ public class MockMessage implements Message {
             return false;
         }
 
-        Queue<Atom> mock = ((MockMessage)o).atoms;
+        MockMessage mock = (MockMessage)o;
 
-        if (mock == atoms) {
-            return true;
-        }
-
-        if (mock.size() != atoms.size()) {
-            return false;
-        }
-
-        Iterator<Atom> i1 = atoms.iterator();
-        Iterator<Atom> i2 = mock.iterator();
-
-        while (i1.hasNext()) {
-            if(!i1.next().equals(i2.next())) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    public MockMessage copy() {
-        Queue<Atom> newAtoms = new LinkedList<>();
-
-        for (Atom atom : atoms) {
-            newAtoms.add(atom.copy());
-        }
-
-        return new MockMessage(newAtoms);
+        return (atoms == null && mock.atoms == null) || (atoms != null && atoms.equals(mock.atoms));
     }
 
     @Override
     public String toString() {
+        if (atoms == null) {
+            return "";
+        }
         return atoms.toString();
     }
 }

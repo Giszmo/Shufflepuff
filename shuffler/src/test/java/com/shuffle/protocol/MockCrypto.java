@@ -64,14 +64,8 @@ public class MockCrypto implements Crypto {
             throw new InvalidImplementationError();
         }
 
-        MockMessage p = ((MockMessage)m).copy();
+        MockMessage p = ((MockMessage)m);
 
-        Queue<MockMessage.Atom> z = new LinkedList<>();
-
-        z.add(new MockMessage.Atom(new MockMessage.Hash(p.atoms)));
-
-        p.atoms = z;
-
-        return p;
+        return new MockMessage().attach(new MockMessage.Hash(p.atoms));
     }
 }

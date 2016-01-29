@@ -24,5 +24,5 @@ public interface Message {
     Address readAddress() throws FormatException;
     Blame readBlame() throws FormatException, CryptographyError;
 
-    Message copy() throws InvalidImplementationError;
+    Message rest() throws FormatException;
 }

@@ -112,21 +112,6 @@ public class Blame {
                 (invalid == blame.invalid || invalid != null && invalid.equals(blame.invalid));
     }
 
-    public Blame copy() {
-        List<SignedPacket> packets = null;
-
-        if (this.packets != null) {
-            packets = new LinkedList<>();
-
-            for (SignedPacket packet : this.packets) {
-
-                packets.add(packet.copy());
-            }
-        }
-
-        return new Blame(reason, accused, t, privateKey, packets, invalid);
-    }
-
     // Sent when a player has insufficient funds in his address.
     public static Blame InsufficientFunds(VerificationKey accused, Transaction t) {
         return new Blame(Reason.InsufficientFunds, accused, t, null, null, null);

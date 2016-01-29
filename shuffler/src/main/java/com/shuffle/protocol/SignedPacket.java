@@ -23,10 +23,6 @@ public class SignedPacket {
         return payload.signer.verify(payload, signature);
     }
 
-    public SignedPacket copy() {
-        return new SignedPacket(payload.copy(), signature.copy());
-    }
-
     @Override
     public String toString() {
         return payload.toString() + "[" + signature.toString() + "]";

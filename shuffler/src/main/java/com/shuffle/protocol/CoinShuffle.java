@@ -21,6 +21,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.net.ProtocolException;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -312,12 +313,12 @@ final class CoinShuffle {
                 return null;
             }
 
-            Queue<Address> readNewAddresses(Message message) throws FormatException, InvalidImplementationError {
-                Queue<Address> queue = new LinkedList<>();
+            Deque<Address> readNewAddresses(Message message) throws FormatException, InvalidImplementationError {
+                Deque<Address> queue = new LinkedList<>();
 
-                Message copy = message.copy();
-                while (!copy.isEmpty()) {
-                    queue.add(copy.readAddress());
+                while (!message.isEmpty()) {
+                    queue.add(message.readAddress());
+                    message = message.rest();
                 }
 
                 return queue;
@@ -329,20 +330,23 @@ final class CoinShuffle {
                 int count = 0;
                 Set<Address> addrs = new HashSet<>(); // Used to check that all addresses are different.
 
-                Message copy = message.copy();
-                while (!copy.isEmpty()) {
-                    Address address = copy.readAddress();
+                while (!message.isEmpty()) {
+                    Address address = message.readAddress();
+                    message = message.rest();
+
                     addrs.add(address);
                     count++;
                     try {
-                        decrypted.attach(key.decrypt(address));
+                        decrypted = decrypted.attach(key.decrypt(address));
                     } catch (CryptographyError e) {
+                        System.out.println("decrypt all error case Q");
                         mailbox.broadcast(messages.make().attach(Blame.ShuffleFailure()), phase);
                         return null;
                     }
                 }
 
                 if (addrs.size() != count || count != expected) {
+                    System.out.println("decrypt all error case 1; count = " + count + "; expected = " + expected);
                     mailbox.broadcast(messages.make().attach(Blame.MissingOutput(players.get(N))), phase);
                     return null;
                 }
@@ -419,11 +423,11 @@ final class CoinShuffle {
                     Transaction t = coin.getConflictingTransaction(offender.address(), amount);
 
                     if (t == null) {
-                        blameMessage.attach(Blame.NoFundsAtAll(offender));
+                        blameMessage = blameMessage.attach(Blame.NoFundsAtAll(offender));
                         matrix.put(vk, offender,
                                 Evidence.NoFundsAtAll(true));
                     } else {
-                        blameMessage.attach(Blame.InsufficientFunds(offender, t));
+                        blameMessage = blameMessage.attach(Blame.InsufficientFunds(offender, t));
                         matrix.put(vk, offender,
                                 Evidence.InsufficientFunds(true, t));
                     }
@@ -509,6 +513,8 @@ final class CoinShuffle {
 
                         while (!message.isEmpty()) {
                             Blame blame = message.readBlame();
+                            message = message.rest();
+
                             boolean credible;
                             switch (blame.reason) {
                                 case NoFundsAtAll: {
@@ -775,18 +781,18 @@ final class CoinShuffle {
                 Queue<Address> newAddresses) {
 
             // Put all temporary encryption keys into a list and hash the result.
-            Message equivocationCheck = messages.make();
+            Message check = messages.make();
             for (int i = 2; i <= players.size(); i++) {
-                equivocationCheck.attach(encryptionKeys.get(players.get(i)));
+                check = check.attach(encryptionKeys.get(players.get(i)));
             }
 
             if (newAddresses != null) {
                 for (Address address : newAddresses) {
-                    equivocationCheck.attach(address);
+                    check = check.attach(address);
                 }
             }
 
-            return crypto.hash(equivocationCheck);
+            return crypto.hash(check);
         }
 
         // Run the protocol. This function manages retries and (nonmalicious) error cases.
@@ -921,14 +927,14 @@ final class CoinShuffle {
 
     // Algorithm to randomly shuffle the elements of a message.
     Message shuffle(Message message) throws CryptographyError, InvalidImplementationError, FormatException {
-        Message copy = message.copy();
         Message shuffled = messages.make();
 
         // Read all elements of the packet and insert them in a Queue.
         Queue<Address> old = new LinkedList<>();
         int N = 0;
-        while(!copy.isEmpty()) {
-            old.add(copy.readAddress());
+        while(!message.isEmpty()) {
+            old.add(message.readAddress());
+            message = message.rest();
             N++;
         }
 
@@ -942,7 +948,7 @@ final class CoinShuffle {
             }
 
             // add the randomly selected element to the queue.
-            shuffled.attach(old.remove());
+            shuffled = shuffled.attach(old.remove());
         }
 
         return shuffled;
@@ -974,6 +980,7 @@ final class CoinShuffle {
 
             encryptionKeys.put(key, message.readEncryptionKey());
 
+            message = message.rest();
             if (!message.isEmpty()) {
                 change.put(key, message.readAddress());
             }

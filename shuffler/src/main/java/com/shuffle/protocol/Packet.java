@@ -60,8 +60,4 @@ public class Packet {
     public String toString() {
         return "{" + message.toString() + ", " + session.toString() + ", " + phase.toString() + ", " + recipient.toString() + ", " + signer.toString() + "}";
     }
-
-    public Packet copy() {
-        return new Packet(message.copy(), session, phase, signer, recipient);
-    }
 }

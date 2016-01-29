@@ -13,6 +13,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -214,11 +215,11 @@ public class TestShuffleMachineMethods {
 
             Message input = new MockMessage();
             for (int i : test.input) {
-                input.attach(new MockAddress(i));
+                input = input.attach(new MockAddress(i));
             }
             Message expected = new MockMessage();
             for (int i : test.expected) {
-                expected.attach(new MockAddress(i));
+                expected = expected.attach(new MockAddress(i));
             }
             try {
                 Message result = machine.shuffle(input);
@@ -251,9 +252,9 @@ public class TestShuffleMachineMethods {
         areEqualTestCase(int[][] input, boolean expected) {
 
             for(int[] in : input) {
-                Queue<MockMessage.Atom> queue = new LinkedList<>();
+                Message queue = new MockMessage();
                 for (int i : in) {
-                    queue.add(new MockMessage.Atom(new MockAddress(i)));
+                    queue = queue.attach(new MockAddress(i));
                 }
 
                 this.input.add(new MockMessage().attach(new MockMessage.Hash(queue)));
@@ -305,9 +306,12 @@ public class TestShuffleMachineMethods {
                 )
         };
 
+        int i = 0;
         for(areEqualTestCase testCase : tests) {
+            i++;
             try {
-                Assert.assertEquals(testCase.expected, CoinShuffle.areEqual(testCase.input));
+                System.out.println("test case... input " + testCase.input.toString());
+                Assert.assertEquals("Failure in test case " + i, testCase.expected, CoinShuffle.areEqual(testCase.input));
             } catch (InvalidImplementationError e) {
                 Assert.fail("Tests have failed due blockchain error in test class.");
             } catch (CryptographyError e) {
@@ -345,8 +349,8 @@ public class TestShuffleMachineMethods {
                     players.put(j + 1, key);
                     Address addr = key.address();
 
-                    output.attach(addr);
-                    input.attach(new MockEncryptedAddress(addr, dk.EncryptionKey()));
+                    output = output.attach(addr);
+                    input = input.attach(new MockEncryptedAddress(addr, dk.EncryptionKey()));
                 }
 
                 SessionIdentifier mockSessionIdentifier = new MockSessionIdentifier("testDecryptAll" + i);
@@ -355,7 +359,7 @@ public class TestShuffleMachineMethods {
                 CoinShuffle.ShuffleMachine.Round round =
                         standardTestInitialization(mockSessionIdentifier, sk, playerSet, crypto).new Round(players, null, mailbox);
 
-                Message result = round.decryptAll(new MockMessage().attach(input), dk, i + 1);
+                Message result = round.decryptAll(input, dk, i + 1);
 
                 Assert.assertTrue(result.equals(output));
             }
@@ -387,10 +391,10 @@ public class TestShuffleMachineMethods {
                         playerSet.add(vk);
                         players.put(j + 1, vk);
 
-                        input.attach(new MockEncryptedAddress(vk.address(), dk.EncryptionKey()));
+                        input = input.attach(new MockEncryptedAddress(vk.address(), dk.EncryptionKey()));
                     }
 
-                    input.attach(crypto.makeSigningKey().VerificationKey().address());
+                    input = input.attach(crypto.makeSigningKey().VerificationKey().address());
                 } catch (CryptographyError e) {
                     Assert.fail();
                 }
@@ -401,7 +405,7 @@ public class TestShuffleMachineMethods {
                         standardTestInitialization(mockSessionIdentifier, sk, playerSet, crypto).new Round(players, null, mailbox);
 
                 try {
-                    round.decryptAll(new MockMessage().attach(input), dk, i);
+                    round.decryptAll(input, dk, i);
                     Assert.fail("Exception should have been thrown.");
                 } catch (FormatException | CryptographyError e) {
                 }
@@ -432,8 +436,8 @@ public class TestShuffleMachineMethods {
                     players.put(j + 1, vk);
                     Address addr = vk.address();
 
-                    expected.attach(addr);
-                    input.attach(addr);
+                    expected = expected.attach(addr);
+                    input = input.attach(addr);
                 }
 
                 SessionIdentifier mockSessionIdentifier = new MockSessionIdentifier("testReadNewAddresses" + i);
@@ -442,7 +446,7 @@ public class TestShuffleMachineMethods {
                 CoinShuffle.ShuffleMachine.Round round =
                         standardTestInitialization(mockSessionIdentifier, sk, playerSet, crypto).new Round(players, null, mailbox);
 
-                Queue<Address> result = round.readNewAddresses(new MockMessage().attach(input));
+                Deque<Address> result = round.readNewAddresses(input);
 
                 Assert.assertTrue(expected.equals(new MockMessage().attachAddrs(result)));
             }
@@ -462,10 +466,10 @@ public class TestShuffleMachineMethods {
                     VerificationKey vk = new MockSigningKey(j + 1).VerificationKey();
                     playerSet.add(vk);
                     players.put(j + 1, vk);
-                    input.attach(vk.address());
+                    input = input.attach(vk.address());
                 }
 
-                input.attach(new MockEncryptionKey(14));
+                input = input.attach(new MockEncryptionKey(14));
                 SessionIdentifier mockSessionIdentifier = new MockSessionIdentifier("testReadNewAddressesfail" + i);
                 SigningKey sk = new MockSigningKey(1);
                 Mailbox mailbox = new Mailbox(mockSessionIdentifier, sk, playerSet, new MockNetwork());
@@ -473,7 +477,7 @@ public class TestShuffleMachineMethods {
                         standardTestInitialization(mockSessionIdentifier, sk, playerSet, crypto).new Round(players, null, mailbox);
 
                 try {
-                    round.readNewAddresses(new MockMessage().attach(input));
+                    round.readNewAddresses(input);
                     Assert.fail();
                 } catch (FormatException e) {
                 }

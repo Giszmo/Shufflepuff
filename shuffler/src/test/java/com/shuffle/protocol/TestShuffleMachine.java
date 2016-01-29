@@ -1,6 +1,7 @@
 package com.shuffle.protocol;
 
 import com.shuffle.bitcoin.CryptographyError;
+import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
@@ -79,13 +80,13 @@ public class TestShuffleMachine {
         public SignedPacket replace(SignedPacket sigPacket) throws FormatException {
             Packet packet = sigPacket.payload;
             if (packet.phase == Phase.VerificationAndSubmission) {
-                if (packet.message instanceof MockMessage && packet.signer instanceof MockVerificationKey) {
-                    MockMessage mockMessage = (MockMessage)packet.message;
+                if (packet.signer instanceof MockVerificationKey) {
                     MockVerificationKey mvk = (MockVerificationKey)packet.signer;
 
-                    MockMessage.Atom atom = mockMessage.atoms.peek();
-                    if (atom.sig instanceof MockSignature) {
-                        MockSignature mockSig = (MockSignature)atom.sig;
+                    Signature sig = packet.message.readSignature();
+
+                    if (sig instanceof MockSignature) {
+                        MockSignature mockSig = (MockSignature)sig;
                         if (mockSig.t instanceof MockCoin.MockTransaction) {
 
                             MockCoin.MockTransaction mt = (MockCoin.MockTransaction) mockSig.t;
