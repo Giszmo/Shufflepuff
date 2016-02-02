@@ -1,10 +1,11 @@
-package com.shuffle.protocol;
+package com.shuffle.mock;
 
 import com.shuffle.bitcoin.CryptographyError;
 import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.protocol.Packet;
 
 /**
  * Created by Daniel Krawisz on 12/9/15.
@@ -12,7 +13,7 @@ import com.shuffle.bitcoin.VerificationKey;
 public class MockSigningKey extends SigningKey {
     final int index;
 
-    MockSigningKey(int index) {
+    public MockSigningKey(int index) {
         this.index = index;
     }
 

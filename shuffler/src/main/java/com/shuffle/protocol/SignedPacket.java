@@ -2,12 +2,14 @@ package com.shuffle.protocol;
 
 import com.shuffle.bitcoin.Signature;
 
+import java.io.Serializable;
+
 /**
  * Represents a packet that has been digitally signed.
  *
  * Created by Daniel Krawisz on 1/22/16.
  */
-public class SignedPacket {
+public class SignedPacket implements Serializable{
     public final Packet payload;
     public final Signature signature;
 

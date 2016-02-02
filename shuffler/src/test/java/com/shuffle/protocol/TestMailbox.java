@@ -1,6 +1,12 @@
 package com.shuffle.protocol;
 
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.mock.MockMessage;
+import com.shuffle.mock.MockMessageFactory;
+import com.shuffle.mock.MockNetwork;
+import com.shuffle.mock.MockSessionIdentifier;
+import com.shuffle.mock.MockSigningKey;
+import com.shuffle.mock.MockVerificationKey;
 import com.shuffle.protocol.blame.BlameException;
 
 import org.junit.Assert;

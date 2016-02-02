@@ -1,12 +1,12 @@
-package com.shuffle.protocol;
+package com.shuffle.mock;
 
 import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.CryptographyError;
 import com.shuffle.bitcoin.DecryptionKey;
 import com.shuffle.bitcoin.SigningKey;
+import com.shuffle.protocol.InvalidImplementationError;
+import com.shuffle.protocol.Message;
 
-import java.util.LinkedList;
-import java.util.Queue;
 import java.util.Random;
 
 /**
@@ -21,7 +21,7 @@ public class MockCrypto implements Crypto {
 
     Random notCryptographicallySecure;
 
-    MockCrypto(int seed) {
+    public MockCrypto(int seed) {
         this.rand = null;
         signingKeyCounter = 1;
         decryptionKeyCounter = 1;
@@ -29,7 +29,7 @@ public class MockCrypto implements Crypto {
         notCryptographicallySecure = new Random(seed);
     }
 
-    MockCrypto(MockRandomSequence rand) {
+    public MockCrypto(MockRandomSequence rand) {
         this.rand = rand;
         signingKeyCounter = 1;
         decryptionKeyCounter = 1;

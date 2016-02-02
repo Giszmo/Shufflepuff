@@ -20,6 +20,7 @@ import com.shuffle.protocol.blame.Reason;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.io.IOException;
 import java.net.ProtocolException;
 import java.util.Deque;
 import java.util.HashMap;
@@ -111,7 +112,8 @@ final class CoinShuffle {
                     CryptographyError,
                     InvalidImplementationError,
                     ValueException,
-                    InterruptedException, ProtocolException, SignatureException {
+                    InterruptedException,
+                    SignatureException, ProtocolException {
 
                 if (amount <= 0) {
                     throw new IllegalArgumentException();
@@ -885,10 +887,10 @@ final class CoinShuffle {
 
                 return new ReturnState(false, session, Phase.Blame, null, blame);
             } catch (InvalidParticipantSetException
-                    | ProtocolException
                     | ValueException
                     | CryptographyError
-                    | FormatException e) {
+                    | FormatException
+                    | ProtocolException e) {
                 // TODO many of these cases could be dealt with instead of just aborting.
                 e.printStackTrace();
                 return new ReturnState(false, session, currentPhase(), e, null);

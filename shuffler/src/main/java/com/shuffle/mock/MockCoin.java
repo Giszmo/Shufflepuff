@@ -1,10 +1,13 @@
-package com.shuffle.protocol;
+package com.shuffle.mock;
 
 import com.shuffle.bitcoin.Address;
 import com.shuffle.bitcoin.CoinNetworkError;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.protocol.InvalidImplementationError;
+import com.shuffle.protocol.Simulator;
 
+import java.io.Serializable;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -13,12 +16,12 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- *
+ * Simulation of a cryptocurrency network for testing purposes.
  *
  * Created by Daniel Krawisz on 12/5/15.
  */
 public class MockCoin implements Simulator.MockCoin {
-    public static class Output {
+    public static class Output implements Serializable {
         final Address address;
         final long amountHeld;
 
@@ -56,27 +59,27 @@ public class MockCoin implements Simulator.MockCoin {
     /**
      * Created by Daniel Krawisz on 12/8/15.
      */
-    public class MockTransaction implements Transaction {
-        final List<Output> inputs = new LinkedList<>();
-        final List<Output> outputs = new LinkedList<>();
+    public class MockTransaction implements Transaction, Serializable {
+        final public List<Output> inputs = new LinkedList<>();
+        final public List<Output> outputs = new LinkedList<>();
         // A number used to represented slight variations in a transaction which would
         // result in different signatures being produced.
-        int z = 1;
+        public final int z;
 
         public MockTransaction(List<Output> inputs, List<Output> outputs) {
+            this(inputs, outputs, 1);
+        }
+
+        public MockTransaction(List<Output> inputs, List<Output> outputs, int z) {
             for (Output output : inputs) {
                 if (output == null) throw new NullPointerException();
             }
             for (Output output : outputs) {
                 if (output == null) throw new NullPointerException();
             }
+            this.z = z;
             this.inputs.addAll(inputs);
             this.outputs.addAll(outputs);
-        }
-
-        public MockTransaction(List<Output> inputs, List<Output> outputs, int z) {
-            this(inputs, outputs);
-            this.z = z;
         }
 
         @Override
@@ -137,7 +140,11 @@ public class MockCoin implements Simulator.MockCoin {
         }
 
         public MockTransaction copy() {
-            return new MockTransaction(inputs, outputs);
+            return new MockTransaction(inputs, outputs, z);
+        }
+
+        public MockTransaction copyMutate() {
+            return new MockTransaction(inputs, outputs, z+1);
         }
     }
 

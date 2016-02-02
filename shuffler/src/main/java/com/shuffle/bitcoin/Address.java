@@ -1,5 +1,7 @@
 package com.shuffle.bitcoin;
 
+import com.shuffle.player.Marshaller;
+
 /**
  * Represents an address in a cryptocurrency network.
  *

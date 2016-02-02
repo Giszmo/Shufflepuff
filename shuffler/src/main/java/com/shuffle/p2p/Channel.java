@@ -3,6 +3,9 @@ package com.shuffle.p2p;
 /**
  * Created by cosmos on 1/25/16.
  */
+
+import java.io.IOException;
+
 /**
  * Identity -- the object used to identify a particular tcppeer.
  *
@@ -15,8 +18,8 @@ package com.shuffle.p2p;
  */
 public interface Channel<Identity, Message, Token> {
 
-    // Turn on listening for other peers. Returns false if it is already listening.
-    boolean listen(final Listener<Identity, Message, Token> listener);
+    // Block until a new peer is found.
+    void listen(final Listener<Identity, Message, Token> listener) throws IOException;
 
     Peer<Identity, Message, Token> getPeer(Identity you);
 }

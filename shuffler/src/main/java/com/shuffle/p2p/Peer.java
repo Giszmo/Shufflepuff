@@ -9,5 +9,5 @@ public interface Peer<Identity, Message, Token> {
     Identity getIdentity();
 
     // Returns null if there is a session already open.
-    Session<Message, Token> openSession();
+    Session<Message, Token> openSession(Receiver<Message> receiver);
 }

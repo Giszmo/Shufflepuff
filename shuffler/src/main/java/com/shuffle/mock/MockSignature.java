@@ -1,23 +1,26 @@
-package com.shuffle.protocol;
+package com.shuffle.mock;
 
 import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.Transaction;
+import com.shuffle.protocol.Packet;
+
+import java.io.Serializable;
 
 /**
  * Created by Daniel Krawisz on 12/9/15.
  */
-public class MockSignature implements Signature {
-    final Transaction t;
-    final Packet packet;
-    final MockVerificationKey key;
+public class MockSignature implements Signature, Serializable {
+    public final Transaction t;
+    public final Packet packet;
+    public final MockVerificationKey key;
 
-    MockSignature(Transaction t, MockVerificationKey key) {
+    public MockSignature(Transaction t, MockVerificationKey key) {
         this.t = t;
         this.key = key;
         this.packet = null;
     }
 
-    MockSignature(Packet packet, MockVerificationKey key) {
+    public MockSignature(Packet packet, MockVerificationKey key) {
         this.packet = packet;
         this.key = key;
         this.t = null;

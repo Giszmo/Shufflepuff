@@ -5,6 +5,13 @@ import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.mock.MockCoin;
+import com.shuffle.mock.MockCrypto;
+import com.shuffle.mock.MockMessage;
+import com.shuffle.mock.MockMessageFactory;
+import com.shuffle.mock.MockSessionIdentifier;
+import com.shuffle.mock.MockSignature;
+import com.shuffle.mock.MockVerificationKey;
 import com.shuffle.protocol.blame.Matrix;
 import com.shuffle.protocol.blame.Evidence;
 import com.shuffle.protocol.blame.Reason;
@@ -90,10 +97,7 @@ public class TestShuffleMachine {
                         if (mockSig.t instanceof MockCoin.MockTransaction) {
 
                             MockCoin.MockTransaction mt = (MockCoin.MockTransaction) mockSig.t;
-                            MockCoin.MockTransaction nmt = mt.copy();
-                            nmt.z = 2;
-
-                            MockSignature newMockSig = new MockSignature(nmt, mockSig.key);
+                            MockCoin.MockTransaction nmt = mt.copyMutate();
 
                             Packet newPacket = new Packet(
                                     new MockMessage().attach(new MockSignature(nmt, mockSig.key)),

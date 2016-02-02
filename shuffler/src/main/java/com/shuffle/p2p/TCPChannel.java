@@ -1,5 +1,7 @@
 package com.shuffle.p2p;
 
+import com.shuffle.protocol.Message;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
@@ -12,22 +14,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * Created by cosmos on 1/25/16.
+ * Receive messages over a tcp channel.
+ *
+ * Created by Daniel Krawisz on 1/25/16.
  */
 public class TCPChannel implements Channel<InetSocketAddress, Bytestring, Void>{
-
-    private class Bytestring implements com.shuffle.p2p.Bytestring {
-        byte[] bytes;
-
-        public Bytestring(byte[] bytes) {
-            this.bytes = bytes;
-        }
-
-        @Override
-        public byte[] getBytes() {
-            return bytes;
-        }
-    }
 
     // A message sent over TCP requires a header to tell how long it is.
     public interface Header {
@@ -46,6 +37,8 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring, Void>{
 
     public class TCPPeer implements Peer<InetSocketAddress, com.shuffle.p2p.Bytestring, Void>{
         InetSocketAddress identity;
+
+        Receiver<Bytestring> receiver;
 
         List<Session<com.shuffle.p2p.Bytestring, Void>> history;
 
@@ -71,7 +64,7 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring, Void>{
         }
 
         @Override
-        public Session<com.shuffle.p2p.Bytestring, Void> openSession() {
+        public Session<Bytestring, Void> openSession(Receiver<Bytestring> receiver) {
             if (currentSession != null) {
                 return null;
             }
@@ -98,7 +91,7 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring, Void>{
             public boolean send(com.shuffle.p2p.Bytestring message) {
 
                 try {
-                    socket.getOutputStream().write(message.getBytes());
+                    socket.getOutputStream().write(message.bytes);
                 } catch (IOException e) {
                     return false;
                 }
@@ -115,17 +108,16 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring, Void>{
                 }
             }
 
-            @Override
-            public com.shuffle.p2p.Bytestring receive() {
+            public void check() {
                 try {
                     byte[] headerBytes = new byte[header.headerLength()];
                     in.read(headerBytes);
                     byte[] payload = new byte[header.payloadLength(headerBytes)];
                     in.read(payload);
-                    return new com.shuffle.p2p.TCPChannel.Bytestring(payload);
+                    receiver.receive(new Bytestring(payload));
                 } catch (IOException e) {
                     // TODO: do something useful here.
-                    return null;
+
                 }
             }
 
@@ -158,61 +150,29 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring, Void>{
     InetSocketAddress me;
     int port;
 
-    TCPListener listener;
+    ServerSocket server;
 
-    private class TCPListener implements Runnable {
-        Listener<InetSocketAddress, com.shuffle.p2p.Bytestring, Void> listener;
-        ServerSocket server;
+    @Override
+    public void listen(Listener<InetSocketAddress, com.shuffle.p2p.Bytestring, Void> listener) throws IOException {
+        if (listener == null) {
+            throw new NullPointerException();
+        }
 
-        private TCPListener(int port, Listener<InetSocketAddress, com.shuffle.p2p.Bytestring, Void> listener) throws IOException {
-            this.listener = listener;
+        if (server == null) {
             server = new ServerSocket(me.getPort());
         }
 
-        @Override
-        public void run() {
-            try {
-                while (true) {
-                    // New connection found.
-                    Socket client = server.accept();
+        // New connection found.
+        Socket client = server.accept();
 
-                    // Determine the identity of this connection.
-                    InetSocketAddress identity = new InetSocketAddress(client.getInetAddress(), client.getPort());
+        // Determine the identity of this connection.
+        InetSocketAddress identity = new InetSocketAddress(client.getInetAddress(), client.getPort());
 
-                    TCPPeer peer = new TCPPeer(identity).setSesssion(client);
+        TCPPeer peer = new TCPPeer(identity).setSesssion(client);
 
-                    peers.put(identity, peer);
+        peers.put(identity, peer);
 
-                    listener.newPeer(getPeer(identity));
-                }
-            } catch (IOException e) {
-                // TODO
-            }
-        }
-
-        public void close() {
-            try {
-                server.close();
-            } catch (IOException e) {
-                // TODO
-            }
-        }
-    }
-
-    @Override
-    public boolean listen(Listener<InetSocketAddress, com.shuffle.p2p.Bytestring, Void> listener) {
-        if (this.listener != null) return false;
-
-        try {
-            this.listener = new TCPListener(port, listener);
-        } catch (IOException e) {
-            return false;
-        }
-
-        Thread thread = new Thread(this.listener);
-        thread.start();
-
-        return true;
+        listener.newPeer(getPeer(identity));
     }
 
     @Override

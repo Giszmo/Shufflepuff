@@ -5,6 +5,7 @@ import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.protocol.blame.BlameException;
 
+import java.io.IOException;
 import java.net.ProtocolException;
 import java.util.Collection;
 import java.util.HashMap;

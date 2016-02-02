@@ -1,4 +1,8 @@
-package com.shuffle.protocol;
+package com.shuffle.mock;
+
+import com.shuffle.mock.MockMessage;
+import com.shuffle.protocol.Message;
+import com.shuffle.protocol.MessageFactory;
 
 /**
  * Created by Daniel Krawisz on 12/9/15.

@@ -1,11 +1,15 @@
-package com.shuffle.protocol;
+package com.shuffle.mock;
+
+import com.shuffle.protocol.SessionIdentifier;
+
+import java.io.Serializable;
 
 /**
  * Created by Daniel Krawisz on 12/6/15.
  */
-public class MockSessionIdentifier implements SessionIdentifier {
+public class MockSessionIdentifier implements SessionIdentifier, Serializable {
     static String version = "CoinShuffle mock implementation for testing.";
-    String id;
+    final String id;
 
     public MockSessionIdentifier(String id) {
         this.id = id;

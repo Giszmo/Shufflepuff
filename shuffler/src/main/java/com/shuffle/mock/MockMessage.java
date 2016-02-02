@@ -1,28 +1,31 @@
-package com.shuffle.protocol;
+package com.shuffle.mock;
 
 import com.shuffle.bitcoin.Address;
 import com.shuffle.bitcoin.CryptographyError;
 import com.shuffle.bitcoin.EncryptionKey;
 import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.Transaction;
+import com.shuffle.protocol.FormatException;
+import com.shuffle.protocol.InvalidImplementationError;
+import com.shuffle.protocol.Message;
+import com.shuffle.protocol.Packet;
+import com.shuffle.protocol.SignedPacket;
 import com.shuffle.protocol.blame.Blame;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.Arrays;
+import java.io.Serializable;
 import java.util.Deque;
 import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.Queue;
 
 /**
  * Created by Daniel Krawisz on 12/19/15.
  */
-public class MockMessage implements Message {
-    private static Logger log = LogManager.getLogger(TestShuffleMachine.class);
+public class MockMessage implements Message, Serializable {
+    private transient static Logger log = LogManager.getLogger(MockMessage.class);
 
-    public static class Hash {
+    public static class Hash implements Serializable {
         public final Atom hashed;
 
         public Hash(Atom toHash) {
@@ -56,7 +59,7 @@ public class MockMessage implements Message {
         }
     }
 
-    private static class Atom {
+    private static class Atom implements Serializable {
         public final Address addr;
         public final EncryptionKey ek;
         public final Signature sig;
@@ -64,10 +67,10 @@ public class MockMessage implements Message {
         public final Blame blame;
 
         public final Transaction t;
-        // Sometimes, we have blockchain send whole packets that we previously received.
+        // Sometimes, we have to send whole packets that we previously received.
         public final Packet packet;
 
-        public final  Atom next;
+        public final Atom next;
 
         private Atom(Address addr, EncryptionKey ek, Signature sig, Hash hash, Blame blame, Transaction t, Packet packet, Atom next) {
             // Enforce the correct format.
@@ -150,11 +153,11 @@ public class MockMessage implements Message {
             throw new IllegalArgumentException();
         }
 
-        public static Atom make(Object o) {
+        private static Atom make(Object o) {
             return make(o, null);
         }
 
-        public static Atom attach(Atom a, Atom o) {
+        private static Atom attach(Atom a, Atom o) {
             if (a == null) {
                 return o;
             }

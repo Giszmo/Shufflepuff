@@ -1,12 +1,14 @@
-package com.shuffle.protocol;
+package com.shuffle.mock;
 
 import com.shuffle.bitcoin.Address;
+
+import java.io.Serializable;
 
 /**
  * Created by Daniel Krawisz on 12/19/15.
  */
-public class MockAddress implements Address {
-    int index;
+public class MockAddress implements Address, Serializable {
+    final public int index;
 
     public MockAddress(int index) {
         this.index = index;

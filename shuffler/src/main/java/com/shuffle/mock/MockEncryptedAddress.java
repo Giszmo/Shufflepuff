@@ -1,4 +1,4 @@
-package com.shuffle.protocol;
+package com.shuffle.mock;
 
 import com.shuffle.bitcoin.Address;
 import com.shuffle.bitcoin.EncryptionKey;

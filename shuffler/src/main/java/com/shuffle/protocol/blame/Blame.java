@@ -7,6 +7,7 @@ import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.protocol.Packet;
 import com.shuffle.protocol.SignedPacket;
 
+import java.io.Serializable;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -17,7 +18,7 @@ import java.util.Map;
  *
  * Created by Daniel Krawisz on 1/22/16.
  */
-public class Blame {
+public class Blame implements Serializable {
     final public Reason reason;
     final public VerificationKey accused; // Can be null if we don't know who to accuse yet.
     final public Transaction t;

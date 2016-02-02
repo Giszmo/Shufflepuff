@@ -1,16 +1,22 @@
-package com.shuffle.protocol;
+package com.shuffle.mock;
 
 import com.shuffle.bitcoin.Address;
 import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.p2p.Bytestring;
+import com.shuffle.protocol.InvalidImplementationError;
+import com.shuffle.protocol.Packet;
+
+import java.io.IOException;
+import java.io.Serializable;
 
 /**
  * TODO
  *
  * Created by Daniel Krawisz on 12/7/15.
  */
-public class MockVerificationKey implements VerificationKey {
+public class MockVerificationKey implements VerificationKey, Serializable {
     final int index;
 
     public MockVerificationKey(int index) {

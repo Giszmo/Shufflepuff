@@ -1,6 +1,9 @@
-package com.shuffle.protocol;
+package com.shuffle.mock;
 
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.protocol.Network;
+import com.shuffle.protocol.SignedPacket;
+import com.shuffle.protocol.TimeoutError;
 
 import java.util.LinkedList;
 import java.util.Map;
@@ -63,7 +66,7 @@ public class MockNetwork implements Network {
     Queue<Map.Entry<SignedPacket, VerificationKey>> responses;
     Queue<SignedPacket> sent;
 
-    MockNetwork() {
+    public MockNetwork() {
         this.sent = new LinkedList<>();
         this.responses = new LinkedList<>();
     }
@@ -73,7 +76,7 @@ public class MockNetwork implements Network {
         this.responses = new LinkedList<>();
     }
 
-    Queue<Map.Entry<SignedPacket, VerificationKey>> getResponses() {
+    public Queue<Map.Entry<SignedPacket, VerificationKey>> getResponses() {
         return responses;
     }
 

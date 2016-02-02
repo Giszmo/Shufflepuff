@@ -10,9 +10,6 @@ public interface Session<Message, Token> {
     // Whether a message is ready.
     boolean ready();
 
-    // Wait to receive a message.
-    Message receive();
-
     // What is the token for this session?
     Token getToken();
     

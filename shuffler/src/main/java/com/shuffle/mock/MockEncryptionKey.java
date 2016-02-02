@@ -1,15 +1,17 @@
-package com.shuffle.protocol;
+package com.shuffle.mock;
 
 import com.shuffle.bitcoin.Address;
 import com.shuffle.bitcoin.CryptographyError;
 import com.shuffle.bitcoin.EncryptionKey;
 
+import java.io.Serializable;
+
 /**
  *
  * Created by Daniel Krawisz on 12/8/15.
  */
-public class MockEncryptionKey implements EncryptionKey {
-    final int index;
+public class MockEncryptionKey implements EncryptionKey, Serializable {
+    final public int index;
 
     public MockEncryptionKey(int index) {
         this.index = index;

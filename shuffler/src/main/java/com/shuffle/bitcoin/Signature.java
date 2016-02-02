@@ -1,5 +1,7 @@
 package com.shuffle.bitcoin;
 
+import com.shuffle.player.Marshaller;
+
 /**
  * Representing a digital signature of a bitcoin transaction.
  *

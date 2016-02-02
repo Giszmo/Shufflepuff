@@ -3,6 +3,8 @@ package com.shuffle.protocol;
 import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.VerificationKey;
 
+import java.io.Serializable;
+
 /**
  * Represents a coin shuffle message with context information attached that is necessary to
  * detect low-level errors. The main protocol does not need to worry about that stuff, so
@@ -10,7 +12,7 @@ import com.shuffle.bitcoin.VerificationKey;
  *
  * Created by Daniel Krawisz on 12/9/15.
  */
-public class Packet {
+public class Packet implements Serializable {
 
     final Message message;
     final SessionIdentifier session;
