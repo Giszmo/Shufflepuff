@@ -63,29 +63,43 @@ public final class CoinShuffle {
 
         final private SigningKey sk; // My signing private key.
 
-        final private VerificationKey vk; // My verification public key, which is also my identity.
-
         final SortedSet<VerificationKey> players;
 
-        final Address change;
+        private Exception e = null;
 
-        final private Matrix blame = new Matrix();
+        private Transaction t = null;
+
+        private Matrix matrix = null;
 
         // the phase can be accessed concurrently in case we want to update
         // the user on how the protocol is going.
-        public Phase currentPhase() {
+        public Phase phase() {
             return phase;
+        }
+
+        public Transaction transaction() {
+            return t;
+        }
+
+        public Matrix blame() {
+            return matrix;
+        }
+
+        public Exception exception() {
+            return e;
         }
 
         // A single round of the protocol. It is possible that the players may go through
         // several failed rounds until they have eliminated malicious players.
-        public class Round {
+        class Round {
 
             final public int me; // Which player am I?
 
             final public Map<Integer, VerificationKey> players; // The keys representing all the players.
 
             final public int N; // The number of players.
+
+            final public VerificationKey vk; // My verification public key, which is also my identity.
 
             // This will contain the new encryption public keys.
             final public Map<VerificationKey, EncryptionKey> encryptionKeys = new HashMap<>();
@@ -97,11 +111,9 @@ public final class CoinShuffle {
 
             final public Map<VerificationKey, Signature> signatures = new HashMap<>();
 
-            public Transaction t = null;
-
             final public Mailbox mailbox;
 
-            Matrix protocolDefinition(
+            void protocolDefinition(
             ) throws
                     TimeoutError,
                     FormatException,
@@ -122,9 +134,9 @@ public final class CoinShuffle {
                 // Check for sufficient funds.
                 // There was a problem with the wording of the original paper which would have meant
                 // that player 1's funds never would have been checked, but we have to do that.
-                Matrix matrix = blameInsufficientFunds();
+                matrix = blameInsufficientFunds();
                 if (matrix != null) {
-                    return matrix;
+                    return;
                 }
 
                 // This will contain the change addresses.
@@ -154,7 +166,8 @@ public final class CoinShuffle {
                 } catch (BlameException e) {
                     // might receive blame messages about insufficient funds.
                     phase = Phase.Blame;
-                    return fillBlameMatrix(new Matrix());
+                    matrix = fillBlameMatrix(new Matrix());
+                    return;
                 }
 
                 readAnnouncements(announcement, encryptionKeys, change);
@@ -178,7 +191,8 @@ public final class CoinShuffle {
                     if (me != 1) {
                         shuffled = decryptAll(shuffled.attach(mailbox.receiveFrom(players.get(me - 1), phase)), dk, me - 1);
                         if (shuffled == null) {
-                            return blameShuffleMisbehavior(dk);
+                            matrix = blameShuffleMisbehavior(dk);
+                            return;
                         }
                     }
 
@@ -214,7 +228,8 @@ public final class CoinShuffle {
                     if (!newAddresses.contains(addr_new)) {
                         phase = Phase.Blame;
                         mailbox.broadcast(messages.make().attach(Blame.MissingOutput(players.get(N))), phase);
-                        return blameShuffleMisbehavior(dk);
+                        matrix = blameShuffleMisbehavior(dk);
+                        return;
                     }
 
                     // Phase 4: equivocation check.
@@ -224,7 +239,7 @@ public final class CoinShuffle {
 
                     matrix = equivocationCheck(encryptionKeys, newAddresses);
                     if (matrix != null) {
-                        return matrix;
+                        return;
                     }
                 } catch (BlameException e) {
                     log.error("Blame exception ", e);
@@ -261,7 +276,8 @@ public final class CoinShuffle {
                     }
 
                     mailbox.broadcast(doubleSpend, phase);
-                    return fillBlameMatrix(bm);
+                    matrix = fillBlameMatrix(bm);
+                    return;
                 }
 
                 mailbox.broadcast(messages.make().attach(sk.makeSignature(t)), phase);
@@ -299,7 +315,8 @@ public final class CoinShuffle {
                         blameMessage.attach(Blame.InvalidSignature(key, signature));
                     }
                     mailbox.broadcast(blameMessage, phase);
-                    return fillBlameMatrix(bm);
+                    matrix = fillBlameMatrix(bm);
+                    return;
                 }
 
                 // Send the transaction into the net.
@@ -307,8 +324,6 @@ public final class CoinShuffle {
 
                 // The protocol has completed successfully.
                 phase = Phase.Completed;
-
-                return null;
             }
 
             Deque<Address> readNewAddresses(Message message) throws FormatException, InvalidImplementationError {
@@ -750,6 +765,7 @@ public final class CoinShuffle {
             Round(Map<Integer, VerificationKey> players, Address change, Mailbox mailbox) throws InvalidParticipantSetException {
                 this.players = players;
                 this.change = change;
+                vk = sk.VerificationKey();
                 this.mailbox = mailbox;
 
                 int m = -1;
@@ -793,7 +809,7 @@ public final class CoinShuffle {
             return crypto.hash(check);
         }
 
-        public ReturnState run(Network network)  {
+        ReturnState run(Address change, Network network)  {
 
             // Get the initial ordering of the players.
             int i = 1;
@@ -806,9 +822,8 @@ public final class CoinShuffle {
             // Make an inbox for the next round.
             Mailbox mailbox = new Mailbox(session, sk, numberedPlayers.values(), network);
 
-            Matrix matrix = null;
             try {
-                matrix = new Round(numberedPlayers, change, mailbox).protocolDefinition();
+                new Round(numberedPlayers, change, mailbox).protocolDefinition();
             } catch (InterruptedException
                     | ProtocolException
                     | FormatException
@@ -830,8 +845,7 @@ public final class CoinShuffle {
                 SessionIdentifier session,
                 long amount,
                 SigningKey sk,
-                SortedSet<VerificationKey> players,
-                Address change) {
+                SortedSet<VerificationKey> players) {
 
             if (session == null || sk == null || players == null) {
                 throw new NullPointerException();
@@ -844,9 +858,7 @@ public final class CoinShuffle {
             this.session = session;
             this.amount = amount;
             this.sk = sk;
-            this.vk = sk.VerificationKey();
             this.players = players;
-            this.change = change;
             this.phase = Phase.Uninitiated;
         }
     }
@@ -974,11 +986,10 @@ public final class CoinShuffle {
                     break;
             }
         }
-
     }
 
     // Run the protocol without creating a new thread.
-    public ReturnState run(
+    public ShuffleMachine run(
             SessionIdentifier session, // Unique session identifier.
             long amount, // The amount to be shuffled per player.
             SigningKey sk, // The signing key of the current player.
@@ -988,25 +999,20 @@ public final class CoinShuffle {
             // If this is not null, the machine is put in this queue so that another thread can
             // query the phase as it runs.
             LinkedBlockingQueue<ShuffleMachine> queue
-    ) throws InvalidImplementationError,
-            InterruptedException,
-            InvalidParticipantSetException,
-            ProtocolException,
-            SignatureException,
-            ValueException,
-            FormatException {
+    ) {
         if (amount <= 0) {
             throw new IllegalArgumentException();
         }
         if (session == null || sk == null || players == null || change == null || network == null) {
             throw new NullPointerException();
         }
-        ShuffleMachine machine = new ShuffleMachine(session, amount, sk, players, change);
+        ShuffleMachine machine = new ShuffleMachine(session, amount, sk, players);
         if (queue != null) {
             queue.add(machine);
         }
 
-        return machine.run(network);
+        machine.run(change, network);
+        return machine;
     }
 
     public CoinShuffle(

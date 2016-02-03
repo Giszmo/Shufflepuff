@@ -12,7 +12,6 @@ import com.shuffle.bitcoin.VerificationKey;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.net.ProtocolException;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -161,7 +160,7 @@ public final class Simulator {
             this.players = players;
             this.t = t;
             shuffle = new CoinShuffle(messages, crypto, coin);
-            this.machine = shuffle.new ShuffleMachine(session, amount, sk, players, null);
+            this.machine = shuffle.new ShuffleMachine(session, amount, sk, players);
         }
 
         Adversary lie(MessageReplacement lie) {
@@ -390,11 +389,11 @@ public final class Simulator {
         }
 
         public ReturnState turnOn() throws InvalidImplementationError {
-            return machine.run(network);
+            return machine.run(null, network);
         }
 
         public Phase currentPhase() {
-            return machine.currentPhase();
+            return machine.phase();
         }
 
         public void deliver(SignedPacket packet) throws InterruptedException {

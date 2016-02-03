@@ -55,7 +55,7 @@ public class TestShuffleMachineMethods {
         playerSet.addAll(players.values());
         CoinShuffle.ShuffleMachine machine =
                 new CoinShuffle(messages, new MockCrypto(seed), new MockCoin()).new
-                        ShuffleMachine(session, 20l, sk, playerSet, null);
+                        ShuffleMachine(session, 20l, sk, playerSet);
         machine.phase = phase;
         return machine.new Round(players, null, new Mailbox(session, sk, playerSet, network));
     }
@@ -337,7 +337,7 @@ public class TestShuffleMachineMethods {
                 new MockMessageFactory(),
                 crypto,
                 new MockCoin()).new ShuffleMachine(
-                    session, 20l, sk, players, null);
+                    session, 20l, sk, players);
     }
 
     @Test

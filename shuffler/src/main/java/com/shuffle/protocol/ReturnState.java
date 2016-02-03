@@ -5,9 +5,11 @@ import com.shuffle.protocol.blame.Matrix;
 /**
  * An error state that the protocol returns if the it fails.
  *
+ * TODO get rid of this class.
+ *
  * Created by Daniel Krawisz on 12/6/15.
  */
-public class ReturnState {
+class ReturnState {
     public final boolean success;
     public final SessionIdentifier session;
     public final Phase phase;
@@ -21,8 +23,6 @@ public class ReturnState {
         this.error = error;
         this.blame = blame;
     }
-
-    //protected ReturnState() {}
 
     // Whether two return states are equivalent.
     public boolean match(ReturnState m) {

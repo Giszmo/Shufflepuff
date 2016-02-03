@@ -13,7 +13,6 @@ import com.shuffle.protocol.InvalidParticipantSetException;
 import com.shuffle.protocol.Mailbox;
 import com.shuffle.protocol.MessageFactory;
 import com.shuffle.protocol.Phase;
-import com.shuffle.protocol.ReturnState;
 import com.shuffle.protocol.SessionIdentifier;
 import com.shuffle.protocol.SignatureException;
 import com.shuffle.protocol.TimeoutError;
@@ -81,7 +80,7 @@ public class Player<Identity, Format> {
         this.messages = messages;
     }
 
-    public List<ReturnState> coinShuffle(
+    public List<CoinShuffle.ShuffleMachine> coinShuffle(
             Set<Identity> identities,
             Channel<Identity, Format> channel,
             Marshaller<Format> marshaller,
@@ -110,7 +109,7 @@ public class Player<Identity, Format> {
         }
 
         // Try the protocol.
-        List<ReturnState> list = new LinkedList<>();
+        List<CoinShuffle.ShuffleMachine> list = new LinkedList<>();
         int attempt = 0;
 
         // The eliminated players. A player is eliminated when there is a subset of players
@@ -120,72 +119,56 @@ public class Player<Identity, Format> {
         CoinShuffle shuffle = new CoinShuffle(messages, crypto, coin);
 
         while (true) {
-            try {
 
-                if (players.size() - eliminated.size() < settings.minPlayers) {
-                    break;
-                }
-
-                // Get the initial ordering of the players.
-                int i = 1;
-                SortedSet<VerificationKey> validPlayers = new TreeSet<>();
-                for (VerificationKey player : players) {
-                    if (!eliminated.contains(player)) {
-                        validPlayers.add(player);
-                        i++;
-                    }
-                }
-
-                // Make an inbox for the next round.
-                Mailbox mailbox = new Mailbox(session, sk, validPlayers, net);
-
-                // Send an introductory message and make sure all players agree on who is in
-                // this round of the protocol.
-                // TODO
-
-                ReturnState round = shuffle.run(session, settings.amount, sk, validPlayers, settings.change, net, queue);
-
-                if (round.phase != Phase.Blame) {
-                    // The protocol was successful, so return.
-                    break;
-                }
-
-                attempt++;
-
-                if (attempt > settings.maxRetries) {
-                    break;
-                }
-
-                break; // TODO remove this line.
-                // TODO
-                // Determine if the protocol can be restarted with some players eliminated.
-
-                // First, if a player had insufficient funds or not enough funds, does everyone
-                // else agree that this player needs to be eliminated? If so, eliminate that player.
-
-                // If there was an equivocation check failure, does everyone agree as to the player
-                // who caused it? If so then we can restart.
-
-                // If there was a shuffle failure, does everyone agree as to the accused? If so then
-                // eliminate that player.
-
-                // If we can restart, broadcast a message to that effect and wait to receive a
-                // similar message from the remaining players.
-
-            } catch(InvalidParticipantSetException
-                    | ValueException
-                    | CryptographyError
-                    | FormatException
-                    | ProtocolException
-                    | SignatureException
-                    | InterruptedException e){
-                // TODO many of these cases could be dealt with instead of just aborting.
-                e.printStackTrace();
-                list.add(new ReturnState(false, session, Phase.Error, e, null));
-            } catch(TimeoutError e) {
-                // TODO enter "suspect" phase now.
-                list.add(new ReturnState(false, session, Phase.Error, e, null));
+            if (players.size() - eliminated.size() < settings.minPlayers) {
+                break;
             }
+
+            // Get the initial ordering of the players.
+            int i = 1;
+            SortedSet<VerificationKey> validPlayers = new TreeSet<>();
+            for (VerificationKey player : players) {
+                if (!eliminated.contains(player)) {
+                    validPlayers.add(player);
+                    i++;
+                }
+            }
+
+            // Make an inbox for the next round.
+            Mailbox mailbox = new Mailbox(session, sk, validPlayers, net);
+
+            // Send an introductory message and make sure all players agree on who is in
+            // this round of the protocol.
+            // TODO
+
+            CoinShuffle.ShuffleMachine machine = shuffle.run(session, settings.amount, sk, validPlayers, settings.change, net, queue);
+
+            if (machine.exception() == null && machine.phase() != Phase.Blame) {
+                break;
+            }
+
+            attempt++;
+
+            if (attempt > settings.maxRetries) {
+                break;
+            }
+
+            break; // TODO remove this line.
+            // TODO
+            // Determine if the protocol can be restarted with some players eliminated.
+
+            // First, if a player had insufficient funds or not enough funds, does everyone
+            // else agree that this player needs to be eliminated? If so, eliminate that player.
+
+            // If there was an equivocation check failure, does everyone agree as to the player
+            // who caused it? If so then we can restart.
+
+            // If there was a shuffle failure, does everyone agree as to the accused? If so then
+            // eliminate that player.
+
+            // If we can restart, broadcast a message to that effect and wait to receive a
+            // similar message from the remaining players.
+
         }
 
         return list;
