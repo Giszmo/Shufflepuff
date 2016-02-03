@@ -20,7 +20,6 @@ import com.shuffle.protocol.blame.Reason;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.IOException;
 import java.net.ProtocolException;
 import java.util.Deque;
 import java.util.HashMap;
@@ -46,15 +45,14 @@ import java.util.concurrent.LinkedBlockingQueue;
  * Created by Daniel Krawisz on 12/3/15.
  *
  */
-final class CoinShuffle {
+public final class CoinShuffle {
+    static Logger log= LogManager.getLogger(CoinShuffle.class);
 
     final Crypto crypto;
 
     final Coin coin;
 
     final MessageFactory messages;
-
-    static Logger log= LogManager.getLogger(CoinShuffle.class);
 
     public class ShuffleMachine {
         Phase phase;
@@ -71,9 +69,7 @@ final class CoinShuffle {
 
         final Address change;
 
-        final int maxRetries;
-
-        final int minPlayers;
+        final private Matrix blame = new Matrix();
 
         // the phase can be accessed concurrently in case we want to update
         // the user on how the protocol is going.
@@ -83,7 +79,7 @@ final class CoinShuffle {
 
         // A single round of the protocol. It is possible that the players may go through
         // several failed rounds until they have eliminated malicious players.
-        class Round {
+        public class Round {
 
             final public int me; // Which player am I?
 
@@ -797,104 +793,36 @@ final class CoinShuffle {
             return crypto.hash(check);
         }
 
-        // Run the protocol. This function manages retries and (nonmalicious) error cases.
-        // The core loop is in the function protocolDefinition above.
-        ReturnState run(Network network) throws InvalidImplementationError, InterruptedException {
+        public ReturnState run(Network network)  {
 
-            // Don't let the protocol be run more than once at a time.
-            if (phase != Phase.Uninitiated) {
-                return new ReturnState(false, session, currentPhase(), new ProtocolStartedException(), null);
+            // Get the initial ordering of the players.
+            int i = 1;
+            Map<Integer, VerificationKey> numberedPlayers = new TreeMap<>();
+            for (VerificationKey player : players) {
+                numberedPlayers.put(i, player);
+                i++;
             }
 
-            int attempt = 0;
+            // Make an inbox for the next round.
+            Mailbox mailbox = new Mailbox(session, sk, numberedPlayers.values(), network);
 
-            // The eliminated players. A player is eliminated when there is a subset of players
-            // which all blame him and none of whom blame one another.
-            SortedSet<VerificationKey> eliminated = new TreeSet<>();
-
-            // Here we handle a bunch of lower level errors.
+            Matrix matrix = null;
             try {
-                Matrix blame = null;
-                while (true) {
-
-                    if (players.size() - eliminated.size() < minPlayers) {
-                        break;
-                    }
-
-                    // Get the initial ordering of the players.
-                    int i = 1;
-                    Map<Integer, VerificationKey> numberedPlayers = new TreeMap<>();
-                    for (VerificationKey player : players) {
-                        if (!eliminated.contains(player)) {
-                            numberedPlayers.put(i, player);
-                            i++;
-                        }
-                    }
-
-                    // Make an inbox for the next round.
-                    Mailbox mailbox = new Mailbox(session, sk, numberedPlayers.values(), network);
-
-                    // Send an introductory message and make sure all players agree on who is in
-                    // this round of the protocol.
-                    // TODO
-
-                    // Run the protocol.
-                    try {
-                        blame = new Round(numberedPlayers, change, mailbox).protocolDefinition();
-                    } catch (TimeoutError e) {
-                        // TODO We have to go into "suspect" mode at this point to determine why the timeout occurred.
-                        log.warn("player " + sk.toString() + " received a time out: ", e);
-                        return new ReturnState(false, session, currentPhase(), e, null);
-                    } catch (SignatureException e) {
-                        log.warn("player " + sk.toString() + " received invalid signature: " + e.packet.toString());
-                        log.warn("player " + sk.toString() + " checks signature: " + e.packet.verify());
-                        return new ReturnState(false, session, currentPhase(), e, null);
-                    }
-
-                    Phase endPhase = currentPhase();
-
-                    if (endPhase != Phase.Blame) {
-                        // The protocol was successful, so return.
-                        return new ReturnState(true, session, endPhase, null, null);
-                    }
-
-                    attempt++;
-
-                    if (attempt > maxRetries) {
-                        break;
-                    }
-
-                    // Eliminate malicious players if possible and try again.
-                    phase = Phase.Uninitiated;
-
-                    break; // TODO remove this line.
-                    // TODO
-                    // Determine if the protocol can be restarted with some players eliminated.
-
-                    // First, if a player had insufficient funds or not enough funds, does everyone
-                    // else agree that this player needs to be eliminated? If so, eliminate that player.
-
-                    // If there was an equivocation check failure, does everyone agree as to the player
-                    // who caused it? If so then we can restart.
-
-                    // If there was a shuffle failure, does everyone agree as to the accused? If so then
-                    // eliminate that player.
-
-                    // If we can restart, broadcast a message to that effect and wait to receive a
-                    // similar message from the remaining players.
-
-                }
-
-                return new ReturnState(false, session, Phase.Blame, null, blame);
-            } catch (InvalidParticipantSetException
-                    | ValueException
-                    | CryptographyError
+                matrix = new Round(numberedPlayers, change, mailbox).protocolDefinition();
+            } catch (InterruptedException
+                    | ProtocolException
                     | FormatException
-                    | ProtocolException e) {
-                // TODO many of these cases could be dealt with instead of just aborting.
-                e.printStackTrace();
-                return new ReturnState(false, session, currentPhase(), e, null);
+                    | ValueException
+                    | InvalidParticipantSetException
+                    | SignatureException e) {
+                return new ReturnState(false, session, phase, e, null);
             }
+
+            if (matrix == null) {
+                return new ReturnState(true, session, phase, null, null);
+            }
+
+            return new ReturnState(false, session, phase, null, matrix);
         }
 
         // The ShuffleMachine cannot be instantiated directly.
@@ -903,9 +831,7 @@ final class CoinShuffle {
                 long amount,
                 SigningKey sk,
                 SortedSet<VerificationKey> players,
-                Address change,
-                int maxRetries,
-                int minPlayers) {
+                Address change) {
 
             if (session == null || sk == null || players == null) {
                 throw new NullPointerException();
@@ -921,8 +847,6 @@ final class CoinShuffle {
             this.vk = sk.VerificationKey();
             this.players = players;
             this.change = change;
-            this.maxRetries = maxRetries;
-            this.minPlayers = minPlayers;
             this.phase = Phase.Uninitiated;
         }
     }
@@ -1060,23 +984,28 @@ final class CoinShuffle {
             SigningKey sk, // The signing key of the current player.
             SortedSet<VerificationKey> players, // The set of players, sorted alphabetically by address.
             Address change, // Change address. (can be null)
-            int maxRetries, // maximum number of rounds this protocol can go through.,
-            int minPlayers, // Minimum number of players allowed for the protocol to continue.
             Network network, // The network that connects us to the other players.
             // If this is not null, the machine is put in this queue so that another thread can
             // query the phase as it runs.
             LinkedBlockingQueue<ShuffleMachine> queue
-    ) throws InvalidImplementationError, InterruptedException {
+    ) throws InvalidImplementationError,
+            InterruptedException,
+            InvalidParticipantSetException,
+            ProtocolException,
+            SignatureException,
+            ValueException,
+            FormatException {
         if (amount <= 0) {
             throw new IllegalArgumentException();
         }
         if (session == null || sk == null || players == null || change == null || network == null) {
             throw new NullPointerException();
         }
-        ShuffleMachine machine = new ShuffleMachine(session, amount, sk, players, change, maxRetries, minPlayers);
+        ShuffleMachine machine = new ShuffleMachine(session, amount, sk, players, change);
         if (queue != null) {
             queue.add(machine);
         }
+
         return machine.run(network);
     }
 

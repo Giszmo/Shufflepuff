@@ -16,8 +16,8 @@ import java.util.Queue;
  */
 public class MockNetwork implements Network {
     public static class SentMessage implements Map.Entry<SignedPacket, VerificationKey> {
-        SignedPacket packet;
-        VerificationKey to;
+        private final SignedPacket packet;
+        private VerificationKey to;
 
         public SentMessage(SignedPacket packet, VerificationKey to) {
             this.to = to;
@@ -63,8 +63,8 @@ public class MockNetwork implements Network {
         }
     }
 
-    Queue<Map.Entry<SignedPacket, VerificationKey>> responses;
-    Queue<SignedPacket> sent;
+    final Queue<Map.Entry<SignedPacket, VerificationKey>> responses;
+    final Queue<SignedPacket> sent;
 
     public MockNetwork() {
         this.sent = new LinkedList<>();

@@ -8,11 +8,11 @@ import com.shuffle.protocol.blame.Matrix;
  * Created by Daniel Krawisz on 12/6/15.
  */
 public class ReturnState {
-    boolean success;
-    SessionIdentifier session;
-    Phase phase;
-    Throwable error = null;
-    Matrix blame = null;
+    public final boolean success;
+    public final SessionIdentifier session;
+    public final Phase phase;
+    public final Throwable error;
+    public final Matrix blame;
 
     public ReturnState(boolean success, SessionIdentifier session, Phase phase, Throwable error, Matrix blame) {
         this.success = success;
@@ -22,7 +22,7 @@ public class ReturnState {
         this.blame = blame;
     }
 
-    protected ReturnState() {}
+    //protected ReturnState() {}
 
     // Whether two return states are equivalent.
     public boolean match(ReturnState m) {

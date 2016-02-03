@@ -7,8 +7,8 @@ import com.shuffle.protocol.InvalidImplementationError;
  * Created by Daniel Krawisz on 12/6/15.
  */
 public class MockRandomSequence {
-    int counter = 0;
-    int sequence[];
+    private int counter = 0;
+    final public int sequence[];
 
     public MockRandomSequence(int sequence[]) {
         this.sequence = sequence;

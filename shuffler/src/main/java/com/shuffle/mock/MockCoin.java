@@ -143,7 +143,7 @@ public class MockCoin implements Simulator.MockCoin {
             return new MockTransaction(inputs, outputs, z);
         }
 
-        public MockTransaction copyMutate() {
+        public MockTransaction mutate() {
             return new MockTransaction(inputs, outputs, z+1);
         }
     }

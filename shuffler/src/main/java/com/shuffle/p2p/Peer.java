@@ -5,9 +5,9 @@ import java.io.IOException;
 /**
  * Created by cosmos on 1/25/16.
  */
-public interface Peer<Identity, Message, Token> {
+public interface Peer<Identity, Message> {
     Identity getIdentity();
 
     // Returns null if there is a session already open.
-    Session<Message, Token> openSession(Receiver<Message> receiver);
+    Session<Message> openSession(Receiver<Message> receiver);
 }

@@ -97,7 +97,7 @@ public class TestShuffleMachine {
                         if (mockSig.t instanceof MockCoin.MockTransaction) {
 
                             MockCoin.MockTransaction mt = (MockCoin.MockTransaction) mockSig.t;
-                            MockCoin.MockTransaction nmt = mt.copyMutate();
+                            MockCoin.MockTransaction nmt = mt.mutate();
 
                             Packet newPacket = new Packet(
                                     new MockMessage().attach(new MockSignature(nmt, mockSig.key)),

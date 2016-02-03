@@ -12,12 +12,12 @@ import java.io.IOException;
 import java.io.Serializable;
 
 /**
- * TODO
+ * A mock implementation of a VerificationKey.
  *
  * Created by Daniel Krawisz on 12/7/15.
  */
 public class MockVerificationKey implements VerificationKey, Serializable {
-    final int index;
+    final public int index;
 
     public MockVerificationKey(int index) {
         this.index = index;

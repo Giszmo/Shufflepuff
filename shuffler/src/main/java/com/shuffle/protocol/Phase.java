@@ -1,6 +1,8 @@
 package com.shuffle.protocol;
 
 /**
+ * The phases of the shuffle protocol.
+ *
  * Created by Daniel Krawisz on 12/3/15.
  */
 public enum Phase {
@@ -12,4 +14,5 @@ public enum Phase {
     VerificationAndSubmission, // Generate transaction, distribute signatures, and send it off.
     Completed,
     Blame, // Someone has attempted to cheat.
+    Error,
 }

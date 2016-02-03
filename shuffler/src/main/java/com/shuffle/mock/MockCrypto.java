@@ -14,12 +14,12 @@ import java.util.Random;
  * Created by Daniel Krawisz on 12/5/15.
  */
 public class MockCrypto implements Crypto {
-    int signingKeyCounter;
-    int decryptionKeyCounter;
+    private int signingKeyCounter;
+    private int decryptionKeyCounter;
 
-    MockRandomSequence rand;
+    private final MockRandomSequence rand;
 
-    Random notCryptographicallySecure;
+    private final Random notCryptographicallySecure;
 
     public MockCrypto(int seed) {
         this.rand = null;
@@ -33,6 +33,8 @@ public class MockCrypto implements Crypto {
         this.rand = rand;
         signingKeyCounter = 1;
         decryptionKeyCounter = 1;
+
+        notCryptographicallySecure = null;
     }
 
     MockCrypto setSigningKeyCounter(int count) {

@@ -12,6 +12,7 @@ import com.shuffle.bitcoin.VerificationKey;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.net.ProtocolException;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -36,6 +37,7 @@ import java.util.concurrent.TimeUnit;
  */
 public final class Simulator {
     private static Logger log= LogManager.getLogger(Simulator.class);
+
     ConcurrentMap<VerificationKey, BlackBox> machines;
     //long amount;
     final MessageFactory messages;
@@ -159,7 +161,7 @@ public final class Simulator {
             this.players = players;
             this.t = t;
             shuffle = new CoinShuffle(messages, crypto, coin);
-            this.machine = shuffle.new ShuffleMachine(session, amount, sk, players, null, 1, 2);
+            this.machine = shuffle.new ShuffleMachine(session, amount, sk, players, null);
         }
 
         Adversary lie(MessageReplacement lie) {
@@ -388,11 +390,7 @@ public final class Simulator {
         }
 
         public ReturnState turnOn() throws InvalidImplementationError {
-            try {
-                return machine.run(network);
-            } catch (InterruptedException e) {
-                return new ReturnState(false, session, machine.currentPhase(), e, null);
-            }
+            return machine.run(network);
         }
 
         public Phase currentPhase() {

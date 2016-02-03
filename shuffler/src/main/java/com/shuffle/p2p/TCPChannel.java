@@ -18,7 +18,7 @@ import java.util.concurrent.ConcurrentMap;
  *
  * Created by Daniel Krawisz on 1/25/16.
  */
-public class TCPChannel implements Channel<InetSocketAddress, Bytestring, Void>{
+public class TCPChannel implements Channel<InetSocketAddress, Bytestring>{
 
     // A message sent over TCP requires a header to tell how long it is.
     public interface Header {
@@ -35,12 +35,12 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring, Void>{
     // The sessions which are currently open.
     Map<InetSocketAddress, TCPPeer.TCPSession> openSessions = new HashMap<>();
 
-    public class TCPPeer implements Peer<InetSocketAddress, com.shuffle.p2p.Bytestring, Void>{
+    public class TCPPeer implements Peer<InetSocketAddress, com.shuffle.p2p.Bytestring>{
         InetSocketAddress identity;
 
         Receiver<Bytestring> receiver;
 
-        List<Session<com.shuffle.p2p.Bytestring, Void>> history;
+        List<Session<com.shuffle.p2p.Bytestring>> history;
 
         TCPSession currentSession;
 
@@ -64,7 +64,7 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring, Void>{
         }
 
         @Override
-        public Session<Bytestring, Void> openSession(Receiver<Bytestring> receiver) {
+        public Session<Bytestring> openSession(Receiver<Bytestring> receiver) {
             if (currentSession != null) {
                 return null;
             }
@@ -78,7 +78,7 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring, Void>{
             return currentSession;
         }
 
-        public class TCPSession implements Session<com.shuffle.p2p.Bytestring, Void> {
+        public class TCPSession implements Session<com.shuffle.p2p.Bytestring> {
             Socket socket;
             InputStream in;
 
@@ -122,11 +122,6 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring, Void>{
             }
 
             @Override
-            public Void getToken() {
-                return null;
-            }
-
-            @Override
             public void close() {
                 try {
                     socket.close();
@@ -153,7 +148,7 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring, Void>{
     ServerSocket server;
 
     @Override
-    public void listen(Listener<InetSocketAddress, com.shuffle.p2p.Bytestring, Void> listener) throws IOException {
+    public void listen(Listener<InetSocketAddress, com.shuffle.p2p.Bytestring> listener) throws IOException {
         if (listener == null) {
             throw new NullPointerException();
         }
@@ -176,7 +171,7 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring, Void>{
     }
 
     @Override
-    public Peer<InetSocketAddress, com.shuffle.p2p.Bytestring, Void> getPeer(InetSocketAddress you) {
+    public Peer<InetSocketAddress, com.shuffle.p2p.Bytestring> getPeer(InetSocketAddress you) {
         TCPPeer peer = peers.get(you);
         if (peer == null) {
             peer = new TCPPeer(you);

@@ -8,8 +8,8 @@ import java.io.Serializable;
  * Created by Daniel Krawisz on 12/6/15.
  */
 public class MockSessionIdentifier implements SessionIdentifier, Serializable {
-    static String version = "CoinShuffle mock implementation for testing.";
-    final String id;
+    static final String version = "CoinShuffle mock implementation for testing.";
+    final public String id;
 
     public MockSessionIdentifier(String id) {
         this.id = id;
@@ -27,7 +27,7 @@ public class MockSessionIdentifier implements SessionIdentifier, Serializable {
 
         MockSessionIdentifier s = (MockSessionIdentifier) o;
 
-        return this == s || version.equals(s.version) && id.equals(s.id);
+        return this == s || id.equals(s.id);
     }
 
     @Override

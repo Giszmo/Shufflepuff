@@ -9,14 +9,14 @@ import java.io.IOException;
 /**
  * Created by Daniel Krawisz on 1/26/16.
  */
-public class MediatedChannel<Identity, Message, Token> implements Channel<Identity, Message, Token> {
+public class MediatedChannel<Identity, Message, Token> implements Channel<Identity, Message> {
     @Override
-    public void listen(Listener<Identity, Message, Token> listener) throws IOException {
+    public void listen(Listener<Identity, Message> listener) throws IOException {
 
     }
 
     @Override
-    public Peer<Identity, Message, Token> getPeer(Identity you) {
+    public Peer<Identity, Message> getPeer(Identity you) {
         return null;
     }
 }

@@ -32,7 +32,7 @@ public class Mailbox {
     final private Queue<SignedPacket> sent = new LinkedList<>();
     private boolean blameReceived = false;
 
-    Mailbox(SessionIdentifier session, SigningKey sk, Collection<VerificationKey> players, Network network) {
+    public Mailbox(SessionIdentifier session, SigningKey sk, Collection<VerificationKey> players, Network network) {
         this.sk = sk;
         this.session = session;
         this.network = network;

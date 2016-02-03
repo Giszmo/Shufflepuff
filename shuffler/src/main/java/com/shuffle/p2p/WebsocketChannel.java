@@ -8,14 +8,14 @@ import java.net.URI;
  *
  * Created by Daniel Krawisz on 1/31/16.
  */
-public class WebsocketChannel implements Channel<URI, Bytestring, Void> {
+public class WebsocketChannel implements Channel<URI, Bytestring> {
     @Override
-    public void listen(Listener<URI, Bytestring, Void> listener) throws IOException {
+    public void listen(Listener<URI, Bytestring> listener) throws IOException {
 
     }
 
     @Override
-    public Peer<URI, Bytestring, Void> getPeer(URI you) {
+    public Peer<URI, Bytestring> getPeer(URI you) {
         return null;
     }
 }

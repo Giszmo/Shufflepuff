@@ -16,10 +16,10 @@ import java.io.IOException;
  *
  * Created by Daniel Krawisz on 12/16/15.
  */
-public interface Channel<Identity, Message, Token> {
+public interface Channel<Identity, Message> {
 
     // Block until a new peer is found.
-    void listen(final Listener<Identity, Message, Token> listener) throws IOException;
+    void listen(final Listener<Identity, Message> listener) throws IOException;
 
-    Peer<Identity, Message, Token> getPeer(Identity you);
+    Peer<Identity, Message> getPeer(Identity you);
 }
