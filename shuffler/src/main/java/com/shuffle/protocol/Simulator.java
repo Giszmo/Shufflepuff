@@ -56,38 +56,13 @@ public final class Simulator {
 
     // This implementation of Network connects each shuffle machine to the simulator.
     private class Network implements com.shuffle.protocol.Network {
-        MessageReplacement malicious; // Can be used to replace messages with malicious ones.
         final BlockingQueue<SignedPacket> inbox = new LinkedBlockingQueue<>();
 
         Network() {
         }
 
-        public Network addReplacement(MessageReplacement replacement) {
-
-            if (replacement == null) {
-                return this;
-            }
-
-            if (malicious == null) {
-                malicious = replacement;
-            } else {
-                malicious = new Composition(replacement, malicious);
-            }
-
-            return this;
-        }
-
         @Override
         public void sendTo(VerificationKey to, SignedPacket packet) throws InvalidImplementationError, TimeoutError {
-
-            // Replace with malicious packet if necessary.
-            if (malicious != null) {
-                try {
-                    packet = malicious.replace(packet);
-                } catch (FormatException e) {
-                    log.error("Error sending ", e);
-                }
-            }
 
             try {
                 Simulator.this.sendTo(to, packet);
@@ -116,27 +91,12 @@ public final class Simulator {
         }
     }
 
-    public class Composition implements MessageReplacement {
-        MessageReplacement first;
-        MessageReplacement rest;
-
-        public Composition(MessageReplacement first, MessageReplacement rest) {
-            this.first = first;
-            this.rest = rest;
-        }
-
-        @Override
-        public SignedPacket replace(SignedPacket packet) throws FormatException {
-            return rest.replace(first.replace(packet));
-        }
-    }
-
     // The malicious adversary can be made to send malicious messages or to spend bitcoins at
     // inappropriate times.
     private class Adversary {
 
         final SessionIdentifier session;
-        final CoinShuffle shuffle;
+        //final CoinShuffle shuffle;
         final CoinShuffle.ShuffleMachine machine;
         Network network;
         final SigningKey sk;
@@ -152,123 +112,18 @@ public final class Simulator {
                 SigningKey sk,
                 SortedSet<VerificationKey> players,
                 Coin coin,
-                Transaction t) {
+                Transaction t,
+                CoinShuffle.ShuffleMachine machine) {
             this.session = session;
             this.sk = sk;
             this.coin = coin;
             this.network = new Network();
             this.players = players;
             this.t = t;
-            shuffle = new CoinShuffle(messages, crypto, coin);
-            this.machine = shuffle.new ShuffleMachine(session, amount, sk, players);
+            this.machine = machine;
         }
 
-        Adversary lie(MessageReplacement lie) {
-            network.addReplacement(lie);
-            return this;
-        }
-
-        // A player sends different encryption keys to different players.
-        // TODO malicious player needs to eqivocate again in phase 4 to stay consistent.
-        public class EquivocateEncryptionKeys implements MessageReplacement {
-            final Set<VerificationKey> others;
-            final EncryptionKey alternate;
-
-            public EquivocateEncryptionKeys(int[] others) {
-                this.others = new TreeSet<>();
-
-                int p = 1;
-                int i = 0;
-                for(VerificationKey player: players) {
-                    while(i < others.length && others[i] < p) {
-                        i++;
-                    }
-
-                    if(i < others.length && others[i] == p) {
-                        this.others.add(player);
-                    }
-
-                    p ++;
-                }
-                alternate = crypto.makeDecryptionKey().EncryptionKey();
-            }
-
-            @Override
-            public SignedPacket replace(SignedPacket sigPacket) {
-                Packet packet = sigPacket.payload;
-
-                if (packet.phase == Phase.Announcement && others.contains(packet.recipient)) {
-                    Message message = packet.message;
-
-                    // Sometimes a change address is included with message 1.
-                    Address change = null;
-                    try {
-                        message = message.rest();
-                        if (!message.isEmpty()) {
-                            change = message.readAddress();
-                        }
-                    } catch (FormatException e) {
-                        e.printStackTrace();
-                    }
-
-                    message = message.attach(alternate);
-
-                    if (change != null) {
-                        message = message.attach(change);
-                    }
-
-                    Packet newPacket = new Packet(message, packet.session, packet.phase, packet.signer, packet.recipient);
-                    return new SignedPacket(newPacket, sk.makeSignature(newPacket));
-                }
-
-                return sigPacket;
-            }
-        }
-
-        // Send different output address to different players.
-        // TODO malicious player needs to eqivocate again in phase 4 to stay consistent.
-        public class EquivocateOutputVector implements MessageReplacement {
-            Set<VerificationKey> others;
-            Message alternate;
-
-            public EquivocateOutputVector(int[] others) {
-                this.others = new TreeSet<>();
-
-                int p = 1;
-                int i = 0;
-                for(VerificationKey player: players) {
-                    while(i < others.length && others[i] < p) {
-                        i++;
-                    }
-
-                    if(i < others.length && others[i] == p) {
-                        this.others.add(player);
-                    }
-
-                    p ++;
-                }
-            }
-
-            @Override
-            public SignedPacket replace(SignedPacket packet) {
-                if (packet.payload.phase == Phase.BroadcastOutput && others.contains(packet.payload.recipient)) {
-                    if (alternate == null) {
-                        // Reshuffle the packet we just got.
-                        try {
-                            alternate = shuffle.shuffle(packet.payload.message);
-                        } catch (FormatException e) {
-                            e.printStackTrace();
-                        }
-                    }
-
-                    Packet newPacket = new Packet(alternate, packet.payload.session, packet.payload.phase, packet.payload.signer, packet.payload.recipient);
-                    return new SignedPacket(newPacket, sk.makeSignature(newPacket));
-                }
-
-                return packet;
-            }
-        }
-
+        // TODO get rid of all of these.
         // Drop an address in phase 2.
         public class DropAddress implements MessageReplacement {
             int drop;
@@ -575,6 +430,26 @@ public final class Simulator {
         return results;
     }
 
+    private Set<VerificationKey> fromSet(SortedSet<VerificationKey> identities, int[] array) {
+        Set<VerificationKey> others = new TreeSet<>();
+
+        int p = 1;
+        int i = 0;
+        for(VerificationKey player: identities) {
+            while(i < array.length && array[i] < p) {
+                i++;
+            }
+
+            if(i < array.length && array[i] == p) {
+                others.add(player);
+            }
+
+            p ++;
+        }
+
+        return others;
+    }
+
     public class InitialState {
         private final SessionIdentifier session;
         private final long amount;
@@ -602,11 +477,11 @@ public final class Simulator {
             Player() {}
 
             Adversary adversary(Map<Player, SigningKey> keys) {
-                MockCoin newcoin;
+                MockCoin newCoin;
                 if(coin != null) {
-                    newcoin = coin;
+                    newCoin = coin;
                 } else if (defaultCoin != null) {
-                    newcoin = defaultCoin;
+                    newCoin = defaultCoin;
                 } else {
                     return null;
                 }
@@ -616,7 +491,7 @@ public final class Simulator {
                     coins = InitialState.this.coins;
                 } else {
                     coins = new LinkedList<>();
-                    coins.add(newcoin);
+                    coins.add(newCoin);
                 }
 
                 SortedSet<VerificationKey> identities = new TreeSet<>();
@@ -645,26 +520,32 @@ public final class Simulator {
 
                     if (doubleSpend > 0) {
                         // is he going to double spend? If so, make a new transaction for him.
-                        doubleSpendTrans = newcoin.spend(address, crypto.makeSigningKey().VerificationKey().address(), doubleSpend);
+                        doubleSpendTrans = newCoin.spend(address, crypto.makeSigningKey().VerificationKey().address(), doubleSpend);
                     }
                 }
 
-                Adversary adversary = new Adversary(session, amount, key, identities, newcoin, doubleSpendTrans);
+                CoinShuffle.ShuffleMachine machine;
 
                 if (equivocateAnnouncement != null && equivocateAnnouncement.length > 0) {
-                    adversary.lie(adversary.new EquivocateEncryptionKeys(equivocateAnnouncement));
+                    machine = new MaliciousMachine(messages, crypto, newCoin).new
+                            AnnouncementEquivocator(session, amount, key, identities,
+                                fromSet(identities, equivocateAnnouncement));
+                } else if (equivocateOutputVector != null && equivocateOutputVector.length > 0) {
+                    machine = new MaliciousMachine(messages, crypto, newCoin).new
+                            BroadcastEquivocator(session, amount, key, identities,
+                                fromSet(identities, equivocateOutputVector));
+                } else {
+                    machine = new CoinShuffle(messages, crypto, newCoin).new ShuffleMachine(session, amount, key, identities);
                 }
 
-                if (equivocateOutputVector != null && equivocateOutputVector.length > 0) {
-                    adversary.lie(adversary.new EquivocateOutputVector(equivocateOutputVector));
-                }
+                Adversary adversary = new Adversary(session, amount, key, identities, newCoin, doubleSpendTrans, machine);
 
                 if (replace && drop != 0) {
-                    adversary.lie(adversary.new DropAddressReplaceNew(drop));
+                    //adversary.lie(adversary.new DropAddressReplaceNew(drop));
                 } else if (duplicate != 0 && drop != 0) {
-                    adversary.lie(adversary.new DropAddressReplaceDuplicate(drop, duplicate));
+                    //adversary.lie(adversary.new DropAddressReplaceDuplicate(drop, duplicate));
                 } else if (drop != 0) {
-                    adversary.lie(adversary.new DropAddress(drop));
+                    //adversary.lie(adversary.new DropAddress(drop));
                 }
 
                 return adversary;
@@ -844,43 +725,5 @@ public final class Simulator {
         }
 
         return init.run();
-    }
-
-    public Map<SigningKey, ReturnState> runWithReplacements(
-            SessionIdentifier session,
-            int numPlayers,
-            long amount,
-            MockCoin coin,
-            Map<Integer, MessageReplacement> malicious
-    ) {
-
-        SortedSet<VerificationKey> players = new TreeSet<>();
-        List<SigningKey> keys = new LinkedList<>();
-        Map<SigningKey, MessageReplacement> maliciousPlayers = new HashMap<>();
-
-        for (int i = 1; i <= numPlayers; i++) {
-            SigningKey key = crypto.makeSigningKey();
-            players.add(key.VerificationKey());
-            keys.add(key);
-
-            if (malicious.containsKey(i)) {
-                maliciousPlayers.put(key, malicious.get(i));
-            }
-        }
-
-        List<Adversary> init = new LinkedList<>();
-
-        for (SigningKey key : keys) {
-            Address address = key.VerificationKey().address();
-            coin.put(address, 20);
-
-            if (maliciousPlayers.containsKey(key)) {
-                init.add(new Adversary(session, amount, key, players, coin, null).lie(maliciousPlayers.get(key)));
-            } else {
-                init.add(new Adversary(session, amount, key, players, coin, null));
-            }
-        }
-
-        return runSimulation(init);
     }
 }

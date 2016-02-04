@@ -20,7 +20,6 @@ import java.util.Deque;
 import java.util.Iterator;
 
 /**
- * Created by Daniel Krawisz on 12/19/15.
  */
 public class MockMessage implements Message, Serializable {
     private transient static Logger log = LogManager.getLogger(MockMessage.class);

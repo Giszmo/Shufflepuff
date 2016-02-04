@@ -507,6 +507,8 @@ public class TestShuffleMachine {
 
         init.player().initialFunds(20).equivocateOutputVector(equivocation);
 
+        log.info("Broadcast equivocation test case: " + Arrays.toString(equivocation));
+
         TestCase test = new TestCase(session, amount, "Broadcast phase equivocation test case.", caseNo);
         Map<SigningKey, ReturnState> results = init.run();
         SortedSet<SigningKey> players = new TreeSet<>();

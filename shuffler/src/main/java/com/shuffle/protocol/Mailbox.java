@@ -126,8 +126,8 @@ public class Mailbox {
     }
 
     // Get all packets history or received by phase. Used during blame phase.
-    public List<SignedPacket> getPacketsByPhase(Phase phase) {
-        List<SignedPacket> selection = new LinkedList<>();
+    public Queue<SignedPacket> getPacketsByPhase(Phase phase) {
+        Queue<SignedPacket> selection = new LinkedList<>();
 
         for (SignedPacket packet : history) {
             if (packet.payload.phase == phase) {
@@ -208,12 +208,12 @@ public class Mailbox {
     // When the blame phase it reached, there may be a lot of blame going around. This function
     // waits to receive all blame messages until a timeout exception is caught, and then returns
     // the list of blame messages, organized by player.
-    public Map<VerificationKey, List<SignedPacket>> receiveAllBlame() throws
+    public Map<VerificationKey, Queue<SignedPacket>> receiveAllBlame() throws
             InterruptedException,
             FormatException,
             ValueException,
             SignatureException {
-        Map<VerificationKey, List<SignedPacket>> blame = new HashMap<>();
+        Map<VerificationKey, Queue<SignedPacket>> blame = new HashMap<>();
         for (VerificationKey player : players) {
             blame.put(player, new LinkedList<SignedPacket>());
         }

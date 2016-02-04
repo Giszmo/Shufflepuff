@@ -11,6 +11,7 @@ import java.io.Serializable;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 
 /**
  * Represents a message in which a player indicates that something has gone wrong, and which
@@ -22,7 +23,7 @@ public class Blame implements Serializable {
     final public Reason reason;
     final public VerificationKey accused; // Can be null if we don't know who to accuse yet.
     final public Transaction t;
-    final public List<SignedPacket> packets;
+    final public Queue<SignedPacket> packets;
     final public DecryptionKey privateKey;
     final public Signature invalid;
 
@@ -30,7 +31,7 @@ public class Blame implements Serializable {
           VerificationKey accused,
           Transaction t,
           DecryptionKey privateKey,
-          List<SignedPacket> packets,
+          Queue<SignedPacket> packets,
           Signature invalid) {
 
         if (reason == null) {
@@ -139,7 +140,7 @@ public class Blame implements Serializable {
     }
 
     // Sent when something goes wrong in phase 4.
-    public static Blame EquivocationFailure(List<SignedPacket> packets) {
+    public static Blame EquivocationFailure(Queue<SignedPacket> packets) {
         return new Blame(Reason.EquivocationFailure, null, null, null, packets, null);
     }
 
@@ -149,7 +150,7 @@ public class Blame implements Serializable {
     }
 
     // Sent when there is a failure in phase two and in the subsequent equivocation check.
-    public static Blame ShuffleAndEquivocationFailure(DecryptionKey privateKey, List<SignedPacket> packets) {
+    public static Blame ShuffleAndEquivocationFailure(DecryptionKey privateKey, Queue<SignedPacket> packets) {
         return new Blame(Reason.ShuffleFailure, null, null, privateKey, packets, null);
     }
 }

@@ -45,7 +45,7 @@ import java.util.concurrent.LinkedBlockingQueue;
  * Created by Daniel Krawisz on 12/3/15.
  *
  */
-public final class CoinShuffle {
+public class CoinShuffle {
     static Logger log= LogManager.getLogger(CoinShuffle.class);
 
     final Crypto crypto;
@@ -61,15 +61,15 @@ public final class CoinShuffle {
 
         final long amount; // The amount to be shuffled.
 
-        final private SigningKey sk; // My signing private key.
+        final SigningKey sk; // My signing private key.
 
         final SortedSet<VerificationKey> players;
 
-        private Exception e = null;
+        Exception e = null;
 
-        private Transaction t = null;
+        Transaction t = null;
 
-        private Matrix matrix = null;
+        Matrix matrix = null;
 
         // the phase can be accessed concurrently in case we want to update
         // the user on how the protocol is going.
@@ -100,6 +100,8 @@ public final class CoinShuffle {
             final public int N; // The number of players.
 
             final public VerificationKey vk; // My verification public key, which is also my identity.
+
+            public DecryptionKey dk = null;
 
             // This will contain the new encryption public keys.
             final public Map<VerificationKey, EncryptionKey> encryptionKeys = new HashMap<>();
@@ -140,24 +142,10 @@ public final class CoinShuffle {
                 }
 
                 // This will contain the change addresses.
-                Map<VerificationKey, Address> change = new HashMap<>();
+                Map<VerificationKey, Address> changeAddresses = new HashMap<>();
 
                 // Everyone except player 1 creates a new keypair and sends it around to everyone else.
-                DecryptionKey dk = null;
-                EncryptionKey ek;
-                if (me != 1) {
-                    dk = crypto.makeDecryptionKey();
-                    ek = dk.EncryptionKey();
-
-                    // Broadcast the public key and store it in the set with everyone else's.
-                    encryptionKeys.put(vk, ek);
-                    change.put(vk, this.change);
-                    Message message = messages.make().attach(ek);
-                    if (this.change != null) {
-                        message.attach(this.change);
-                    }
-                    mailbox.broadcast(message, phase);
-                }
+                dk = newDecryptionKey(changeAddresses);
 
                 // Now we wait to receive similar key from everyone else.
                 Map<VerificationKey, Message> announcement;
@@ -170,7 +158,7 @@ public final class CoinShuffle {
                     return;
                 }
 
-                readAnnouncements(announcement, encryptionKeys, change);
+                readAnnouncements(announcement, encryptionKeys, changeAddresses);
 
                 // Phase 2: Shuffle
                 // In the shuffle phase, we create a sequence of orderings which will b successively
@@ -216,13 +204,7 @@ public final class CoinShuffle {
                     // In this phase, the last player just broadcasts the transaction to everyone else.
                     phase = Phase.BroadcastOutput;
 
-                    if (me == N) {
-                        // The last player adds his own new address in without encrypting anything and shuffles the result.
-                        newAddresses = readNewAddresses(shuffled);
-                        mailbox.broadcast(shuffled, phase);
-                    } else {
-                        newAddresses = readNewAddresses(mailbox.receiveFrom(players.get(N), phase));
-                    }
+                    newAddresses = readAndBroadcastNewAddresses(shuffled);
 
                     // Everyone else receives the broadcast and checks to make sure their message was included.
                     if (!newAddresses.contains(addr_new)) {
@@ -257,7 +239,7 @@ public final class CoinShuffle {
                 }
 
                 try {
-                    t = coin.shuffleTransaction(amount, inputs, newAddresses, change);
+                    t = coin.shuffleTransaction(amount, inputs, newAddresses, changeAddresses);
                 } catch (CoinNetworkError e) {
                     // If there is an error, then see if a double spending transaction can be found.
                     phase = Phase.Blame;
@@ -326,6 +308,24 @@ public final class CoinShuffle {
                 phase = Phase.Completed;
             }
 
+            // Everyone except player 1 creates a new keypair and sends it around to everyone else.
+            DecryptionKey newDecryptionKey(Map<VerificationKey, Address> changeAddresses) {
+                DecryptionKey dk = null;
+                if (me != 1) {
+                    dk = crypto.makeDecryptionKey();
+
+                    // Broadcast the public key and store it in the set with everyone else's.
+                    encryptionKeys.put(vk, dk.EncryptionKey());
+                    changeAddresses.put(vk, change);
+                    Message message = messages.make().attach(dk.EncryptionKey());
+                    if (change != null) {
+                        message.attach(change);
+                    }
+                    mailbox.broadcast(message, phase);
+                }
+                return dk;
+            }
+
             Deque<Address> readNewAddresses(Message message) throws FormatException, InvalidImplementationError {
                 Deque<Address> queue = new LinkedList<>();
 
@@ -335,6 +335,21 @@ public final class CoinShuffle {
                 }
 
                 return queue;
+            }
+
+            Deque<Address> readAndBroadcastNewAddresses(Message shuffled)
+                    throws FormatException, InterruptedException,
+                    SignatureException, ValueException, BlameException {
+                Deque<Address> newAddresses;
+                if (me == N) {
+                    // The last player adds his own new address in without encrypting anything and shuffles the result.
+                    newAddresses = readNewAddresses(shuffled);
+                    mailbox.broadcast(shuffled, phase);
+                } else {
+                    newAddresses = readNewAddresses(mailbox.receiveFrom(players.get(N), phase));
+                }
+
+                return newAddresses;
             }
 
             Message decryptAll(Message message, DecryptionKey key, int expected) throws InvalidImplementationError, FormatException {
@@ -352,14 +367,12 @@ public final class CoinShuffle {
                     try {
                         decrypted = decrypted.attach(key.decrypt(address));
                     } catch (CryptographyError e) {
-                        System.out.println("decrypt all error case Q");
                         mailbox.broadcast(messages.make().attach(Blame.ShuffleFailure()), phase);
                         return null;
                     }
                 }
 
                 if (addrs.size() != count || count != expected) {
-                    System.out.println("decrypt all error case 1; count = " + count + "; expected = " + expected);
                     mailbox.broadcast(messages.make().attach(Blame.MissingOutput(players.get(N))), phase);
                     return null;
                 }
@@ -372,8 +385,9 @@ public final class CoinShuffle {
             // message has already been sent.
             boolean equivocationCheckSent = false;
 
-            // There is an error case in which we have to do an equivocation check, so this phase is in a separate function.
-            private Matrix equivocationCheck(
+            // Players run an equivocation check when they must confirm that they all have
+            // the same information.
+            Matrix equivocationCheck(
                     Map<VerificationKey, EncryptionKey> encryptonKeys,
                     Queue<Address> newAddresses)
                     throws InterruptedException, ValueException,
@@ -402,10 +416,9 @@ public final class CoinShuffle {
                 // If the hashes are not equal, enter the blame phase.
                 // Collect all packets from phase 1 and 3.
                 phase = Phase.Blame;
-                Message blameMessage = messages.make();
-                List<SignedPacket> evidence = mailbox.getPacketsByPhase(Phase.Announcement);
+                Queue<SignedPacket> evidence = mailbox.getPacketsByPhase(Phase.Announcement);
                 evidence.addAll(mailbox.getPacketsByPhase(Phase.BroadcastOutput));
-                blameMessage.attach(Blame.EquivocationFailure(evidence));
+                Message blameMessage = messages.make().attach(Blame.EquivocationFailure(evidence));
                 mailbox.broadcast(blameMessage, phase);
 
                 return fillBlameMatrix(new Matrix());
@@ -475,7 +488,7 @@ public final class CoinShuffle {
 
                 // Collect all packets from phase 2 and 3.
                 Message blameMessage = messages.make();
-                List<SignedPacket> evidence = mailbox.getPacketsByPhase(Phase.Shuffling);
+                Queue<SignedPacket> evidence = mailbox.getPacketsByPhase(Phase.Shuffling);
                 evidence.addAll(mailbox.getPacketsByPhase(Phase.BroadcastOutput));
 
                 // Send them all with the decryption key.
@@ -487,17 +500,17 @@ public final class CoinShuffle {
 
             // When we know we'll receive a bunch of blame messages, we have to go through them all to figure
             // out what's going on.
-            private Matrix fillBlameMatrix(Matrix matrix) throws
+            Matrix fillBlameMatrix(Matrix matrix) throws
                     InterruptedException,
                     FormatException,
                     ValueException,
                     SignatureException {
-                Map<VerificationKey, List<SignedPacket>> blameMessages = mailbox.receiveAllBlame();
+                Map<VerificationKey, Queue<SignedPacket>> blameMessages = mailbox.receiveAllBlame();
 
                 // Get all hashes received in phase 4 so that we can check that they were reported correctly.
                 Map<VerificationKey, Message> hashes = new HashMap<>();
                 {
-                    List<SignedPacket> hashMessages = mailbox.getPacketsByPhase(Phase.EquivocationCheck);
+                    Queue<SignedPacket> hashMessages = mailbox.getPacketsByPhase(Phase.EquivocationCheck);
                     for (SignedPacket packet : hashMessages) {
                         hashes.put(packet.payload.signer, packet.payload.message);
                         // Include my own hash.
@@ -518,9 +531,9 @@ public final class CoinShuffle {
                 Map<VerificationKey, DecryptionKey> decryptionKeys = new HashMap<>();
 
                 // Determine who is being blamed and by whom.
-                for (Map.Entry<VerificationKey, List<SignedPacket>> entry : blameMessages.entrySet()) {
+                for (Map.Entry<VerificationKey, Queue<SignedPacket>> entry : blameMessages.entrySet()) {
                     VerificationKey from = entry.getKey();
-                    List<SignedPacket> responses = entry.getValue();
+                    Queue<SignedPacket> responses = entry.getValue();
                     for (SignedPacket packet : responses) {
                         Message message = packet.payload.message;
 
@@ -565,6 +578,7 @@ public final class CoinShuffle {
                                         Message output = outputVectors.get(from).payload.message;
                                         while (!output.isEmpty()) {
                                             addresses.add(output.readAddress());
+                                            output = output.rest();
                                         }
                                     }
 
@@ -627,10 +641,14 @@ public final class CoinShuffle {
                 }
 
                 if (outputVectors.size() > 0) {
+                    // Add our own vector to this.
+                    if (me != N) {
+                        outputVectors.put(vk, mailbox.getPacketsByPhase(Phase.BroadcastOutput).peek());
+                    }
+
                     // We should have one output vector for every player except the last and ourselves.
                     Set<VerificationKey> leftover = playerSet(1, N - 1);
                     leftover.removeAll(outputVectors.keySet());
-                    leftover.remove(vk);
                     if (leftover.size() > 0) {
                         for (VerificationKey key : leftover) {
                             matrix.put(vk, key, null /*TODO*/);
@@ -665,9 +683,12 @@ public final class CoinShuffle {
                             continue;
                         }
 
+                        // Add in the key I received from this player.
+                        sent.put(vk, encryptionKeys.get(from));
+
                         EncryptionKey key = null;
-                        for (int j = 2; j <= players.size(); j++) {
-                            if (j == i || j == me) {
+                        for (int j = 1; j <= players.size(); j++) {
+                            if (i == j) {
                                 continue;
                             }
 
@@ -677,9 +698,8 @@ public final class CoinShuffle {
 
                             if (next == null) {
                                 // blame player to. He should have sent us this.
-                                log.info("About to make null blame entry. i = " + i + "; j = " + j + "; to = " + to.toString());
 
-                                matrix.put(vk, to, null /*TODO*/); // <--------- And this one.
+                                matrix.put(vk, to, null /*TODO*/);
                                 continue;
                             }
 
@@ -789,7 +809,7 @@ public final class CoinShuffle {
         // Generate the message sent during the equivocation check phase.
         // This message hashes some information that the player has received.
         // It is used to check that other players have received the same information.
-        private Message equivocationCheckHash(
+        Message equivocationCheckHash(
                 Map<Integer, VerificationKey> players,
                 Map<VerificationKey, EncryptionKey> encryptionKeys,
                 Queue<Address> newAddresses) {
@@ -930,7 +950,7 @@ public final class CoinShuffle {
     static void fillBlameMatrixCollectHistory(
             VerificationKey vk,
             VerificationKey from,
-            List<SignedPacket> packets,
+            Queue<SignedPacket> packets,
             Matrix matrix,
             // The messages sent in the broadcast phase by the last player to all the other players.
             Map<VerificationKey, SignedPacket> outputVectors,
