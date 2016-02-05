@@ -2,16 +2,16 @@ An implementation of the CoinShuffle protocol in java.
 
 http://crypsys.mmci.uni-saarland.de/projects/CoinShuffle/coinshuffle.pdf
 
-The general philosophy of this implementation is to write code that not only 
-runs and implements the protocol, but as an exposition as clear as that of the 
-original paper. As a result, this implementation assumes as given the same 
-expectations that would be expected in the original exposition. 
+-- Overall Organization of the Project
 
-Therefore, this implementation of CoinShuffle is NOT plug-and-play! Anyone who 
-attempts to use this library must be sufficiently facile with cryptograhy and 
-computer networks as to be capable of reading the paper linked above  and to 
-provide this implementation with the correct cryptographic primitives and 
-network interactions. 
+Package protocol implements Coin Shuffle according to the same concepts as in
+the original paper. It abstracts away a lot. In order to implement this version
+of the protocol, a user would have to implement the following interfaces: 
+
+    * Coin     - provides cryptocurrency functions and objects.
+    * Crypto   - provides cryptographic functions and objects.
+    * Messages - provides for a implementation of the messages in Coin Shuffle
+    * Network  - provides a connection to the other players in the protocol. 
 
 The purpose of this design is that a set of test cases can be developed for
 the protocol as a whole before any work has been put into its details. This 
@@ -21,31 +21,58 @@ reduce the risk of introducing errors as the rest of the development work
 proceeds. Furthermore, this protocol can be adapted to any java implementation
 of Bitcoin, or any other cryptocurrency.
 
-Right now there are only positive test cases and the correct responses for
-malicious behavior have not been implemented yet.
+Protocol also includes a Simulator which can be used to simulate runs of the
+protocol with any implementation. It allows for malicious players. As of now,
+the success cases for the protocol run perfectly and so do many of the malicious
+cases. The integration tests are not yet comprehensive. 
 
-Instructions: After reading this file, go into the form package and read 
-the function protocolDefinition() in ShuffleMachine.java, followed by
-TestShuffleMachine.java, and Simulator.java. Try running the tests.
+status: coming along very nicely
 
-Finally, implement the following interfaces:
+Package mock includes mock implementations of all these interfaces for testing
+purposes.
 
-Coin
-CoinAddress
-CoinAmount
-CoinSignature
-CoinTransaction
+status: functional
 
-Crypto
-DecryptionKey
-EncryptionKey
-SigningKey
-VerificationKey
+Package bitcoin will provide an implementation of Coin and Crypto which is
+specific to the Bitcoin network and which provides the cryptography as described
+in the paper. It relies on bitcoinj and Spongey Castle.
 
-SessionIdentifier
-MessageFactory
-Message
+status: please someone help!
 
-Network
+Package p2p includes classes for constructing various internet channels, by
+which instances of this program will communicate. 
 
+status: should work, let's try it. 
 
+Package player provides for some peripheral issues about running the protocol, 
+such as collecting the initial data and re-running the protocol if some players
+have to be eliminated. Player is also quite abstract and could be implemented in
+various ways. 
+
+status: lots to do. 
+
+Package moderator will have a server which will eventually help people to find
+one another to create joins. It will also provide for a client that can schedule
+and commit to joins. 
+
+status: barely started
+
+-- Uses of shuffle-java
+
+shuffle-java will run on its own. It takes a private key and a means of 
+communicating with other players, and then runs the protocol with the other 
+players. 
+
+shuffle-java can be used as a library in another application. The other wallet
+would provide for an implementation of the Player class (not yet fully designed)
+as well as implementations of the underlying services. (The ready-made classes
+in packages bitcoin and p2p can be used in a pinch.)
+
+-- Issues
+
+Coin Shuffle requires the ability to look up balances on arbitrary addresses in
+order to determine whether all players have enough funds to make a join
+transaction. Querying arbitrary addresses is actually rather difficult unless
+you just want to defer to a server like Blockchain.info. I don't yet know the
+best way of providing this service on a user's own computer yet. Is there some
+good open-source software for doing blockchain queries? 
