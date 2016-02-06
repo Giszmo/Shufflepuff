@@ -430,26 +430,6 @@ public final class Simulator {
         return results;
     }
 
-    private Set<VerificationKey> fromSet(SortedSet<VerificationKey> identities, int[] array) {
-        Set<VerificationKey> others = new TreeSet<>();
-
-        int p = 1;
-        int i = 0;
-        for(VerificationKey player: identities) {
-            while(i < array.length && array[i] < p) {
-                i++;
-            }
-
-            if(i < array.length && array[i] == p) {
-                others.add(player);
-            }
-
-            p ++;
-        }
-
-        return others;
-    }
-
     public class InitialState {
         private final SessionIdentifier session;
         private final long amount;
@@ -647,6 +627,26 @@ public final class Simulator {
             }
 
             return Simulator.this.runSimulation(adversaries);
+        }
+
+        private Set<VerificationKey> fromSet(SortedSet<VerificationKey> identities, int[] array) {
+            Set<VerificationKey> others = new TreeSet<>();
+
+            int p = 1;
+            int i = 0;
+            for(VerificationKey player: identities) {
+                while(i < array.length && array[i] < p) {
+                    i++;
+                }
+
+                if(i < array.length && array[i] == p) {
+                    others.add(player);
+                }
+
+                p ++;
+            }
+
+            return others;
         }
     }
 

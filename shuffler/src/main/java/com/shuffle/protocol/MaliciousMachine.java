@@ -44,8 +44,8 @@ final public class MaliciousMachine extends CoinShuffle {
         class MaliciousRound extends Round {
             DecryptionKey alt = null;
 
-            MaliciousRound(Map<Integer, VerificationKey> players, Address change, Mailbox mailbox) throws InvalidParticipantSetException {
-                super(players, change, mailbox);
+            MaliciousRound(SessionIdentifier session, long amount, SigningKey sk, Map<Integer, VerificationKey> players, Address change, Mailbox mailbox) throws InvalidParticipantSetException {
+                super(session, amount, sk, players, change, mailbox);
             }
 
             @Override
@@ -136,7 +136,7 @@ final public class MaliciousMachine extends CoinShuffle {
             Mailbox mailbox = new Mailbox(session, sk, numberedPlayers.values(), network);
 
             try {
-                new MaliciousRound(numberedPlayers, change, mailbox).protocolDefinition();
+                new MaliciousRound(session, amount, sk, numberedPlayers, change, mailbox).protocolDefinition();
             } catch (InterruptedException
                     | ProtocolException
                     | FormatException
@@ -170,8 +170,8 @@ final public class MaliciousMachine extends CoinShuffle {
         class MaliciousRound extends Round {
             Deque<Address> otherAddresses;
 
-            MaliciousRound(Map<Integer, VerificationKey> players, Address change, Mailbox mailbox) throws InvalidParticipantSetException {
-                super(players, change, mailbox);
+            MaliciousRound(SessionIdentifier session, long amount, SigningKey sk, Map<Integer, VerificationKey> players, Address change, Mailbox mailbox) throws InvalidParticipantSetException {
+                super(session, amount, sk, players, change, mailbox);
             }
 
             @Override
@@ -251,7 +251,7 @@ final public class MaliciousMachine extends CoinShuffle {
             Mailbox mailbox = new Mailbox(session, sk, numberedPlayers.values(), network);
 
             try {
-                new MaliciousRound(numberedPlayers, change, mailbox).protocolDefinition();
+                new MaliciousRound(session, amount, sk, numberedPlayers, change, mailbox).protocolDefinition();
             } catch (InterruptedException
                     | ProtocolException
                     | FormatException
@@ -280,8 +280,8 @@ final public class MaliciousMachine extends CoinShuffle {
 
         class MaliciousRound extends Round {
 
-            MaliciousRound(Map<Integer, VerificationKey> players, Address change, Mailbox mailbox) throws InvalidParticipantSetException {
-                super(players, change, mailbox);
+            MaliciousRound(SessionIdentifier session, long amount, SigningKey sk, Map<Integer, VerificationKey> players, Address change, Mailbox mailbox) throws InvalidParticipantSetException {
+                super(session, amount, sk, players, change, mailbox);
             }
         }
     }
@@ -303,8 +303,8 @@ final public class MaliciousMachine extends CoinShuffle {
 
         class MaliciousRound extends Round {
 
-            MaliciousRound(Map<Integer, VerificationKey> players, Address change, Mailbox mailbox) throws InvalidParticipantSetException {
-                super(players, change, mailbox);
+            MaliciousRound(SessionIdentifier session, long amount, SigningKey sk, Map<Integer, VerificationKey> players, Address change, Mailbox mailbox) throws InvalidParticipantSetException {
+                super(session, amount, sk, players, change, mailbox);
             }
         }
     }
@@ -326,8 +326,8 @@ final public class MaliciousMachine extends CoinShuffle {
 
         class MaliciousRound extends Round {
 
-            MaliciousRound(Map<Integer, VerificationKey> players, Address change, Mailbox mailbox) throws InvalidParticipantSetException {
-                super(players, change, mailbox);
+            MaliciousRound(SessionIdentifier session, long amount, SigningKey sk, Map<Integer, VerificationKey> players, Address change, Mailbox mailbox) throws InvalidParticipantSetException {
+                super(session, amount, sk, players, change, mailbox);
             }
         }
     }

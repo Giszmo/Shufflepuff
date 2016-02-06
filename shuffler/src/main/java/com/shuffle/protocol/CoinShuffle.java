@@ -92,6 +92,11 @@ public class CoinShuffle {
         // A single round of the protocol. It is possible that the players may go through
         // several failed rounds until they have eliminated malicious players.
         class Round {
+            final SessionIdentifier session;
+
+            final long amount; // The amount to be shuffled.
+
+            final SigningKey sk; // My signing private key.
 
             final public int me; // Which player am I?
 
@@ -782,7 +787,16 @@ public class CoinShuffle {
             }
 
             // A round is a single run of the protocol.
-            Round(Map<Integer, VerificationKey> players, Address change, Mailbox mailbox) throws InvalidParticipantSetException {
+            Round(
+                    SessionIdentifier session,
+                    long amount,
+                    SigningKey sk,
+                    Map<Integer, VerificationKey> players,
+                    Address change,
+                    Mailbox mailbox) throws InvalidParticipantSetException {
+                this.session = session;
+                this.amount = amount;
+                this.sk = sk;
                 this.players = players;
                 this.change = change;
                 vk = sk.VerificationKey();
@@ -843,7 +857,7 @@ public class CoinShuffle {
             Mailbox mailbox = new Mailbox(session, sk, numberedPlayers.values(), network);
 
             try {
-                new Round(numberedPlayers, change, mailbox).protocolDefinition();
+                new Round(session, amount, sk, numberedPlayers, change, mailbox).protocolDefinition();
             } catch (InterruptedException
                     | ProtocolException
                     | FormatException
