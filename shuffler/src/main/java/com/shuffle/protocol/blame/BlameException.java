@@ -9,8 +9,8 @@ import com.shuffle.protocol.Packet;
  * This exception is thrown when malicious behavior is detected on the part of another player.
  */
 final public class BlameException extends Exception {
-    final VerificationKey sender;
-    final Packet packet;
+    final public VerificationKey sender;
+    final public Packet packet;
 
     // A blame message history from another party.
     public BlameException(VerificationKey sender, Packet packet) {

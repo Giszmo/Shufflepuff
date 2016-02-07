@@ -5,7 +5,8 @@ import com.shuffle.protocol.SignedPacket;
 
 /**
  *
- * Should be comparable according to the lexicographic order of the address corresponding to the keys.
+ * Should be comparable according to the lexicographic order of the
+ * address corresponding to the keys.
  *
  * Created by Daniel Krawisz on 12/3/15.
  */

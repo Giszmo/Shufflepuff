@@ -170,10 +170,10 @@ public class Mailbox {
     }
 
     // Receive messages from a set of players, which may come in any order.
-    public Map<VerificationKey, Message> receiveFromMultiple(
+    private Map<VerificationKey, Message> receiveFromMultiple(
             Set<VerificationKey> from,
             Phase expectedPhase,
-            boolean blameInterrupt // Whether to stop if a blame message is received.
+            boolean ignoreBlame // Whether to stop if a blame message is received.
     )
             throws TimeoutError, CryptographyError, FormatException,
             InvalidImplementationError, ValueException, InterruptedException,
@@ -188,7 +188,7 @@ public class Mailbox {
         while (from.size() > 0) {
             Packet packet = receiveNextPacket(expectedPhase).payload;
             if (expectedPhase != Phase.Blame && packet.phase == Phase.Blame) {
-                if (blameInterrupt) {
+                if (!ignoreBlame) {
                     throw new BlameException(packet.signer, packet);
                 }
                 continue;
@@ -203,6 +203,34 @@ public class Mailbox {
         }
 
         return broadcasts;
+    }
+
+    public Map<VerificationKey, Message> receiveFromMultipleBlameless(
+            Set<VerificationKey> from,
+            Phase expectedPhase
+    )
+            throws TimeoutError, CryptographyError, FormatException,
+            InvalidImplementationError, ValueException, InterruptedException,
+            ProtocolException, SignatureException {
+
+        try {
+            return receiveFromMultiple(from, expectedPhase, true);
+        } catch (BlameException e) {
+        }
+
+        assert true; // Should not reach here.
+        return null;
+    }
+
+    public Map<VerificationKey, Message> receiveFromMultiple(
+            Set<VerificationKey> from,
+            Phase expectedPhase
+    )
+            throws TimeoutError, CryptographyError, FormatException,
+            InvalidImplementationError, ValueException, InterruptedException,
+            ProtocolException, BlameException, SignatureException {
+
+        return receiveFromMultiple(from, expectedPhase, false);
     }
 
     // When the blame phase it reached, there may be a lot of blame going around. This function

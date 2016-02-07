@@ -14,7 +14,8 @@ import com.shuffle.protocol.Message;
  * Created by Daniel Krawisz on 12/4/15.
  */
 public interface Crypto {
-    // Generate new signing key. (The key doesn't have to have any bitcoins in it; it can just be new.)
+    // Generate new signing key.
+    // (The key doesn't have to have any bitcoins in it; it can just be new.)
     SigningKey makeSigningKey() throws CryptographyError;
 
     // Generate new decryption key.

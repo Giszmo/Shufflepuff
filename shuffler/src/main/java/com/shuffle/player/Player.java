@@ -3,25 +3,18 @@ package com.shuffle.player;
 import com.shuffle.bitcoin.Address;
 import com.shuffle.bitcoin.Coin;
 import com.shuffle.bitcoin.Crypto;
-import com.shuffle.bitcoin.CryptographyError;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.p2p.Channel;
 import com.shuffle.protocol.CoinShuffle;
-import com.shuffle.protocol.FormatException;
-import com.shuffle.protocol.InvalidParticipantSetException;
 import com.shuffle.protocol.Mailbox;
 import com.shuffle.protocol.MessageFactory;
 import com.shuffle.protocol.Phase;
 import com.shuffle.protocol.SessionIdentifier;
-import com.shuffle.protocol.SignatureException;
-import com.shuffle.protocol.TimeoutError;
-import com.shuffle.protocol.ValueException;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.net.ProtocolException;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -80,13 +73,13 @@ public class Player<Identity, Format> {
         this.messages = messages;
     }
 
-    public List<CoinShuffle.ShuffleMachine> coinShuffle(
+    public List<CoinShuffle.Machine> coinShuffle(
             Set<Identity> identities,
             Channel<Identity, Format> channel,
             Marshaller<Format> marshaller,
             Map<Identity, VerificationKey> keys, // Can be null.
             Settings settings,
-            LinkedBlockingQueue<CoinShuffle.ShuffleMachine> queue
+            LinkedBlockingQueue<CoinShuffle.Machine> queue
     ) {
         SessionIdentifier session = settings.session;
         Network<Identity, Format> net = new Network<>(channel, marshaller, settings.timeout);
@@ -109,7 +102,7 @@ public class Player<Identity, Format> {
         }
 
         // Try the protocol.
-        List<CoinShuffle.ShuffleMachine> list = new LinkedList<>();
+        List<CoinShuffle.Machine> list = new LinkedList<>();
         int attempt = 0;
 
         // The eliminated players. A player is eliminated when there is a subset of players
@@ -141,7 +134,7 @@ public class Player<Identity, Format> {
             // this round of the protocol.
             // TODO
 
-            CoinShuffle.ShuffleMachine machine = shuffle.run(session, settings.amount, sk, validPlayers, settings.change, net, queue);
+            CoinShuffle.Machine machine = shuffle.run(session, settings.amount, sk, validPlayers, settings.change, net, queue);
 
             if (machine.exception() == null && machine.phase() != Phase.Blame) {
                 break;

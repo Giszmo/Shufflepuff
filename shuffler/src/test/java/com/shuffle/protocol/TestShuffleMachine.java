@@ -1,17 +1,13 @@
 package com.shuffle.protocol;
 
 import com.shuffle.bitcoin.CryptographyError;
-import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.mock.MockCoin;
 import com.shuffle.mock.MockCrypto;
-import com.shuffle.mock.MockMessage;
 import com.shuffle.mock.MockMessageFactory;
 import com.shuffle.mock.MockSessionIdentifier;
-import com.shuffle.mock.MockSignature;
-import com.shuffle.mock.MockVerificationKey;
 import com.shuffle.protocol.blame.Matrix;
 import com.shuffle.protocol.blame.Evidence;
 import com.shuffle.protocol.blame.Reason;
@@ -64,52 +60,6 @@ public class TestShuffleMachine {
         @Override
         public String toString() {
             return "Any";
-        }
-    }
-
-    public static class ReturnStatePatternOr extends ReturnState {
-        ReturnState a;
-        ReturnState b;
-
-        public ReturnStatePatternOr(boolean success, SessionIdentifier session, Phase phase, Throwable error, Matrix blame) {
-            super(success, session, phase, error, blame);
-        }
-
-        @Override
-        public boolean match(ReturnState x) {
-            return a.match(x) || b.match(x);
-        }
-    }
-
-    public class MutateTransactionSignature implements Simulator.MessageReplacement {
-
-        @Override
-        public SignedPacket replace(SignedPacket sigPacket) throws FormatException {
-            Packet packet = sigPacket.payload;
-            if (packet.phase == Phase.VerificationAndSubmission) {
-                if (packet.signer instanceof MockVerificationKey) {
-                    MockVerificationKey mvk = (MockVerificationKey)packet.signer;
-
-                    Signature sig = packet.message.readSignature();
-
-                    if (sig instanceof MockSignature) {
-                        MockSignature mockSig = (MockSignature)sig;
-                        if (mockSig.t instanceof MockCoin.MockTransaction) {
-
-                            MockCoin.MockTransaction mt = (MockCoin.MockTransaction) mockSig.t;
-                            MockCoin.MockTransaction nmt = mt.mutate();
-
-                            Packet newPacket = new Packet(
-                                    new MockMessage().attach(new MockSignature(nmt, mockSig.key)),
-                                    packet.session, packet.phase, packet.signer, packet.recipient);
-
-                            return new SignedPacket(newPacket, new MockSignature(newPacket, mvk));
-                        }
-                    }
-                }
-            }
-
-            return sigPacket;
         }
     }
 
@@ -201,8 +151,8 @@ public class TestShuffleMachine {
         int id;
         SessionIdentifier session;
         long amount;
-        Map<SigningKey, ReturnState> expected = new HashMap<>();
-        Map<SigningKey, ReturnState> results = new HashMap<>();
+        Map<SigningKey, CoinShuffle.Machine> expected = new HashMap<>();
+        Map<SigningKey, CoinShuffle.Machine> results = new HashMap<>();
 
         TestCase(SessionIdentifier session, long amount, String desc, int id) {
             this.session = session;
@@ -211,14 +161,14 @@ public class TestShuffleMachine {
             this.id = id;
         }
 
-        TestCase put(SigningKey key, ReturnState ex, ReturnState r) {
+        TestCase put(SigningKey key, CoinShuffle.Machine ex, CoinShuffle.Machine r) {
             results.put(key, r);
             expected.put(key, ex);
             return this;
         }
 
-        public void putSuccessfulPlayer(SigningKey key, ReturnState r) {
-            put(key, new ReturnState(true, session, Phase.Completed, null, null), r);
+        public void putSuccessfulPlayer(SigningKey key, CoinShuffle.Machine m) {
+            put(key, new CoinShuffle.Machine(session, Phase.Completed, null, null), m);
         }
 
         public void check() {
@@ -228,12 +178,14 @@ public class TestShuffleMachine {
             }
 
             log.info("Checking test case: " + (description != null ? " " + description + "; " : "") + "case number = " + id);
+            log.info("expected: " + expected.toString());
+            log.info("results:  " + results.toString());
 
             // Check that the map of error states returned matches that which was expected.
-            for (Map.Entry<SigningKey, ReturnState> ex : expected.entrySet()) {
+            for (Map.Entry<SigningKey, CoinShuffle.Machine> ex : expected.entrySet()) {
                 SigningKey key = ex.getKey();
-                ReturnState result = results.get(key);
-                ReturnState expected = ex.getValue();
+                CoinShuffle.Machine result = results.get(key);
+                CoinShuffle.Machine expected = ex.getValue();
 
                 Assert.assertNotNull(result);
 
@@ -247,7 +199,7 @@ public class TestShuffleMachine {
         }
     }
 
-    TestCase successfulExpectation(TestCase test, Map<SigningKey, ReturnState> results) {
+    TestCase successfulExpectation(TestCase test, Map<SigningKey, CoinShuffle.Machine> results) {
         for (SigningKey key : results.keySet()) {
             test.putSuccessfulPlayer(key, results.get(key));
         }
@@ -279,7 +231,7 @@ public class TestShuffleMachine {
         long amount = 17;
         TestCase test = new TestCase(session, amount, "Insufficient funds test case.", caseNo);
 
-        Map<SigningKey, ReturnState> results =
+        Map<SigningKey, CoinShuffle.Machine> results =
                 sim.insufficientFundsRun(session, numPlayers, deadbeats, poor, spenders, amount, coin);
 
         // If no offenders were defined, then this should be a successful run.
@@ -330,7 +282,7 @@ public class TestShuffleMachine {
             }
 
             test.put(i,
-                    new ReturnState(false, session, Phase.Blame, null, bm),
+                    new CoinShuffle.Machine(session, Phase.Blame, null, bm),
                     results.get(i));
         }
         
@@ -356,7 +308,7 @@ public class TestShuffleMachine {
             coinNetList.add(coinNetMap.get(view));
         }
 
-        Map<SigningKey, ReturnState> results =
+        Map<SigningKey, CoinShuffle.Machine> results =
                 sim.doubleSpendingRun(session, coinNets, coinNetList, doubleSpenders, amount);
 
         // The set of offending transactions.
@@ -410,7 +362,7 @@ public class TestShuffleMachine {
             }
 
             test.put(i,
-                    new ReturnState(false, session, phase, null, bm),
+                    new CoinShuffle.Machine(session, phase, null, bm),
                     results.get(i));
         }
 
@@ -444,7 +396,7 @@ public class TestShuffleMachine {
         log.info("Announcement equivocation test case: " + Arrays.toString(equivocators));
 
         TestCase test = new TestCase(session, amount, "Announcement phase equivocation test case.", caseNo);
-        Map<SigningKey, ReturnState> results = init.run();
+        Map<SigningKey, CoinShuffle.Machine> results = init.run();
         SortedSet<SigningKey> players = new TreeSet<>();
         players.addAll(results.keySet());
         Set<SigningKey> malicious = new HashSet<>();
@@ -485,7 +437,7 @@ public class TestShuffleMachine {
             }
 
             test.put(i,
-                    new ReturnState(false, session, null, null, bm),
+                    new CoinShuffle.Machine(session, null, null, bm),
                     results.get(i));
 
             index ++;
@@ -510,7 +462,7 @@ public class TestShuffleMachine {
         log.info("Broadcast equivocation test case: " + Arrays.toString(equivocation));
 
         TestCase test = new TestCase(session, amount, "Broadcast phase equivocation test case.", caseNo);
-        Map<SigningKey, ReturnState> results = init.run();
+        Map<SigningKey, CoinShuffle.Machine> results = init.run();
         SortedSet<SigningKey> players = new TreeSet<>();
         players.addAll(results.keySet());
         SigningKey malicious = null;
@@ -548,7 +500,7 @@ public class TestShuffleMachine {
             }
 
             test.put(i,
-                    new ReturnState(false, session, null, null, bm),
+                    new CoinShuffle.Machine(session, null, null, bm),
                     results.get(i));
 
             index ++;
@@ -584,7 +536,7 @@ public class TestShuffleMachine {
         }
 
         TestCase test = new TestCase(session, amount, "invalid signature test case.", caseNo);
-        Map<SigningKey, ReturnState> results = init.run();
+        Map<SigningKey, CoinShuffle.Machine> results = init.run();
         SortedSet<SigningKey> players = new TreeSet<>();
         players.addAll(results.keySet());
 
@@ -598,9 +550,9 @@ public class TestShuffleMachine {
             index ++;
         }
 
-        for (Map.Entry<SigningKey, ReturnState> result : results.entrySet()) {
+        for (Map.Entry<SigningKey, CoinShuffle.Machine> result : results.entrySet()) {
             SigningKey i = result.getKey();
-            ReturnState returnState = result.getValue();
+            CoinShuffle.Machine returnState = result.getValue();
 
             Matrix bm = null;
 
@@ -621,10 +573,65 @@ public class TestShuffleMachine {
                 }
             }
 
-            test.put(i, new ReturnState(false, session, Phase.Blame, null, bm), returnState);
+            test.put(i, new CoinShuffle.Machine(session, Phase.Blame, null, bm), returnState);
         }
 
         return test;
+    }
+
+    class Dropper {
+        final int player;
+        final int drop;
+        final int duplicate;
+
+        Dropper(int player, int drop, int duplicate) {
+            this.player = player;
+            this.drop = drop;
+            this.duplicate = duplicate;
+        }
+
+        @Override
+        public String toString() {
+            return " drop " + drop;
+        }
+    }
+
+    public TestCase DropAddress(int caseNo, int numPlayers, Dropper dropper, Simulator sim) {
+
+        long amount = 17;
+        SessionIdentifier session = new MockSessionIdentifier("drop" + caseNo);
+        Simulator.InitialState init = sim.initialize(session, amount).defaultCoin(new MockCoin());
+
+        // Set a player to drop an address.
+        for (int i = 1; i <= numPlayers; i ++) {
+            init.player().initialFunds(20);
+
+            if (i == dropper.player) {
+                if (dropper.duplicate > 0) {
+                    init.replace(dropper.drop, dropper.duplicate);
+                } else {
+                    init.drop(dropper.drop);
+                }
+            }
+        }
+
+        log.info("drop address test case: " + dropper.toString());
+
+        TestCase test = new TestCase(session, amount, "Drop address test case.", caseNo);
+        Map<SigningKey, CoinShuffle.Machine> results = init.run();
+        SortedSet<SigningKey> players = new TreeSet<>();
+        players.addAll(results.keySet());
+        SigningKey malicious = null;
+
+        // Find malicious player.
+
+        // Construct expected matrix.
+
+        return null; // TODO
+    }
+
+    public TestCase DropAddressReplaceNew(int caseNo, int numPlayers, int drop, Simulator sim) {
+        return null; // TODO
     }
 
     @Test
@@ -742,9 +749,14 @@ public class TestShuffleMachine {
     @Test
     // Tests for failures during the shuffle phase.
     public void testShuffleMalice() {
+        MockCrypto crypto = new MockCrypto(409);
+        Simulator sim = new Simulator(new MockMessageFactory(), crypto);
+        int caseNo = 0;
 
         // A player drops an address during phase 2.
+
         // A player drops an address and adds another one in phase 2.
+
         // A player drops an address and adds a duplicate in phase 2.
     }
 

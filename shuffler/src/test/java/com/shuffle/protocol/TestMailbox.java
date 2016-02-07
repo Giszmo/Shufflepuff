@@ -25,11 +25,11 @@ import java.util.Set;
  */
 public class TestMailbox {
 
-    static class broadcastTestCase {
+    static class BroadcastTestCase {
         int recipients;
         int sender;
 
-        public broadcastTestCase(int recipients, int sender) {
+        public BroadcastTestCase(int recipients, int sender) {
             this.recipients = recipients;
             this.sender = sender;
         }
@@ -37,17 +37,17 @@ public class TestMailbox {
 
     @Test
     public void testBroadcast() throws InvalidParticipantSetException {
-        broadcastTestCase tests[] =
-                new broadcastTestCase[]{
-                        new broadcastTestCase(1, 1),
-                        new broadcastTestCase(2, 1),
-                        new broadcastTestCase(2, 2),
-                        new broadcastTestCase(3, 2),
-                        new broadcastTestCase(4, 2),
+        BroadcastTestCase tests[] =
+                new BroadcastTestCase[]{
+                        new BroadcastTestCase(1, 1),
+                        new BroadcastTestCase(2, 1),
+                        new BroadcastTestCase(2, 2),
+                        new BroadcastTestCase(3, 2),
+                        new BroadcastTestCase(4, 2),
                 };
 
         int index = 0;
-        for (broadcastTestCase test : tests) {
+        for (BroadcastTestCase test : tests) {
 
             // Create mock network object.
             MockNetwork network = new MockNetwork();
@@ -316,7 +316,7 @@ public class TestMailbox {
             // Now receive them all.
             Map<VerificationKey, Message> messages = null;
             try {
-                messages = mailbox.receiveFromMultiple(receiveFrom, Phase.BroadcastOutput, true);
+                messages = mailbox.receiveFromMultiple(receiveFrom, Phase.BroadcastOutput);
                 if (test.timeoutExpected) {
                     Assert.fail("Failed to throw TimeoutError in test case " + i);
                 }

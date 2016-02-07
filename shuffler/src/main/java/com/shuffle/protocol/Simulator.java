@@ -4,7 +4,6 @@ import com.shuffle.bitcoin.Address;
 import com.shuffle.bitcoin.Coin;
 import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.CryptographyError;
-import com.shuffle.bitcoin.EncryptionKey;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
@@ -12,6 +11,7 @@ import com.shuffle.bitcoin.VerificationKey;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -47,11 +47,6 @@ public final class Simulator {
     public interface MockCoin extends Coin {
         void put(Address addr, long value);
         Transaction spend(Address from, Address to, long amount);
-    }
-
-    public interface MessageReplacement {
-        // Replace a message with a malicious message.
-        SignedPacket replace(SignedPacket packet) throws FormatException;
     }
 
     // This implementation of Network connects each shuffle machine to the simulator.
@@ -96,8 +91,8 @@ public final class Simulator {
     private class Adversary {
 
         final SessionIdentifier session;
-        //final CoinShuffle shuffle;
-        final CoinShuffle.ShuffleMachine machine;
+        final CoinShuffle shuffle;
+        final CoinShuffle.Machine machine;
         Network network;
         final SigningKey sk;
         final SortedSet<VerificationKey> players;
@@ -113,138 +108,24 @@ public final class Simulator {
                 SortedSet<VerificationKey> players,
                 Coin coin,
                 Transaction t,
-                CoinShuffle.ShuffleMachine machine) {
+                CoinShuffle shuffle,
+                CoinShuffle.Machine machine) {
             this.session = session;
             this.sk = sk;
             this.coin = coin;
             this.network = new Network();
             this.players = players;
             this.t = t;
+            this.shuffle = shuffle;
             this.machine = machine;
-        }
-
-        // TODO get rid of all of these.
-        // Drop an address in phase 2.
-        public class DropAddress implements MessageReplacement {
-            int drop;
-
-            public DropAddress(int drop) {
-                this.drop = drop;
-            }
-
-            @Override
-            public SignedPacket replace(SignedPacket sigPacket) throws FormatException {
-                Packet packet = sigPacket.payload;
-
-                if (packet.phase == Phase.Shuffling) {
-                    // drop a random address from the packet.
-                    List<Address> addresses = new LinkedList<>();
-                    Message message = packet.message;
-
-                    while (!message.isEmpty()) {
-                        addresses.add(message.readAddress());
-                        message = message.rest();
-                    }
-
-                    int i = 0;
-                    for (Address address : addresses) {
-                        if (i != drop) {
-                            message = message.attach(address);
-                        }
-                    }
-
-                    Packet newPacket = new Packet(message, packet.session, packet.phase, packet.signer, packet.recipient);
-                    return new SignedPacket(newPacket, sk.makeSignature(newPacket));
-                }
-                return sigPacket;
-            }
-        }
-
-        // Drop an address and replace with a duplicate in phase 2.
-        public class DropAddressReplaceDuplicate implements MessageReplacement {
-            int drop;
-            int duplicate;
-
-            public DropAddressReplaceDuplicate(int drop, int duplicate) {
-                this.drop = drop;
-                this.duplicate = duplicate;
-            }
-
-            @Override
-            public SignedPacket replace(SignedPacket sigPacket) throws FormatException {
-                Packet packet = sigPacket.payload;
-
-                if (packet.phase == Phase.Shuffling) {
-                    // drop a random address from the packet.
-                    List<Address> addresses = new LinkedList<>();
-                    Message message = packet.message;
-
-                    while (!message.isEmpty()) {
-                        addresses.add(message.readAddress());
-                        message = message.rest();
-                    }
-                    Address duplicate = addresses.get(this.duplicate);
-
-                    int i = 0;
-                    for (Address address : addresses) {
-                        if (i != drop) {
-                            message = message.attach(address);
-                        } else {
-                            message = message.attach(duplicate);
-                        }
-                    }
-
-                    Packet newPacket = new Packet(message, packet.session, packet.phase, packet.signer, packet.recipient);
-                    return new SignedPacket(newPacket, sk.makeSignature(newPacket));
-                }
-                return sigPacket;
-            }
-        }
-
-        // Drop an address and replace with a new one in phase 2.
-        public class DropAddressReplaceNew implements MessageReplacement {
-            final Address alternate;
-            int drop;
-
-            public DropAddressReplaceNew(int drop) {
-                this.drop = drop;
-                this.alternate = crypto.makeSigningKey().VerificationKey().address();
-            }
-
-            @Override
-            public SignedPacket replace(SignedPacket sigPacket) throws FormatException {
-                Packet packet = sigPacket.payload;
-                if (packet.phase == Phase.Shuffling) {
-                    // drop a random address from the packet.
-                    List<Address> addresses = new LinkedList<>();
-                    Message message = packet.message;
-
-                    while (!message.isEmpty()) {
-                        addresses.add(message.readAddress());
-                    }
-
-                    int i = 0;
-                    for (Address address : addresses) {
-                        if (i != drop) {
-                            message.attach(address);
-                        } else {
-                            message.attach(alternate);
-                        }
-                    }
-
-                    Packet newPacket = new Packet(message, packet.session, packet.phase, packet.signer, packet.recipient);
-                    return new SignedPacket(newPacket, sk.makeSignature(newPacket));
-                }
-                return sigPacket;
-            }
         }
 
         public SessionIdentifier session() {
             return session;
         }
 
-        public ReturnState turnOn() throws InvalidImplementationError {
-            return machine.run(null, network);
+        public CoinShuffle.Machine turnOn() throws InvalidImplementationError {
+            return shuffle.run(machine, null, network);
         }
 
         public Phase currentPhase() {
@@ -267,20 +148,20 @@ public final class Simulator {
 
     // A wrapper for an adversary that can run a player as a separate thread. Could be good or evil!
     private class BlackBox implements Runnable {
-        Adversary machine;
+        Adversary adversary;
         Thread thread;
 
         // Used to send a message from the new thread to the old one.
-        BlockingQueue<ReturnState> q;
+        BlockingQueue<CoinShuffle.Machine> q;
 
-        public BlackBox(Adversary machine) {
-            this.machine = machine;
+        public BlackBox(Adversary adversary) {
+            this.adversary = adversary;
             thread = null;
             q = new LinkedBlockingQueue<>();
         }
 
         public void deliver(SignedPacket packet) throws InvalidImplementationError, InterruptedException {
-            machine.deliver(packet);
+            adversary.deliver(packet);
         }
 
         public void interrupt() {
@@ -289,12 +170,12 @@ public final class Simulator {
             }
         }
 
-        public Future<Map.Entry<SigningKey, ReturnState>> doIt() {
-            class entry implements Map.Entry<SigningKey, ReturnState> {
+        public Future<Map.Entry<SigningKey, CoinShuffle.Machine>> doIt() {
+            class entry implements Map.Entry<SigningKey, CoinShuffle.Machine> {
                 SigningKey key;
-                ReturnState re;
+                CoinShuffle.Machine re;
 
-                public entry(SigningKey key, ReturnState re) {
+                public entry(SigningKey key, CoinShuffle.Machine re) {
                     this.key = key;
                     this.re = re;
                 }
@@ -305,13 +186,13 @@ public final class Simulator {
                 }
 
                 @Override
-                public ReturnState getValue() {
+                public CoinShuffle.Machine getValue() {
                     return re;
                 }
 
                 @Override
-                public ReturnState setValue(ReturnState returnState) {
-                    re = returnState;
+                public CoinShuffle.Machine setValue(CoinShuffle.Machine machine) {
+                    re = machine;
                     return re;
                 }
             }
@@ -321,7 +202,7 @@ public final class Simulator {
             thread.start();
 
             // Wait for message from new thread.
-            return new Future<Map.Entry<SigningKey, ReturnState>>() {
+            return new Future<Map.Entry<SigningKey, CoinShuffle.Machine>>() {
                 @Override
                 public boolean cancel(boolean b) {
                     return false;
@@ -338,13 +219,13 @@ public final class Simulator {
                 }
 
                 @Override
-                public Map.Entry<SigningKey, ReturnState> get() throws InterruptedException, ExecutionException {
-                    return new entry(machine.identity(), q.take());
+                public Map.Entry<SigningKey, CoinShuffle.Machine> get() throws InterruptedException, ExecutionException {
+                    return new entry(adversary.identity(), q.take());
                 }
 
                 @Override
-                public Map.Entry<SigningKey, ReturnState> get(long l, TimeUnit timeUnit) throws InterruptedException, ExecutionException, java.util.concurrent.TimeoutException {
-                    return new entry(machine.identity(), q.poll(l, timeUnit));
+                public Map.Entry<SigningKey, CoinShuffle.Machine> get(long l, TimeUnit timeUnit) throws InterruptedException, ExecutionException, java.util.concurrent.TimeoutException {
+                    return new entry(adversary.identity(), q.poll(l, timeUnit));
                 }
             };
         }
@@ -352,9 +233,9 @@ public final class Simulator {
         @Override
         public void run() {
             try {
-                q.add(machine.turnOn());
+                q.add(adversary.turnOn());
             } catch (InvalidImplementationError e) {
-                q.add(new ReturnState(false, machine.session(), machine.currentPhase(), e, null));
+                q.add(adversary.machine);
             }
         }
     }
@@ -382,7 +263,7 @@ public final class Simulator {
         this.crypto = crypto;
     }
 
-    private synchronized Map<SigningKey, ReturnState> runSimulation(
+    private synchronized Map<SigningKey, CoinShuffle.Machine> runSimulation(
             List<Adversary> init)  {
         if (init == null ) throw new NullPointerException();
 
@@ -399,24 +280,24 @@ public final class Simulator {
         }
 
         //Timer timer = new Timer();
-        List<Future<Map.Entry<SigningKey, ReturnState>>> wait = new LinkedList<>();
-        Map<SigningKey, ReturnState> results = new HashMap<>();
+        List<Future<Map.Entry<SigningKey, CoinShuffle.Machine>>> wait = new LinkedList<>();
+        Map<SigningKey, CoinShuffle.Machine> results = new HashMap<>();
 
         // First run all the machines.
         for (BlackBox machine : machines.values()) {
             // TODO allow for the machines to be started in various orders.
-            Future<Map.Entry<SigningKey, ReturnState>> future = machine.doIt();
+            Future<Map.Entry<SigningKey, CoinShuffle.Machine>> future = machine.doIt();
             wait.add(future);
         }
 
         // TODO Allow for timeouts.
         while (wait.size() != 0) {
-            Iterator<Future<Map.Entry<SigningKey, ReturnState>>> I = wait.iterator();
+            Iterator<Future<Map.Entry<SigningKey, CoinShuffle.Machine>>> I = wait.iterator();
             while (I.hasNext()) {
-                Future<Map.Entry<SigningKey, ReturnState>> future = I.next();
+                Future<Map.Entry<SigningKey, CoinShuffle.Machine>> future = I.next();
                 if (future.isDone()) {
                     try {
-                        Map.Entry<SigningKey, ReturnState> sim = future.get();
+                        Map.Entry<SigningKey, CoinShuffle.Machine> sim = future.get();
                         results.put(sim.getKey(), sim.getValue());
                     } catch (InterruptedException | ExecutionException e) {
                         e.printStackTrace();
@@ -504,31 +385,24 @@ public final class Simulator {
                     }
                 }
 
-                CoinShuffle.ShuffleMachine machine;
+                CoinShuffle shuffle;
+                CoinShuffle.Machine machine = new CoinShuffle.Machine(session, amount, key, identities);
 
                 if (equivocateAnnouncement != null && equivocateAnnouncement.length > 0) {
-                    machine = new MaliciousMachine(messages, crypto, newCoin).new
-                            AnnouncementEquivocator(session, amount, key, identities,
-                                fromSet(identities, equivocateAnnouncement));
+                    shuffle = MaliciousMachine.announcementEquivocator(messages, crypto, newCoin, fromSet(identities, equivocateAnnouncement));
                 } else if (equivocateOutputVector != null && equivocateOutputVector.length > 0) {
-                    machine = new MaliciousMachine(messages, crypto, newCoin).new
-                            BroadcastEquivocator(session, amount, key, identities,
-                                fromSet(identities, equivocateOutputVector));
-                } else {
-                    machine = new CoinShuffle(messages, crypto, newCoin).new ShuffleMachine(session, amount, key, identities);
-                }
-
-                Adversary adversary = new Adversary(session, amount, key, identities, newCoin, doubleSpendTrans, machine);
-
-                if (replace && drop != 0) {
-                    //adversary.lie(adversary.new DropAddressReplaceNew(drop));
+                    shuffle = MaliciousMachine.broadcastEquivocator(messages, crypto, newCoin, fromSet(identities, equivocateOutputVector));
+                } else if (replace && drop != 0) {
+                    shuffle = MaliciousMachine.addressDropperReplacer(messages, crypto, newCoin, drop);
                 } else if (duplicate != 0 && drop != 0) {
-                    //adversary.lie(adversary.new DropAddressReplaceDuplicate(drop, duplicate));
+                    shuffle = MaliciousMachine.addressDropperDuplicator(messages, crypto, newCoin, drop, duplicate);
                 } else if (drop != 0) {
-                    //adversary.lie(adversary.new DropAddress(drop));
+                    shuffle = MaliciousMachine.addressDropper(messages, crypto, newCoin, drop);
+                } else {
+                    shuffle = new CoinShuffle(messages, crypto, newCoin);
                 }
 
-                return adversary;
+                return new Adversary(session, amount, key, identities, newCoin, doubleSpendTrans, shuffle, machine);
             }
         }
 
@@ -609,7 +483,7 @@ public final class Simulator {
             return this;
         }
 
-        public Map<SigningKey, ReturnState> run() {
+        public Map<SigningKey, CoinShuffle.Machine> run() {
             List<Adversary> adversaries = new LinkedList<>();
             Map<Player, SigningKey> keys = new HashMap<>();
 
@@ -654,7 +528,7 @@ public final class Simulator {
         return new InitialState(session, amount);
     }
 
-    public Map<SigningKey, ReturnState> successfulRun(
+    public Map<SigningKey, CoinShuffle.Machine> successfulRun(
             SessionIdentifier session,
             int numPlayers,
             long amount,
@@ -670,7 +544,7 @@ public final class Simulator {
         return init.run();
     }
 
-    public Map<SigningKey, ReturnState> insufficientFundsRun(
+    public Map<SigningKey, CoinShuffle.Machine> insufficientFundsRun(
             SessionIdentifier session,
             int numPlayers,
             int[] deadbeats, // Players who put no money in their address. 
@@ -703,7 +577,7 @@ public final class Simulator {
         return init.run();
     }
 
-    public Map<SigningKey, ReturnState> doubleSpendingRun(
+    public Map<SigningKey, CoinShuffle.Machine> doubleSpendingRun(
             SessionIdentifier session,
             Set<MockCoin> coinNets,
             List<MockCoin> coinNetList,

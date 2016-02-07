@@ -43,7 +43,7 @@ import java.util.TreeSet;
 public class TestShuffleMachineMethods {
     private static Logger log= LogManager.getLogger(TestShuffleMachineMethods.class);
 
-    public CoinShuffle.ShuffleMachine.Round net(
+    public CoinShuffle.Round net(
             int seed,
             MockSessionIdentifier session,
             MockSigningKey sk,
@@ -55,11 +55,10 @@ public class TestShuffleMachineMethods {
 
         SortedSet<VerificationKey> playerSet = new TreeSet<>();
         playerSet.addAll(players.values());
-        CoinShuffle.ShuffleMachine machine =
-                new CoinShuffle(messages, new MockCrypto(seed), new MockCoin()).new
-                        ShuffleMachine(session, amount, sk, playerSet);
+        CoinShuffle shuffle = new CoinShuffle(messages, new MockCrypto(seed), new MockCoin());
+        CoinShuffle.Machine machine = new CoinShuffle.Machine(session, amount, sk, playerSet);
         machine.phase = phase;
-        return machine.new Round(session, amount, sk, players, null, new Mailbox(session, sk, playerSet, network));
+        return shuffle.new Round(machine, players, null, new Mailbox(session, sk, playerSet, network));
     }
 
     static class playerSetTestCase {
@@ -123,7 +122,7 @@ public class TestShuffleMachineMethods {
 
             Set<VerificationKey> result = null;
             // Set up the network operations object.
-            CoinShuffle.ShuffleMachine.Round netop =
+            CoinShuffle.Round netop =
                     net(234, new MockSessionIdentifier("testPlayerSet" + i), new MockSigningKey(test.player), players,
                             Phase.Shuffling, new MockMessageFactory(), new MockNetwork());
             result = netop.playerSet(test.i, test.n);
@@ -333,7 +332,7 @@ public class TestShuffleMachineMethods {
         }
     }
 
-    private CoinShuffle.ShuffleMachine.Round standardTestInitialization(
+    private CoinShuffle.Round standardTestInitialization(
             SessionIdentifier session, SigningKey sk, SortedSet<VerificationKey> playerSet, Crypto crypto, Mailbox mailbox) throws InvalidParticipantSetException {
 
         int i = 1;
@@ -345,11 +344,10 @@ public class TestShuffleMachineMethods {
 
         long amount = 20l;
 
-        return new CoinShuffle(
-            new MockMessageFactory(),
-            crypto,
-            new MockCoin()).new ShuffleMachine(
-                session, amount, sk, playerSet).new Round(session, amount, sk, players, null, mailbox);
+        CoinShuffle shuffle = new CoinShuffle(new MockMessageFactory(), crypto, new MockCoin());
+
+        return shuffle.new Round(new CoinShuffle.Machine(
+                session, amount, sk, playerSet), players, null, mailbox);
     }
 
     @Test
@@ -364,12 +362,10 @@ public class TestShuffleMachineMethods {
                 Message output = messages.make();
                 DecryptionKey dk = crypto.makeDecryptionKey();
                 SortedSet<VerificationKey> playerSet = new TreeSet<>();
-                Map<Integer, VerificationKey> players = new HashMap<>();
 
                 for (int j = 0; j <= i; j ++) {
                     VerificationKey key = new MockSigningKey(j + 1).VerificationKey();
                     playerSet.add(key);
-                    players.put(j + 1, key);
                     Address addr = key.address();
 
                     output = output.attach(addr);
@@ -379,7 +375,7 @@ public class TestShuffleMachineMethods {
                 SessionIdentifier mockSessionIdentifier = new MockSessionIdentifier("testDecryptAll" + i);
                 SigningKey sk = new MockSigningKey(1);
                 Mailbox mailbox = new Mailbox(mockSessionIdentifier, sk, playerSet, new MockNetwork());
-                CoinShuffle.ShuffleMachine.Round round =
+                CoinShuffle.Round round =
                         standardTestInitialization(mockSessionIdentifier, sk, playerSet, crypto, mailbox);
 
                 Message result = round.decryptAll(input, dk, i + 1);
@@ -422,7 +418,7 @@ public class TestShuffleMachineMethods {
 
                 SigningKey sk = new MockSigningKey(1);
                 Mailbox mailbox = new Mailbox(mockSessionIdentifier, sk, playerSet, new MockNetwork());
-                CoinShuffle.ShuffleMachine.Round round =
+                CoinShuffle.Round round =
                         standardTestInitialization(mockSessionIdentifier, sk, playerSet, crypto, mailbox);
 
                 try {
@@ -462,7 +458,7 @@ public class TestShuffleMachineMethods {
                 SessionIdentifier mockSessionIdentifier = new MockSessionIdentifier("testReadNewAddresses" + i);
                 SigningKey sk = new MockSigningKey(1);
                 Mailbox mailbox = new Mailbox(mockSessionIdentifier, sk, playerSet, new MockNetwork());
-                CoinShuffle.ShuffleMachine.Round round =
+                CoinShuffle.Round round =
                         standardTestInitialization(mockSessionIdentifier, sk, playerSet, crypto, mailbox);
 
                 Deque<Address> result = round.readNewAddresses(input);
@@ -490,7 +486,7 @@ public class TestShuffleMachineMethods {
                 SessionIdentifier mockSessionIdentifier = new MockSessionIdentifier("testReadNewAddressesfail" + i);
                 SigningKey sk = new MockSigningKey(1);
                 Mailbox mailbox = new Mailbox(mockSessionIdentifier, sk, playerSet, new MockNetwork());
-                CoinShuffle.ShuffleMachine.Round round =
+                CoinShuffle.Round round =
                         standardTestInitialization(mockSessionIdentifier, sk, playerSet, crypto, mailbox);
 
                 try {

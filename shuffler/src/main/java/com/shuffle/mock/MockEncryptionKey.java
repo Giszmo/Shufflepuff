@@ -19,6 +19,14 @@ public class MockEncryptionKey implements EncryptionKey, Serializable {
 
     @Override
     public Address encrypt(Address m) throws CryptographyError {
+        if (m instanceof MockDecryptedAddress) {
+            MockDecryptedAddress dec = (MockDecryptedAddress) m;
+
+            if (equals(dec.key)) {
+                return dec.decrypted;
+            }
+        }
+
         return new MockEncryptedAddress(m, this);
     }
 

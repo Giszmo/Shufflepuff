@@ -27,22 +27,20 @@ public class MockDecryptionKey implements DecryptionKey, Serializable {
         return key;
     }
 
-
     @Override
     // Intended blockchain decrypt a single element.
     public Address decrypt(Address m) throws FormatException, CryptographyError {
 
-        if (!(m instanceof MockEncryptedAddress)) {
-            throw new FormatException();
+        if (m instanceof MockEncryptedAddress) {
+
+            MockEncryptedAddress enc = ((MockEncryptedAddress) m);
+
+            if (enc.key.equals(key)) {
+                return enc.encrypted;
+            }
         }
 
-        MockEncryptedAddress enc = ((MockEncryptedAddress)m);
-
-        if (!enc.key.equals(key)) {
-            throw new CryptographyError();
-        }
-
-        return ((MockEncryptedAddress)m).encrypted;
+        return new MockDecryptedAddress(m, key);
     }
 
     @Override
