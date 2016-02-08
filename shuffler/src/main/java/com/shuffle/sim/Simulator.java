@@ -106,7 +106,7 @@ public final class Simulator {
     }
 
     public InitialState initialize(SessionIdentifier session, long amount) {
-        return new InitialState(this, session, amount);
+        return new InitialState(session, amount);
     }
 
     public Map<SigningKey, Machine> successfulRun(
@@ -122,7 +122,7 @@ public final class Simulator {
             init.player().initialFunds(20);
         }
 
-        return init.run();
+        return init.run(this);
     }
 
     public Map<SigningKey, Machine> insufficientFundsRun(
@@ -155,7 +155,7 @@ public final class Simulator {
             }
         }
 
-        return init.run();
+        return init.run(this);
     }
 
     public Map<SigningKey, Machine> doubleSpendingRun(
@@ -179,6 +179,6 @@ public final class Simulator {
             i++;
         }
 
-        return init.run();
+        return init.run(this);
     }
 }

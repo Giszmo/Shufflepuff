@@ -10,9 +10,10 @@ import java.nio.file.Paths;
  *
  * Created by Daniel Krawisz on 2/3/16.
  */
-public class Main {
+public class Player {
+    Adversary adversary;
 
-    private Main() {}
+    private Player() {}
 
     static String readFile(String path, Charset encoding)
             throws IOException

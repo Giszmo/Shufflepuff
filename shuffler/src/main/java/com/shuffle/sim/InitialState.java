@@ -1,12 +1,14 @@
 package com.shuffle.sim;
 
 import com.shuffle.bitcoin.Address;
+import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.protocol.CoinShuffle;
 import com.shuffle.protocol.Machine;
 import com.shuffle.protocol.MaliciousMachine;
+import com.shuffle.protocol.MessageFactory;
 import com.shuffle.protocol.SessionIdentifier;
 
 import java.util.Deque;
@@ -24,7 +26,6 @@ import java.util.TreeSet;
  * Created by Simulator on 2/8/16.
  */
 public class InitialState {
-    private Simulator simulator;
     private final SessionIdentifier session;
     private final long amount;
     private final Deque<PlayerInitialState> players = new LinkedList<>();
@@ -51,7 +52,7 @@ public class InitialState {
         PlayerInitialState() {
         }
 
-        Adversary adversary(Map<PlayerInitialState, SigningKey> keys) {
+        Adversary adversary(Map<PlayerInitialState, SigningKey> keys, Crypto crypto, MessageFactory messages, Network network) {
             MockCoin newCoin;
             if (coin != null) {
                 newCoin = coin;
@@ -81,7 +82,7 @@ public class InitialState {
 
             // Set up the player's initial funds.
             if (initialAmount > 0) {
-                Address previousAddress = simulator.crypto.makeSigningKey().VerificationKey().address();
+                Address previousAddress = crypto.makeSigningKey().VerificationKey().address();
 
                 for (MockCoin coin : coins) {
                     coin.put(previousAddress, initialAmount);
@@ -89,13 +90,13 @@ public class InitialState {
 
                     // Plot twist! We spend it all!
                     if (spend > 0) {
-                        coin.spend(address, simulator.crypto.makeSigningKey().VerificationKey().address(), spend).send();
+                        coin.spend(address, crypto.makeSigningKey().VerificationKey().address(), spend).send();
                     }
                 }
 
                 if (doubleSpend > 0) {
                     // is he going to double spend? If so, make a new transaction for him.
-                    doubleSpendTrans = newCoin.spend(address, simulator.crypto.makeSigningKey().VerificationKey().address(), doubleSpend);
+                    doubleSpendTrans = newCoin.spend(address, crypto.makeSigningKey().VerificationKey().address(), doubleSpend);
                 }
             }
 
@@ -103,25 +104,24 @@ public class InitialState {
             Machine machine = new Machine(session, amount, key, identities);
 
             if (equivocateAnnouncement != null && equivocateAnnouncement.length > 0) {
-                shuffle = MaliciousMachine.announcementEquivocator(simulator.messages, simulator.crypto, newCoin, fromSet(identities, equivocateAnnouncement));
+                shuffle = MaliciousMachine.announcementEquivocator(messages, crypto, newCoin, fromSet(identities, equivocateAnnouncement));
             } else if (equivocateOutputVector != null && equivocateOutputVector.length > 0) {
-                shuffle = MaliciousMachine.broadcastEquivocator(simulator.messages, simulator.crypto, newCoin, fromSet(identities, equivocateOutputVector));
+                shuffle = MaliciousMachine.broadcastEquivocator(messages, crypto, newCoin, fromSet(identities, equivocateOutputVector));
             } else if (replace && drop != 0) {
-                shuffle = MaliciousMachine.addressDropperReplacer(simulator.messages, simulator.crypto, newCoin, drop);
+                shuffle = MaliciousMachine.addressDropperReplacer(messages, crypto, newCoin, drop);
             } else if (duplicate != 0 && drop != 0) {
-                shuffle = MaliciousMachine.addressDropperDuplicator(simulator.messages, simulator.crypto, newCoin, drop, duplicate);
+                shuffle = MaliciousMachine.addressDropperDuplicator(messages, crypto, newCoin, drop, duplicate);
             } else if (drop != 0) {
-                shuffle = MaliciousMachine.addressDropper(simulator.messages, simulator.crypto, newCoin, drop);
+                shuffle = MaliciousMachine.addressDropper(messages, crypto, newCoin, drop);
             } else {
-                shuffle = new CoinShuffle(simulator.messages, simulator.crypto, newCoin);
+                shuffle = new CoinShuffle(messages, crypto, newCoin);
             }
 
-            return new Adversary(session, amount, key, identities, newCoin, doubleSpendTrans, shuffle, machine, new Network(simulator));
+            return new Adversary(session, amount, key, identities, newCoin, doubleSpendTrans, shuffle, machine, network);
         }
     }
 
-    InitialState(Simulator simulator, SessionIdentifier session, long amount) {
-        this.simulator = simulator;
+    InitialState(SessionIdentifier session, long amount) {
 
         this.session = session;
         this.amount = amount;
@@ -198,7 +198,7 @@ public class InitialState {
         return this;
     }
 
-    public Map<SigningKey, Machine> run() {
+    public Map<SigningKey, Machine> run(Simulator simulator) {
         List<Adversary> adversaries = new LinkedList<>();
         Map<PlayerInitialState, SigningKey> keys = new HashMap<>();
 
@@ -208,7 +208,7 @@ public class InitialState {
 
         // Check that all players have a coin network set up, either the default or their own.
         for (PlayerInitialState player : players) {
-            Adversary adversary = player.adversary(keys);
+            Adversary adversary = player.adversary(keys, simulator.crypto, simulator.messages, new Network(simulator));
             if (adversary == null) {
                 return null;
             }

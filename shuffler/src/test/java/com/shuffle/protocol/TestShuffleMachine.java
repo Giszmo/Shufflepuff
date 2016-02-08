@@ -398,7 +398,7 @@ public class TestShuffleMachine {
         log.info("Announcement equivocation test case: " + Arrays.toString(equivocators));
 
         TestCase test = new TestCase(session, amount, "Announcement phase equivocation test case.", caseNo);
-        Map<SigningKey, Machine> results = init.run();
+        Map<SigningKey, Machine> results = init.run(sim);
         SortedSet<SigningKey> players = new TreeSet<>();
         players.addAll(results.keySet());
         Set<SigningKey> malicious = new HashSet<>();
@@ -464,7 +464,7 @@ public class TestShuffleMachine {
         log.info("Broadcast equivocation test case: " + Arrays.toString(equivocation));
 
         TestCase test = new TestCase(session, amount, "Broadcast phase equivocation test case.", caseNo);
-        Map<SigningKey, Machine> results = init.run();
+        Map<SigningKey, Machine> results = init.run(sim);
         SortedSet<SigningKey> players = new TreeSet<>();
         players.addAll(results.keySet());
         SigningKey malicious = null;
@@ -538,7 +538,7 @@ public class TestShuffleMachine {
         }
 
         TestCase test = new TestCase(session, amount, "invalid signature test case.", caseNo);
-        Map<SigningKey, Machine> results = init.run();
+        Map<SigningKey, Machine> results = init.run(sim);
         SortedSet<SigningKey> players = new TreeSet<>();
         players.addAll(results.keySet());
 
@@ -620,7 +620,7 @@ public class TestShuffleMachine {
         log.info("drop address test case: " + dropper.toString());
 
         TestCase test = new TestCase(session, amount, "Drop address test case.", caseNo);
-        Map<SigningKey, Machine> results = init.run();
+        Map<SigningKey, Machine> results = init.run(sim);
         SortedSet<SigningKey> players = new TreeSet<>();
         players.addAll(results.keySet());
         SigningKey malicious = null;
