@@ -1,5 +1,5 @@
 /**
- * Mock implementation of Coin Shuffle objects for testing purposes.
+ * Mock implementation of services required by coin shuffle for testing purposes.
  *
  * Created by Daniel Krawisz on 12/31/15.
  */

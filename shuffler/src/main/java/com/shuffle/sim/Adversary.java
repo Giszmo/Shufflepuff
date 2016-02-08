@@ -22,15 +22,13 @@ import java.util.concurrent.Future;
  */
 public class Adversary {
 
-    final SessionIdentifier session;
-    final CoinShuffle shuffle;
-    final Machine machine;
-    final Network network;
-    final SigningKey sk;
-    final SortedSet<VerificationKey> players;
-    final long amount;
-    final Transaction t;
-    final Coin coin;
+    private final SessionIdentifier session;
+    private final CoinShuffle shuffle;
+    private final Machine machine;
+    private final Network network;
+    private final SigningKey sk;
+    private final SortedSet<VerificationKey> players;
+    private final long amount;
 
     Adversary(
             SessionIdentifier session,
@@ -45,10 +43,8 @@ public class Adversary {
         this.session = session;
         this.amount = amount;
         this.sk = sk;
-        this.coin = coin;
         this.network = network;
         this.players = players;
-        this.t = t;
         this.shuffle = shuffle;
         this.machine = machine;
     }

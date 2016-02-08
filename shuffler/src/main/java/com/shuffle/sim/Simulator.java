@@ -32,7 +32,6 @@ public final class Simulator {
     private static Logger log= LogManager.getLogger(Simulator.class);
 
     final Map<VerificationKey, Adversary> machines = new HashMap<>();
-    //long amount;
     final MessageFactory messages;
     final Crypto crypto;
 
@@ -105,10 +104,6 @@ public final class Simulator {
         return results;
     }
 
-    public InitialState initialize(SessionIdentifier session, long amount) {
-        return new InitialState(session, amount);
-    }
-
     public Map<SigningKey, Machine> successfulRun(
             SessionIdentifier session,
             int numPlayers,
@@ -116,7 +111,7 @@ public final class Simulator {
             MockCoin coin
     ) {
 
-        InitialState init = initialize(session, amount).defaultCoin(coin);
+        InitialState init = new InitialState(session, amount).defaultCoin(coin);
 
         for (int i = 1; i <= numPlayers; i++) {
             init.player().initialFunds(20);
@@ -134,7 +129,7 @@ public final class Simulator {
             long amount,
             MockCoin coin
     ) {
-        InitialState init = initialize(session, amount).defaultCoin(coin);
+        InitialState init = new InitialState(session, amount).defaultCoin(coin);
 
         for (int i = 1; i <= numPlayers; i++) {
             init.player().initialFunds(20);
@@ -165,7 +160,7 @@ public final class Simulator {
             int[] doubleSpenders,
             long amount
     ) {
-        InitialState init = initialize(session, amount);
+        InitialState init = new InitialState(session, amount);
 
         int i = 1;
         for (MockCoin coinNet : coinNetList) {

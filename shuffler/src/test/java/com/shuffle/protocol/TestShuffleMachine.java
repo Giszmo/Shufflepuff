@@ -1,6 +1,8 @@
 package com.shuffle.protocol;
 
 import com.shuffle.bitcoin.CryptographyError;
+import com.shuffle.bitcoin.EncryptionKey;
+import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
@@ -53,7 +55,12 @@ public class TestShuffleMachine {
         }
     }
 
-    public static class BlameEvidencePatternAny extends Evidence {
+    private final static class BlameEvidencePatternAny extends Evidence {
+        private BlameEvidencePatternAny() {
+            super(Reason.NoFundsAtAll, false, null, null, null, null, null);
+
+        }
+
         @Override
         public boolean match(Evidence e) {
             return true;
@@ -274,7 +281,7 @@ public class TestShuffleMachine {
                             bm.put(j.VerificationKey(), k.VerificationKey(), anyReason);
                         } else if(deadbeatPlayers.contains(k)) {
                             bm.put(j.VerificationKey(), k.VerificationKey(),
-                                    new Evidence(Reason.NoFundsAtAll, true));
+                                    Evidence.NoFundsAtAll(true));
                         } else if(offenders.containsKey(k)) {
                             bm.put(j.VerificationKey(), k.VerificationKey(),
                                     Evidence.InsufficientFunds(true, offenders.get(k)));
@@ -380,7 +387,7 @@ public class TestShuffleMachine {
     ) {
         long amount = 17;
         SessionIdentifier session = new MockSessionIdentifier("eqv" + caseNo);
-        InitialState init = sim.initialize(session, amount).defaultCoin(new MockCoin());
+        InitialState init = new InitialState(session, amount).defaultCoin(new MockCoin());
 
         int eq = 0;
         for (int i = 1; i <= numPlayers; i ++) {
@@ -432,7 +439,7 @@ public class TestShuffleMachine {
                             bm.put(j.VerificationKey(), k.VerificationKey(), anyReason);
                         } else if (j.equals(i) && malicious.contains(k)) {
                             bm.put(j.VerificationKey(), k.VerificationKey(),
-                                    new Evidence(Reason.EquivocationFailure, true));
+                                    Evidence.Expected(Reason.EquivocationFailure, true));
                         }
                     }
                 }
@@ -452,7 +459,7 @@ public class TestShuffleMachine {
     public TestCase EquivocateOutput(int caseNo, int numPlayers, int[] equivocation, Simulator sim) {
         long amount = 17;
         SessionIdentifier session = new MockSessionIdentifier("eqv" + caseNo);
-        InitialState init = sim.initialize(session, amount).defaultCoin(new MockCoin());
+        InitialState init = new InitialState(session, amount).defaultCoin(new MockCoin());
 
         // Only the last player can equivocate.
         for (int i = 1; i < numPlayers; i ++) {
@@ -495,7 +502,7 @@ public class TestShuffleMachine {
                             bm.put(j.VerificationKey(), k.VerificationKey(), anyReason);
                         } else if (k.equals(malicious) && j.equals(i)){
                             bm.put(j.VerificationKey(), k.VerificationKey(),
-                                    new Evidence(Reason.EquivocationFailure, true));
+                                    Evidence.Expected(Reason.EquivocationFailure, true));
                         }
                     }
                 }
@@ -527,7 +534,7 @@ public class TestShuffleMachine {
 
         long amount = 17;
         SessionIdentifier session = new MockSessionIdentifier("sig" + caseNo);
-        InitialState init = sim.initialize(session, amount).coins(coins);
+        InitialState init = new InitialState(session, amount).coins(coins);
 
         for (int i = 1; i <= numPlayers; i ++) {
             if (class2.contains(i)) {
@@ -569,7 +576,7 @@ public class TestShuffleMachine {
                         boolean inClass2 = keyClass2.contains(j);
                         if (inClass2 != keyClass2.contains(k)) {
                             bm.put(j.VerificationKey(), k.VerificationKey(),
-                                    new Evidence(Reason.InvalidSignature, inClass2 == keyClass2.contains(i)));
+                                    Evidence.Expected(Reason.InvalidSignature, inClass2 == keyClass2.contains(i)));
                         }
                     }
                 }
@@ -602,7 +609,7 @@ public class TestShuffleMachine {
 
         long amount = 17;
         SessionIdentifier session = new MockSessionIdentifier("drop" + caseNo);
-        InitialState init = sim.initialize(session, amount).defaultCoin(new MockCoin());
+        InitialState init = new InitialState(session, amount).defaultCoin(new MockCoin());
 
         // Set a player to drop an address.
         for (int i = 1; i <= numPlayers; i ++) {
@@ -656,7 +663,7 @@ public class TestShuffleMachine {
         }
     }
 
-    /*@Test
+    @Test
     // Tests for players who come in without enough cash.
     public void testInsufficientFunds() {
         MockCrypto crypto = new MockCrypto(2222);
@@ -678,9 +685,9 @@ public class TestShuffleMachine {
         InsufficientFunds(caseNo++, 10, new int[]{5}, new int[]{10}, new int[]{}, sim).check();
         InsufficientFunds(caseNo++, 10, new int[]{}, new int[]{3}, new int[]{9}, sim).check();
         InsufficientFunds(caseNo,   10, new int[]{1}, new int[]{}, new int[]{2}, sim).check();
-    }*/
+    }
 
-    /*@Test
+    @Test
     // Tests for malicious players who send different output vectors to different players.
     public void testEquivocationBroadcast() {
         MockCrypto crypto = new MockCrypto(87);
@@ -693,9 +700,9 @@ public class TestShuffleMachine {
         EquivocateOutput(caseNo++, 4, new int[]{1}, sim).check();
         EquivocateOutput(caseNo++, 4, new int[]{1, 2}, sim).check();
         EquivocateOutput(caseNo, 10, new int[]{3, 5, 7}, sim).check();
-    }*/
+    }
 
-    /*@Test
+    @Test
     public void testEquivocationAnnounce() {
         MockCrypto crypto = new MockCrypto(87);
         Simulator sim = new Simulator(new MockMessageFactory(), crypto);
@@ -717,9 +724,9 @@ public class TestShuffleMachine {
                         new Equivocation(2, new int[]{3}),
                         new Equivocation(4, new int[]{5, 6}),
                         new Equivocation(8, new int[]{9})}, sim).check();
-    }*/
+    }
 
-    /*@Test
+    @Test
     public void testTransactionDisagreement() {
         MockCrypto crypto = new MockCrypto(99999);
         Simulator sim = new Simulator(new MockMessageFactory(), crypto);
@@ -730,9 +737,9 @@ public class TestShuffleMachine {
         InvalidTransactionSignature(caseNo++, 5, new int[]{2}, sim).check();
         InvalidTransactionSignature(caseNo++, 5, new int[]{2, 3}, sim).check();
         InvalidTransactionSignature(caseNo, 10, new int[]{2, 5, 6, 7}, sim).check();
-    }*/
+    }
 
-    /*@Test
+    @Test
     public void testDoubleSpending() {
         MockCrypto crypto = new MockCrypto(2223);
         Simulator sim = new Simulator(new MockMessageFactory(), crypto);
@@ -746,7 +753,7 @@ public class TestShuffleMachine {
         DoubleSpend(caseNo++, new int[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1}, new int[]{1, 7, 8}, sim).check();
         DoubleSpend(caseNo, new int[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1}, new int[]{4, 6, 7, 8}, sim).check();
 
-    }*/
+    }
 
     @Test
     // Tests for failures during the shuffle phase.

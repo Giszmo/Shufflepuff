@@ -536,7 +536,7 @@ public class CoinShuffle {
                                 // Do we already know about this? The evidence is not credible if we don't.
                                 credible = matrix.blameExists(vk, blame.accused, Reason.NoFundsAtAll);
                                 matrix.put(from, blame.accused,
-                                        new Evidence(Reason.NoFundsAtAll, credible));
+                                        Evidence.NoFundsAtAll(credible));
                                 break;
                             }
                             case InsufficientFunds: {

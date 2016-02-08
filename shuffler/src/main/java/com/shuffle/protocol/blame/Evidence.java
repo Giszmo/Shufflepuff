@@ -16,14 +16,14 @@ import java.util.Map;
  * This format is not sent over the internet and is for the user's records only.
  */
 public class Evidence {
-    Reason reason;
-    boolean credible; // Do we believe this evidence?
-    Transaction t = null;
-    Signature signature = null;
-    Map<VerificationKey, SignedPacket> output = null;
-    Map<VerificationKey, EncryptionKey> sent = null;
+    public final Reason reason;
+    public final boolean credible; // Do we believe this evidence?
+    public final Transaction t;
+    public final Signature signature;
+    private final Map<VerificationKey, SignedPacket> output;
+    private final Map<VerificationKey, EncryptionKey> sent;
 
-    private Evidence(
+    protected Evidence(
             Reason reason,
             boolean credible,
             Transaction t,
@@ -90,26 +90,13 @@ public class Evidence {
         this.sent = sent;
     }
 
-    public Evidence(Reason reason, boolean credible) {
-        // A transaction should always be included with InsufficientFunds.
-        if (reason == Reason.InsufficientFunds) {
-            throw new NullPointerException();
-        }
+    private Evidence(Reason reason, boolean credible) {
         this.reason = reason;
         this.credible = credible;
-    }
-
-    /*public Evidence(Reason reason, boolean credible, Transaction t) {
-        if (t == null) {
-            throw new NullPointerException();
-        }
-        this.reason = reason;
-        this.credible = true;
-        this.t = t;
-    }*/
-
-    protected Evidence() {
-
+        this.t = null;
+        this.signature = null;
+        this.output = null;
+        this.sent = null;
     }
 
     @Override
@@ -176,5 +163,9 @@ public class Evidence {
 
     static public Evidence Liar(SignedPacket packet) {
         return new Evidence(Reason.Liar, true, null, null, null, null, packet);
+    }
+
+    static public Evidence Expected(Reason reason, boolean credible) {
+        return new Evidence(reason, credible);
     }
 }

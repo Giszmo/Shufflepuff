@@ -21,7 +21,8 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 
 /**
- *
+ * A representation of an initial state for a protocol. Can specify various kinds of
+ * malicious behavior.
  *
  * Created by Simulator on 2/8/16.
  */
@@ -121,7 +122,7 @@ public class InitialState {
         }
     }
 
-    InitialState(SessionIdentifier session, long amount) {
+    public InitialState(SessionIdentifier session, long amount) {
 
         this.session = session;
         this.amount = amount;
