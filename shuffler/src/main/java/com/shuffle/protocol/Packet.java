@@ -14,11 +14,11 @@ import java.io.Serializable;
  */
 public class Packet implements Serializable {
 
-    final Message message;
-    final SessionIdentifier session;
-    final Phase phase;
-    final VerificationKey signer;
-    final VerificationKey recipient;
+    final public Message message;
+    final public SessionIdentifier session;
+    final public Phase phase;
+    final public VerificationKey signer;
+    final public VerificationKey recipient;
 
     public Packet(Message message, SessionIdentifier session, Phase phase, VerificationKey signer, VerificationKey recipient) {
         if (session == null || phase == null || signer == null || recipient == null) {

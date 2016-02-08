@@ -11,7 +11,6 @@ import com.shuffle.protocol.blame.BlameException;
 import com.shuffle.protocol.blame.Matrix;
 
 import java.net.ProtocolException;
-import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.Map;

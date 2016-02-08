@@ -7,6 +7,7 @@ import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.p2p.Channel;
 import com.shuffle.protocol.CoinShuffle;
+import com.shuffle.protocol.Machine;
 import com.shuffle.protocol.Mailbox;
 import com.shuffle.protocol.MessageFactory;
 import com.shuffle.protocol.Phase;
@@ -73,13 +74,13 @@ public class Player<Identity, Format> {
         this.messages = messages;
     }
 
-    public List<CoinShuffle.Machine> coinShuffle(
+    public List<Machine> coinShuffle(
             Set<Identity> identities,
             Channel<Identity, Format> channel,
             Marshaller<Format> marshaller,
             Map<Identity, VerificationKey> keys, // Can be null.
             Settings settings,
-            LinkedBlockingQueue<CoinShuffle.Machine> queue
+            LinkedBlockingQueue<Machine> queue
     ) {
         SessionIdentifier session = settings.session;
         Network<Identity, Format> net = new Network<>(channel, marshaller, settings.timeout);
@@ -102,7 +103,7 @@ public class Player<Identity, Format> {
         }
 
         // Try the protocol.
-        List<CoinShuffle.Machine> list = new LinkedList<>();
+        List<Machine> list = new LinkedList<>();
         int attempt = 0;
 
         // The eliminated players. A player is eliminated when there is a subset of players
@@ -134,7 +135,7 @@ public class Player<Identity, Format> {
             // this round of the protocol.
             // TODO
 
-            CoinShuffle.Machine machine = shuffle.run(session, settings.amount, sk, validPlayers, settings.change, net, queue);
+            Machine machine = shuffle.runProtocol(session, settings.amount, sk, validPlayers, settings.change, net, queue);
 
             if (machine.exception() == null && machine.phase() != Phase.Blame) {
                 break;

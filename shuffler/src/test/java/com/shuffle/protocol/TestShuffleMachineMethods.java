@@ -56,7 +56,7 @@ public class TestShuffleMachineMethods {
         SortedSet<VerificationKey> playerSet = new TreeSet<>();
         playerSet.addAll(players.values());
         CoinShuffle shuffle = new CoinShuffle(messages, new MockCrypto(seed), new MockCoin());
-        CoinShuffle.Machine machine = new CoinShuffle.Machine(session, amount, sk, playerSet);
+        Machine machine = new Machine(session, amount, sk, playerSet);
         machine.phase = phase;
         return shuffle.new Round(machine, players, null, new Mailbox(session, sk, playerSet, network));
     }
@@ -346,7 +346,7 @@ public class TestShuffleMachineMethods {
 
         CoinShuffle shuffle = new CoinShuffle(new MockMessageFactory(), crypto, new MockCoin());
 
-        return shuffle.new Round(new CoinShuffle.Machine(
+        return shuffle.new Round(new Machine(
                 session, amount, sk, playerSet), players, null, mailbox);
     }
 

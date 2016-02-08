@@ -5,7 +5,6 @@ import com.shuffle.bitcoin.CoinNetworkError;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.protocol.InvalidImplementationError;
-import com.shuffle.protocol.Simulator;
 
 import java.io.Serializable;
 import java.util.Iterator;
@@ -20,7 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * Created by Daniel Krawisz on 12/5/15.
  */
-public class MockCoin implements Simulator.MockCoin {
+public class MockCoin implements com.shuffle.sim.MockCoin {
     public static class Output implements Serializable {
         final Address address;
         final long amountHeld;

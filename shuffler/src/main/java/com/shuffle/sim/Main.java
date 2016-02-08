@@ -1,4 +1,4 @@
-package com.shuffle.mock;
+package com.shuffle.sim;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -6,7 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 
 /**
- * Implementation using mock addresses.
+ * Implementation using a mock network for testing purposes.
  *
  * Created by Daniel Krawisz on 2/3/16.
  */

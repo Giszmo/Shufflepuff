@@ -32,7 +32,11 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  *
@@ -53,114 +57,6 @@ public class CoinShuffle {
     final Coin coin;
 
     final MessageFactory messages;
-
-    public static class Machine {
-
-        Phase phase;
-
-        final SessionIdentifier session;
-
-        Exception e = null;
-
-        Transaction t = null;
-
-        Matrix matrix = null;
-
-        final long amount; // The amount to be shuffled.
-
-        final SigningKey sk; // My signing private key.
-
-        final SortedSet<VerificationKey> players;
-
-        // the phase can be accessed concurrently in case we want to update
-        // the user on how the protocol is going.
-        public Phase phase() {
-            return phase;
-        }
-
-        public Transaction transaction() {
-            return t;
-        }
-
-        public Matrix blame() {
-            return matrix;
-        }
-
-        public Exception exception() {
-            return e;
-        }
-
-        // The ShuffleMachine cannot be instantiated directly.
-        Machine(
-                SessionIdentifier session,
-                long amount,
-                SigningKey sk,
-                SortedSet<VerificationKey> players) {
-
-            if (session == null || sk == null || players == null) {
-                throw new NullPointerException();
-            }
-
-            if (amount <= 0) {
-                throw new IllegalArgumentException();
-            }
-
-            this.session = session;
-            this.amount = amount;
-            this.sk = sk;
-            this.players = players;
-            this.phase = Phase.Uninitiated;
-        }
-
-        Machine(
-                SessionIdentifier session,
-                Phase phase,
-                Exception e,
-                Matrix matrix
-        ) {
-            this.session = session;
-            this.phase = phase;
-            this.e = e;
-            this.matrix = matrix;
-
-            sk = null;
-            players = null;
-            amount = 0;
-        }
-
-        // Whether two return states are equivalent.
-        public boolean match(Machine m) {
-            return session == m.session &&
-                    (phase == null || phase == m.phase) &&
-                    (e == null && m.e == null ||
-                            e != null && m.e != null && e.getClass().equals(m.e.getClass()))
-                    && (matrix == null && m.e == null || matrix != null && matrix.match(m.matrix));
-        }
-
-        public String toString() {
-            String session = " " + this.session.toString();
-
-            if (phase == Phase.Completed) {
-                return "Successful run" + session;
-            }
-
-            String str = "Unsuccessful run" + session;
-
-            if (e != null) {
-                str += "; threw " + e.toString();
-            }
-
-            if (phase != null) {
-                str += " failed in phase " + phase.toString();
-            }
-
-            if (matrix != null) {
-                str += "; blame = " + matrix.toString();
-            }
-
-            return str;
-        }
-    }
 
     // A single round of the protocol. It is possible that the players may go through
     // several failed rounds until they have eliminated malicious players.
@@ -993,7 +889,7 @@ public class CoinShuffle {
 
     // This function is only called by fillBlameMatrix to collect messages sent in phases 1, 2, and 3.
     // and to organize the information appropriately.
-    static final void fillBlameMatrixCollectHistory(
+    static void fillBlameMatrixCollectHistory(
             VerificationKey vk,
             VerificationKey from,
             Queue<SignedPacket> packets,
@@ -1082,7 +978,7 @@ public class CoinShuffle {
     }
 
     // Run the protocol without creating a new thread.
-    public final Machine run(
+    public final Machine runProtocol(
             SessionIdentifier session, // Unique session identifier.
             long amount, // The amount to be shuffled per player.
             SigningKey sk, // The signing key of the current player.
@@ -1096,7 +992,7 @@ public class CoinShuffle {
         if (amount <= 0) {
             throw new IllegalArgumentException();
         }
-        if (session == null || sk == null || players == null || change == null || network == null) {
+        if (session == null || sk == null || players == null || network == null) {
             throw new NullPointerException();
         }
         Machine machine = new Machine(session, amount, sk, players);
@@ -1105,6 +1001,62 @@ public class CoinShuffle {
         }
 
         return run(machine, change, network);
+    }
+
+    // Run the protocol in a separate thread and get a future to the final state.
+    public final Future<Machine> runProtocolFuture(
+            final SessionIdentifier session, // Unique session identifier.
+            final long amount, // The amount to be shuffled per player.
+            final SigningKey sk, // The signing key of the current player.
+            final SortedSet<VerificationKey> players, // The set of players, sorted alphabetically by address.
+            final Address change, // Change address. (can be null)
+            final Network network // The network that connects us to the other players.
+    ) {
+        final LinkedBlockingQueue<Machine> q = new LinkedBlockingQueue<>();
+
+        if (amount <= 0) {
+            throw new IllegalArgumentException();
+        }
+        if (session == null || sk == null || players == null || network == null) {
+            throw new NullPointerException();
+        }
+
+        Thread thread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                q.add(runProtocol(session, amount, sk, players, change, network, null));
+            }
+        });
+
+        thread.start();
+
+        return new Future<Machine>() {
+
+            @Override
+            public boolean cancel(boolean b) {
+                return false;
+            }
+
+            @Override
+            public boolean isCancelled() {
+                return false;
+            }
+
+            @Override
+            public boolean isDone() {
+                return !q.isEmpty();
+            }
+
+            @Override
+            public Machine get() throws InterruptedException, ExecutionException {
+                return q.take();
+            }
+
+            @Override
+            public Machine get(long l, TimeUnit timeUnit) throws InterruptedException, ExecutionException, TimeoutException {
+                return q.poll(l, timeUnit);
+            }
+        };
     }
 
     public CoinShuffle(
