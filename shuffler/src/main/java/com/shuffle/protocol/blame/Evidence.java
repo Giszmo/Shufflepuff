@@ -125,7 +125,7 @@ public class Evidence {
     }
 
     public boolean match(Evidence e) {
-        return equals(e);
+        return e != null && reason == e.reason && credible == e.credible;
     }
 
     @Override

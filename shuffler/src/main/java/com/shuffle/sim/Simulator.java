@@ -1,16 +1,15 @@
 package com.shuffle.sim;
 
 import com.shuffle.bitcoin.Crypto;
-import com.shuffle.bitcoin.CryptographyError;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.protocol.InvalidImplementationError;
 import com.shuffle.protocol.Machine;
 import com.shuffle.protocol.MessageFactory;
-import com.shuffle.protocol.Packet;
-import com.shuffle.protocol.Phase;
+import com.shuffle.protocol.Network;
 import com.shuffle.protocol.SessionIdentifier;
 import com.shuffle.protocol.SignedPacket;
+import com.shuffle.protocol.TimeoutError;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -20,8 +19,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 /**
  * A simulator for running integration tests on the protocol.
@@ -31,56 +33,91 @@ import java.util.concurrent.Future;
 public final class Simulator {
     private static Logger log= LogManager.getLogger(Simulator.class);
 
-    final Map<VerificationKey, Adversary> machines = new HashMap<>();
+    /**
+     * A network connecting different players together in a simulation.
+     *
+     * Created by Daniel Krawisz on 2/8/16.
+     */
+    private class NetworkSim implements Network {
+        final BlockingQueue<SignedPacket> inbox = new LinkedBlockingQueue<>();
+        final Map<VerificationKey, NetworkSim> networks;
+
+        NetworkSim(Map<VerificationKey, NetworkSim> networks) {
+            if (networks == null) {
+                throw new NullPointerException();
+            }
+            this.networks = networks;
+        }
+
+        @Override
+        public void sendTo(VerificationKey to, SignedPacket packet) throws InvalidImplementationError, TimeoutError {
+
+            try {
+                networks.get(to).deliver(packet);
+            } catch (InterruptedException e) {
+                // This means that the thread running the machine we are delivering to has been interrupted.
+                // This would look like a timeout if this were happening over a real network.
+                throw new TimeoutError();
+            }
+        }
+
+        @Override
+        public SignedPacket receive() throws TimeoutError, InterruptedException {
+            for (int i = 0; i < 2; i++) {
+                SignedPacket next = inbox.poll(1, TimeUnit.SECONDS);
+
+                if (next != null) {
+                    return next;
+                }
+            }
+
+            throw new TimeoutError();
+        }
+
+        public void deliver(SignedPacket packet) throws InterruptedException {
+            inbox.put(packet);
+        }
+    }
+
     final MessageFactory messages;
-    final Crypto crypto;
 
-    final Map<Phase, Map<VerificationKey, Map<VerificationKey, Packet>>> sent = new HashMap<>();
-
-    public void sendTo(VerificationKey to, SignedPacket packet) throws InvalidImplementationError, InterruptedException {
-        Map<VerificationKey, Map<VerificationKey, Packet>> byPacket = sent.get(packet.payload.phase);
-        if(byPacket == null) {
-            byPacket = new HashMap<>();
-            sent.put(packet.payload.phase, byPacket);
-        }
-
-        Map<VerificationKey, Packet> bySender = byPacket.get(packet.payload.signer);
-        if (bySender == null) {
-            bySender = new HashMap<>();
-            byPacket.put(packet.payload.signer, bySender);
-        }
-
-        bySender.put(packet.payload.recipient, packet.payload);
-
-        machines.get(to).deliver(packet);
-    }
-
-    public Simulator(MessageFactory messages, Crypto crypto)  {
+    public Simulator(MessageFactory messages)  {
         this.messages = messages;
-        this.crypto = crypto;
     }
 
-    synchronized Map<SigningKey, Machine> runSimulation(
-            List<Adversary> init)  {
-        if (init == null ) throw new NullPointerException();
+    public Map<SigningKey, Machine> run(InitialState init, Crypto crypto) {
 
-        sent.clear();
-        machines.clear();
+        final Map<SigningKey, Adversary> machines = new HashMap<>();
+        final Map<VerificationKey, NetworkSim> networks = new HashMap<>();
+
+        // Check that all players have a coin network set up, either the default or their own.
+        for (InitialState.PlayerInitialState player : init.getPlayers()) {
+            if (player.sk == null) {
+                continue;
+            }
+
+            NetworkSim network = new NetworkSim(networks);
+            networks.put(player.vk, network);
+
+            Adversary adversary = player.adversary(crypto, messages, network);
+            machines.put(player.sk, adversary);
+        }
+
+        Map<SigningKey, Machine> results = runSimulation(machines);
+
+        networks.clear(); // Avoid memory leak.
+        return results;
+    }
+
+    private static synchronized Map<SigningKey, Machine> runSimulation(
+            Map<SigningKey, Adversary> machines)  {
 
         Map<SigningKey, Future<Machine>> wait = new HashMap<>();
         Map<SigningKey, Machine> results = new HashMap<>();
 
-        try {
-            for (Adversary in : init) {
-                machines.put(in.identity().VerificationKey(), in);
-            }
-        } catch (CryptographyError e) {
-            log.error("Some Crypto error happened",e);
-        }
-
         // Start the simulation.
-        for (Adversary in : init) {
-            wait.put(in.identity(), in.turnOn());
+        for (Map.Entry<SigningKey, Adversary> in : machines.entrySet()) {
+            wait.put(in.getKey(), in.getValue().turnOn());
         }
 
         while (wait.size() != 0) {
@@ -102,78 +139,5 @@ public final class Simulator {
         }
 
         return results;
-    }
-
-    public Map<SigningKey, Machine> successfulRun(
-            SessionIdentifier session,
-            int numPlayers,
-            long amount,
-            MockCoin coin
-    ) {
-
-        InitialState init = new InitialState(session, amount).defaultCoin(coin);
-
-        for (int i = 1; i <= numPlayers; i++) {
-            init.player().initialFunds(20);
-        }
-
-        return init.run(this);
-    }
-
-    public Map<SigningKey, Machine> insufficientFundsRun(
-            SessionIdentifier session,
-            int numPlayers,
-            int[] deadbeats, // Players who put no money in their address. 
-            int[] poor, // Players who didn't put enough in their address.
-            int[] spenders, // Players who don't have enough because they spent it.
-            long amount,
-            MockCoin coin
-    ) {
-        InitialState init = new InitialState(session, amount).defaultCoin(coin);
-
-        for (int i = 1; i <= numPlayers; i++) {
-            init.player().initialFunds(20);
-            for (int deadbeat : deadbeats) {
-                if (deadbeat == i) {
-                    init.initialFunds(0);
-                }
-            }
-            for (int aPoor : poor) {
-                if (aPoor == i) {
-                    init.initialFunds(10);
-                }
-            }
-            for (int spender : spenders) {
-                if (spender == i) {
-                    init.spend(16);
-                }
-            }
-        }
-
-        return init.run(this);
-    }
-
-    public Map<SigningKey, Machine> doubleSpendingRun(
-            SessionIdentifier session,
-            Set<MockCoin> coinNets,
-            List<MockCoin> coinNetList,
-            int[] doubleSpenders,
-            long amount
-    ) {
-        InitialState init = new InitialState(session, amount);
-
-        int i = 1;
-        for (MockCoin coinNet : coinNetList) {
-            init.player().initialFunds(20).coin(coinNet);
-
-            for (int doubleSpender : doubleSpenders) {
-                if (doubleSpender == i) {
-                    init.spend(16);
-                }
-            }
-            i++;
-        }
-
-        return init.run(this);
     }
 }

@@ -7,6 +7,7 @@ import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.protocol.CoinShuffle;
 import com.shuffle.protocol.InvalidImplementationError;
 import com.shuffle.protocol.Machine;
+import com.shuffle.protocol.Network;
 import com.shuffle.protocol.Phase;
 import com.shuffle.protocol.SessionIdentifier;
 import com.shuffle.protocol.SignedPacket;
@@ -59,10 +60,6 @@ public class Adversary {
 
     public Phase currentPhase() {
         return machine.phase();
-    }
-
-    public void deliver(SignedPacket packet) throws InterruptedException {
-        network.deliver(packet);
     }
 
     public SigningKey identity() {

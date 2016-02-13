@@ -1,11 +1,9 @@
 package com.shuffle.protocol;
 
+import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.CryptographyError;
-import com.shuffle.bitcoin.EncryptionKey;
-import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.Transaction;
-import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.mock.MockCoin;
 import com.shuffle.mock.MockCrypto;
 import com.shuffle.mock.MockMessageFactory;
@@ -38,121 +36,6 @@ import java.util.TreeSet;
  */
 public class TestShuffleMachine {
     private static Logger log = LogManager.getLogger(TestShuffleMachine.class);
-    // A blame matrix that matches any matrix given to it.
-    // Used for ensuring a test can't fail no matter what value
-    // simulated adversaries return, since we only care about testing the response of the
-    // honest players.
-    public static class MatrixPatternAny extends Matrix {
-
-        @Override
-        public boolean match(Matrix bm) {
-            return true;
-        }
-
-        @Override
-        public String toString() {
-            return "Any";
-        }
-    }
-
-    private final static class BlameEvidencePatternAny extends Evidence {
-        private BlameEvidencePatternAny() {
-            super(Reason.NoFundsAtAll, false, null, null, null, null, null);
-
-        }
-
-        @Override
-        public boolean match(Evidence e) {
-            return true;
-        }
-
-        @Override
-        public String toString() {
-            return "Any";
-        }
-    }
-
-    private class Equivocation {
-        final int equivocator;
-        final int[] equivocation;
-
-        private Equivocation(int equivocator, int[] equivocation) {
-            // Testing the case where the first player is the equivocator is too hard for now.
-            // It would require basically writing a whole new version of protocolDefinition()
-            // to be a test function. It is unlikely that testing case will find a bug in the code.
-            if (equivocator == 1) {
-                throw new IllegalArgumentException();
-            }
-
-            for (int eq : equivocation) {
-                if (eq <= equivocator) {
-                    throw new IllegalArgumentException();
-                }
-            }
-
-            this.equivocator = equivocator;
-            this.equivocation = equivocation;
-        }
-
-        @Override
-        public String toString() {
-            return "equivocation[" + equivocator + ", " + Arrays.toString(equivocation) + "]";
-        }
-    }
-
-    MatrixPatternAny anyMatrix = new MatrixPatternAny();
-    BlameEvidencePatternAny anyReason = new BlameEvidencePatternAny();
-
-    /*public void analyseSentMessages(Simulator sim) {
-
-        Map<Phase, Map<VerificationKey, Map<VerificationKey, Packet>>> sent = sim.sent;
-        Map<VerificationKey, Map<VerificationKey, Packet>> announceMsgs = sent.get(Phase.Announcement);
-
-        int count = 0;
-        for (Map<VerificationKey, Packet> map : announceMsgs.values()) {
-            count += map.size();
-        }
-
-        log.info("%%% there were " + count + " announcement messages: " + announceMsgs.toString());
-
-        Map<VerificationKey, Map<VerificationKey, Packet>> shuffleMsgs = sent.get(Phase.Shuffling);
-
-        count = 0;
-        for (Map<VerificationKey, Packet> map : shuffleMsgs.values()) {
-            count += map.size();
-        }
-
-        log.info("%%% there were " + count + " shuffle messages. ");
-
-        Map<VerificationKey, Map<VerificationKey, Packet>> broadcastMsgs = sent.get(Phase.BroadcastOutput);
-
-        count = 0;
-        for (Map<VerificationKey, Packet> map : broadcastMsgs.values()) {
-            count += map.size();
-        }
-
-        log.info("%%% there were " + count + " broadcast messages. ");
-
-        Map<VerificationKey, Map<VerificationKey, Packet>> equivocateMsgs = sent.get(Phase.EquivocationCheck);
-
-        count = 0;
-        for (Map<VerificationKey, Packet> map : equivocateMsgs.values()) {
-            count += map.size();
-        }
-
-        log.info("%%% there were " + count + " equivocate messages. ");
-
-        Map<VerificationKey, Map<VerificationKey, Packet>> blameMsgs = sent.get(Phase.Blame);
-
-        count = 0;
-        for (Map<VerificationKey, Packet> map : blameMsgs.values()) {
-            count += map.size();
-        }
-
-        log.info("%%% there were " + count + " blame messages. ");
-
-        log.info("%%% blame: " + blameMsgs.toString());
-    }*/
 
     public class TestCase {
 
@@ -208,6 +91,36 @@ public class TestShuffleMachine {
         }
     }
 
+    private class Equivocation {
+        final int equivocator;
+        final int[] equivocation;
+
+        private Equivocation(int equivocator, int[] equivocation) {
+            // Testing the case where the first player is the equivocator is too hard for now.
+            // It would require basically writing a whole new version of protocolDefinition()
+            // to be a test function. It is unlikely that testing case will find a bug in the code.
+            if (equivocator == 1) {
+                throw new IllegalArgumentException();
+            }
+
+            for (int eq : equivocation) {
+                if (eq <= equivocator) {
+                    throw new IllegalArgumentException();
+                }
+            }
+
+            this.equivocator = equivocator;
+            this.equivocation = equivocation;
+        }
+
+        @Override
+        public String toString() {
+            return "equivocation[" + equivocator + ", " + Arrays.toString(equivocation) + "]";
+        }
+    }
+
+    int seed = 99;
+
     TestCase successfulExpectation(TestCase test, Map<SigningKey, Machine> results) {
         for (SigningKey key : results.keySet()) {
             test.putSuccessfulPlayer(key, results.get(key));
@@ -219,11 +132,12 @@ public class TestShuffleMachine {
     public TestCase SuccessfulRun(int caseNo, int numPlayer, Simulator sim) {
         SessionIdentifier session = new MockSessionIdentifier("success" + caseNo);
         MockCoin coin = new MockCoin();
+        Crypto crypto = new MockCrypto(++seed);
         long amount = 17;
 
         return successfulExpectation(
                 new TestCase(session, amount, "successful run with " + numPlayer + " players.", caseNo),
-                sim.successfulRun(session, numPlayer, amount, coin)
+                sim.run(InitialState.successful(session, numPlayer, amount, coin, crypto), crypto)
         );
     }
     
@@ -239,62 +153,20 @@ public class TestShuffleMachine {
         MockCoin coin = new MockCoin();
         long amount = 17;
         TestCase test = new TestCase(session, amount, "Insufficient funds test case.", caseNo);
+        Crypto crypto = new MockCrypto(++seed);
 
-        Map<SigningKey, Machine> results =
-                sim.insufficientFundsRun(session, numPlayers, deadbeats, poor, spenders, amount, coin);
+        InitialState init = InitialState.insufficientFunds(session, numPlayers, deadbeats, poor, spenders, amount, coin, crypto);
 
-        // If no offenders were defined, then this should be a successful run.
-        if (deadbeats.length == 0 && poor.length == 0 && spenders.length == 0) {
-            return successfulExpectation(test, results);
-        }
+        Map<SigningKey, Machine> results = sim.run(init, crypto);
+        Map<SigningKey, Matrix> expected = init.expectedBlame();
 
-        // The set of offending transactions.
-        Map<SigningKey, Transaction> offenders = new HashMap<>();
-        Set<SigningKey> deadbeatPlayers = new HashSet<>();
-        SortedSet<SigningKey> players = new TreeSet<>();
-        players.addAll(results.keySet());
-
-        // Get transactions by key.
-        for (SigningKey key : players) {
-
-            Transaction t = coin.getConflictingTransaction(key.VerificationKey().address(), 17);
-
-            if (t != null) {
-                offenders.put(key, t);
-            } else if (coin.valueHeld(key.VerificationKey().address()) == 0) {
-                deadbeatPlayers.add(key);
-            }
-        }
-
-        for (SigningKey i : results.keySet()) {
-            Matrix bm;
-            if (offenders.containsKey(i) || deadbeatPlayers.contains(i)) {
-                bm = anyMatrix;
-            } else {
-
-                bm = new Matrix();
-
-                for (SigningKey j : results.keySet()) {
-                    for (SigningKey k : results.keySet()) {
-                        if (offenders.containsKey(j) || deadbeatPlayers.contains(j)) {
-                            // We don't care who the malicious players accuse.
-                            bm.put(j.VerificationKey(), k.VerificationKey(), anyReason);
-                        } else if(deadbeatPlayers.contains(k)) {
-                            bm.put(j.VerificationKey(), k.VerificationKey(),
-                                    Evidence.NoFundsAtAll(true));
-                        } else if(offenders.containsKey(k)) {
-                            bm.put(j.VerificationKey(), k.VerificationKey(),
-                                    Evidence.InsufficientFunds(true, offenders.get(k)));
-                        }
-                    }
-                }
-            }
+        for(SigningKey i : results.keySet()) {
 
             test.put(i,
-                    new Machine(session, Phase.Blame, null, bm),
+                    new Machine(session, null, null, expected.get(i)),
                     results.get(i));
         }
-        
+
         return test;
     }
 
@@ -317,8 +189,10 @@ public class TestShuffleMachine {
             coinNetList.add(coinNetMap.get(view));
         }
 
-        Map<SigningKey, Machine> results =
-                sim.doubleSpendingRun(session, coinNets, coinNetList, doubleSpenders, amount);
+        Crypto crypto = new MockCrypto(++seed);
+        InitialState init = InitialState.doubleSpend(session, coinNets, coinNetList, doubleSpenders, amount, crypto);
+
+        Map<SigningKey, Machine> results = sim.run(init, crypto);
 
         // The set of offending transactions.
         Map<SigningKey, Transaction> offenders = new HashMap<>();
@@ -347,7 +221,7 @@ public class TestShuffleMachine {
             Phase phase;
 
             if (offenders.containsKey(i)) {
-                bm = anyMatrix;
+                bm = InitialState.anyMatrix;
                 phase = null;
             } else {
                 bm = new Matrix();
@@ -357,7 +231,7 @@ public class TestShuffleMachine {
 
                         if (offenders.containsKey(j)) {
                             // We don't care who the malicious players accuse.
-                            bm.put(j.VerificationKey(), k.VerificationKey(), anyReason);
+                            bm.put(j.VerificationKey(), k.VerificationKey(), InitialState.anyReason);
                         } else if(offenders.containsKey(k)) {
                             if (playerToCoin.get(j) == playerToCoin.get(k)) {
                                 // Only include the transaction if the player has the same view
@@ -389,9 +263,12 @@ public class TestShuffleMachine {
         SessionIdentifier session = new MockSessionIdentifier("eqv" + caseNo);
         InitialState init = new InitialState(session, amount).defaultCoin(new MockCoin());
 
+        Crypto crypto = new MockCrypto(++seed);
+
         int eq = 0;
         for (int i = 1; i <= numPlayers; i ++) {
-            init.player().initialFunds(20);
+            SigningKey key = crypto.makeSigningKey();
+            init.player(key).initialFunds(20);
 
             while(eq < equivocators.length && equivocators[eq].equivocator < i) {
                 eq++;
@@ -405,51 +282,14 @@ public class TestShuffleMachine {
         log.info("Announcement equivocation test case: " + Arrays.toString(equivocators));
 
         TestCase test = new TestCase(session, amount, "Announcement phase equivocation test case.", caseNo);
-        Map<SigningKey, Machine> results = init.run(sim);
-        SortedSet<SigningKey> players = new TreeSet<>();
-        players.addAll(results.keySet());
-        Set<SigningKey> malicious = new HashSet<>();
-
-        eq = 0;
-        int index = 1;
-        for (SigningKey key : players) {
-            while(eq < equivocators.length && equivocators[eq].equivocator < index) {
-                eq++;
-            }
-
-            if (eq < equivocators.length && equivocators[eq].equivocator == index) {
-                malicious.add(key);
-            }
-
-            index++;
-        }
+        Map<SigningKey, Machine> results = sim.run(init, crypto);
+        Map<SigningKey, Matrix> expected = init.expectedBlame();
 
         for(SigningKey i : results.keySet()) {
 
-            Matrix bm;
-
-            if (malicious.contains(i)) {
-                bm = anyMatrix;
-            } else {
-                bm = new Matrix();
-
-                for (SigningKey j : results.keySet()) {
-                    for (SigningKey k : results.keySet()) {
-                        if (malicious.contains(j)) {
-                            bm.put(j.VerificationKey(), k.VerificationKey(), anyReason);
-                        } else if (j.equals(i) && malicious.contains(k)) {
-                            bm.put(j.VerificationKey(), k.VerificationKey(),
-                                    Evidence.Expected(Reason.EquivocationFailure, true));
-                        }
-                    }
-                }
-            }
-
             test.put(i,
-                    new Machine(session, null, null, bm),
+                    new Machine(session, null, null, expected.get(i)),
                     results.get(i));
-
-            index ++;
         }
 
         return test;
@@ -461,58 +301,26 @@ public class TestShuffleMachine {
         SessionIdentifier session = new MockSessionIdentifier("eqv" + caseNo);
         InitialState init = new InitialState(session, amount).defaultCoin(new MockCoin());
 
+        Crypto crypto = new MockCrypto(++seed);
+
         // Only the last player can equivocate.
         for (int i = 1; i < numPlayers; i ++) {
-            init.player().initialFunds(20);
+            init.player(crypto.makeSigningKey()).initialFunds(20);
         }
 
-        init.player().initialFunds(20).equivocateOutputVector(equivocation);
+        // Add the malicious equivocator.
+        init.player(crypto.makeSigningKey()).initialFunds(20).equivocateOutputVector(equivocation);
 
         log.info("Broadcast equivocation test case: " + Arrays.toString(equivocation));
 
         TestCase test = new TestCase(session, amount, "Broadcast phase equivocation test case.", caseNo);
-        Map<SigningKey, Machine> results = init.run(sim);
-        SortedSet<SigningKey> players = new TreeSet<>();
-        players.addAll(results.keySet());
-        SigningKey malicious = null;
-
-        // Find the malicious last player.
-        int index = 0;
-        for (SigningKey i : players) {
-
-            index++;
-            if (index == numPlayers) {
-                malicious = i;
-            }
-        }
-
-        assert malicious != null;
+        Map<SigningKey, Machine> results = sim.run(init, crypto);
+        Map<SigningKey, Matrix> expected = init.expectedBlame();
 
         for (SigningKey i : results.keySet()) {
-            Matrix bm;
-
-            if(i.equals(malicious)) {
-                bm = anyMatrix;
-            } else {
-                bm = new Matrix();
-
-                for (SigningKey j : results.keySet()) {
-                    for (SigningKey k : results.keySet()) {
-                        if (j.equals(malicious)) {
-                            bm.put(j.VerificationKey(), k.VerificationKey(), anyReason);
-                        } else if (k.equals(malicious) && j.equals(i)){
-                            bm.put(j.VerificationKey(), k.VerificationKey(),
-                                    Evidence.Expected(Reason.EquivocationFailure, true));
-                        }
-                    }
-                }
-            }
-
             test.put(i,
-                    new Machine(session, null, null, bm),
+                    new Machine(session, null, null, expected.get(i)),
                     results.get(i));
-
-            index ++;
         }
 
         return test;
@@ -528,6 +336,8 @@ public class TestShuffleMachine {
         MockCoin coin1 = new MockCoin().setZ(1);
         MockCoin coin2 = new MockCoin().setZ(2);
 
+        Crypto crypto = new MockCrypto(++seed);
+
         List<com.shuffle.sim.MockCoin> coins = new LinkedList<>();
         coins.add(coin1);
         coins.add(coin2);
@@ -538,14 +348,14 @@ public class TestShuffleMachine {
 
         for (int i = 1; i <= numPlayers; i ++) {
             if (class2.contains(i)) {
-                init.player().initialFunds(20).coin(coin2);
+                init.player(crypto.makeSigningKey()).initialFunds(20).coin(coin2);
             } else {
-                init.player().initialFunds(20).coin(coin1);
+                init.player(crypto.makeSigningKey()).initialFunds(20).coin(coin1);
             }
         }
 
         TestCase test = new TestCase(session, amount, "invalid signature test case.", caseNo);
-        Map<SigningKey, Machine> results = init.run(sim);
+        Map<SigningKey, Machine> results = sim.run(init, crypto);
         SortedSet<SigningKey> players = new TreeSet<>();
         players.addAll(results.keySet());
 
@@ -565,8 +375,8 @@ public class TestShuffleMachine {
 
             Matrix bm = null;
 
-            if (class2.contains(i)) {
-                bm = anyMatrix;
+            if (class2.contains(i)) { // <-- TODO this is definitely an error but I don't know what should go here.
+                bm = InitialState.anyMatrix;
             } else {
 
                 bm = new Matrix();
@@ -611,9 +421,11 @@ public class TestShuffleMachine {
         SessionIdentifier session = new MockSessionIdentifier("drop" + caseNo);
         InitialState init = new InitialState(session, amount).defaultCoin(new MockCoin());
 
+        Crypto crypto = new MockCrypto(++seed);
+
         // Set a player to drop an address.
         for (int i = 1; i <= numPlayers; i ++) {
-            init.player().initialFunds(20);
+            init.player(crypto.makeSigningKey()).initialFunds(20);
 
             if (i == dropper.player) {
                 if (dropper.duplicate > 0) {
@@ -627,10 +439,7 @@ public class TestShuffleMachine {
         log.info("drop address test case: " + dropper.toString());
 
         TestCase test = new TestCase(session, amount, "Drop address test case.", caseNo);
-        Map<SigningKey, Machine> results = init.run(sim);
-        SortedSet<SigningKey> players = new TreeSet<>();
-        players.addAll(results.keySet());
-        SigningKey malicious = null;
+        Map<SigningKey, Machine> results = sim.run(init, crypto);
 
         // Find malicious player.
 
@@ -646,8 +455,7 @@ public class TestShuffleMachine {
     @Test
     // Tests for successful runs of the protocol.
     public void testSuccess() {
-        MockCrypto crypto = new MockCrypto(45);
-        Simulator sim = new Simulator(new MockMessageFactory(), crypto);
+        Simulator sim = new Simulator(new MockMessageFactory());
 
         // Tests for successful runs.
         int caseNo = 0;
@@ -666,8 +474,7 @@ public class TestShuffleMachine {
     @Test
     // Tests for players who come in without enough cash.
     public void testInsufficientFunds() {
-        MockCrypto crypto = new MockCrypto(2222);
-        Simulator sim = new Simulator(new MockMessageFactory(), crypto);
+        Simulator sim = new Simulator(new MockMessageFactory());
         int caseNo = 0;
 
         // Tests for players who initially have insufficient funds.
@@ -690,8 +497,7 @@ public class TestShuffleMachine {
     @Test
     // Tests for malicious players who send different output vectors to different players.
     public void testEquivocationBroadcast() {
-        MockCrypto crypto = new MockCrypto(87);
-        Simulator sim = new Simulator(new MockMessageFactory(), crypto);
+        Simulator sim = new Simulator(new MockMessageFactory());
         int caseNo = 0;
 
         // A player sends different output vectors to different players.
@@ -704,8 +510,7 @@ public class TestShuffleMachine {
 
     @Test
     public void testEquivocationAnnounce() {
-        MockCrypto crypto = new MockCrypto(87);
-        Simulator sim = new Simulator(new MockMessageFactory(), crypto);
+        Simulator sim = new Simulator(new MockMessageFactory());
         int caseNo = 0;
 
         // A player sends different encryption keys to different players.
@@ -728,8 +533,7 @@ public class TestShuffleMachine {
 
     @Test
     public void testTransactionDisagreement() {
-        MockCrypto crypto = new MockCrypto(99999);
-        Simulator sim = new Simulator(new MockMessageFactory(), crypto);
+        Simulator sim = new Simulator(new MockMessageFactory());
         int caseNo = 0;
 
         // Player generates a different transaction signature to everyone else.
@@ -741,8 +545,7 @@ public class TestShuffleMachine {
 
     @Test
     public void testDoubleSpending() {
-        MockCrypto crypto = new MockCrypto(2223);
-        Simulator sim = new Simulator(new MockMessageFactory(), crypto);
+        Simulator sim = new Simulator(new MockMessageFactory());
         int caseNo = 0;
 
         // Tests for players who spend funds while the protocol is going on.
@@ -758,15 +561,17 @@ public class TestShuffleMachine {
     @Test
     // Tests for failures during the shuffle phase.
     public void testShuffleMalice() {
-        MockCrypto crypto = new MockCrypto(409);
-        Simulator sim = new Simulator(new MockMessageFactory(), crypto);
+        Simulator sim = new Simulator(new MockMessageFactory());
         int caseNo = 0;
 
         // A player drops an address during phase 2.
 
+
         // A player drops an address and adds another one in phase 2.
 
+
         // A player drops an address and adds a duplicate in phase 2.
+        Assert.fail();
     }
 
     @Test
@@ -774,17 +579,19 @@ public class TestShuffleMachine {
 
         // A player lies about the equivocation check.
         // A player claims something went wrong in phase 2 when it didn't.
+        Assert.fail();
     }
 
     @Test
     public void testInvalidSignature() {
         // Test that a player is excluded for making an invalid signature.
+        Assert.fail();
     }
 
     @Test
     // Players disconnect at different points during the protocol.
     // TODO must include cases in which a malicious player disconnects after sending a malicious message!!
     public void testDisconnect() {
-
+        Assert.fail();
     }
 }

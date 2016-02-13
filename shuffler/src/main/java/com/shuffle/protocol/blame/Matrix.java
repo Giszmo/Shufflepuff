@@ -141,11 +141,8 @@ public class Matrix {
             bml.remove(accuser);
         }
 
-        if (!bml.isEmpty()) {
-            return false;
-        }
+        return bml.isEmpty();
 
-        return true;
     }
 
     @Override
