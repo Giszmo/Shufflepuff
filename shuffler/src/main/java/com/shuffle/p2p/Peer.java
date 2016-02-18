@@ -3,11 +3,11 @@ package com.shuffle.p2p;
 import java.io.IOException;
 
 /**
- * Created by cosmos on 1/25/16.
+ * Created by Daniel Krawisz on 1/25/16.
  */
 public interface Peer<Identity, Message> {
-    Identity getIdentity();
+    Identity identity();
 
     // Returns null if there is a session already open.
-    Session<Message> openSession(Receiver<Message> receiver);
+    Session<Identity, Message> openSession(Receiver<Message> receiver);
 }

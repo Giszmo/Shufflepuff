@@ -40,7 +40,7 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring>{
 
         Receiver<Bytestring> receiver;
 
-        List<Session<com.shuffle.p2p.Bytestring>> history;
+        List<Session<InetSocketAddress, com.shuffle.p2p.Bytestring>> history;
 
         TCPSession currentSession;
 
@@ -59,12 +59,12 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring>{
         }
 
         @Override
-        public InetSocketAddress getIdentity() {
+        public InetSocketAddress identity() {
             return identity;
         }
 
         @Override
-        public Session<Bytestring> openSession(Receiver<Bytestring> receiver) {
+        public Session<InetSocketAddress, Bytestring> openSession(Receiver<Bytestring> receiver) {
             if (currentSession != null) {
                 return null;
             }
@@ -78,7 +78,7 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring>{
             return currentSession;
         }
 
-        public class TCPSession implements Session<com.shuffle.p2p.Bytestring> {
+        public class TCPSession implements Session<InetSocketAddress, com.shuffle.p2p.Bytestring> {
             Socket socket;
             InputStream in;
 
@@ -138,6 +138,11 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring>{
             public boolean isOpen() {
                 return socket.isConnected();
             }
+
+            @Override
+            public Peer<InetSocketAddress, Bytestring> peer() {
+                return TCPPeer.this;
+            }
         }
     }
 
@@ -167,7 +172,7 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring>{
 
         peers.put(identity, peer);
 
-        listener.newPeer(getPeer(identity));
+        listener.newSession(peer.currentSession);
     }
 
     @Override

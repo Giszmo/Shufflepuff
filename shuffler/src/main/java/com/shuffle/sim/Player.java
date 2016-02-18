@@ -22,12 +22,16 @@ public class Player {
         return new String(encoded, encoding);
     }
 
-    public static void main(String args) {
-        String fileName = "config.json";
+    public static void main(String[] args) {
+        if (args.length < 3) {
+            return;
+        }
 
-        try {
-            String content = readFile(fileName, Charset.defaultCharset());
-        } catch (IOException e) {
+        int players, player;
+        players = Integer.parseInt(args[0]);
+        player = Integer.parseInt(args[1]);
+
+        if (args.length != players + 2) {
             return;
         }
 

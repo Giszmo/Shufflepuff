@@ -83,7 +83,7 @@ public class Player<Identity, Format> {
             LinkedBlockingQueue<Machine> queue
     ) {
         SessionIdentifier session = settings.session;
-        Network<Identity, Format> net = new Network<>(channel, marshaller, settings.timeout);
+        Connect.Network<Identity, Format> net = new Connect.Network<>(channel, marshaller, settings.timeout);
 
         // Start by making connections to all the identies.
         for (Identity identity : identities) {
