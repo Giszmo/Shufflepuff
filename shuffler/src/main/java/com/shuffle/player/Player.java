@@ -10,6 +10,7 @@ import com.shuffle.protocol.CoinShuffle;
 import com.shuffle.protocol.Machine;
 import com.shuffle.protocol.Mailbox;
 import com.shuffle.protocol.MessageFactory;
+import com.shuffle.protocol.Network;
 import com.shuffle.protocol.Phase;
 import com.shuffle.protocol.SessionIdentifier;
 
@@ -83,7 +84,9 @@ public class Player<Identity, Format> {
             LinkedBlockingQueue<Machine> queue
     ) {
         SessionIdentifier session = settings.session;
-        Connect.Network<Identity, Format> net = new Connect.Network<>(channel, marshaller, settings.timeout);
+
+        // TODO make this work.
+        Network net = null; // new Connect.Network<>(channel, marshaller, settings.timeout);
 
         // Start by making connections to all the identies.
         for (Identity identity : identities) {

@@ -33,6 +33,7 @@ public class Connect<Identity> {
         this.crypto = crypto;
     }
 
+    // Provides functions for a thread to call when it receives a new connection.
     private class Listener implements com.shuffle.p2p.Listener<Identity, Bytestring> {
         final Receiver<Bytestring> receiver;
         final Map<VerificationKey, Session<Identity, Bytestring>> players = new HashMap<>();
@@ -46,10 +47,6 @@ public class Connect<Identity> {
             this.receiver = receiver;
             this.keys = keys;
         }
-
-        // Listener<Identity, Bytestring>.
-        //
-        // Provides functions for a thread to call when it receives a new connection.
 
         @Override
         public Receiver<Bytestring> receiver() {
@@ -66,6 +63,7 @@ public class Connect<Identity> {
         }
     }
 
+    // Keep track of the number of connection attempt retries for each address.
     private class Retries {
         final Map<Peer<Identity, Bytestring>, Integer> retries = new HashMap<>();
 
@@ -92,6 +90,9 @@ public class Connect<Identity> {
         }
     }
 
+    // The list of peers will be altered by two threads; the one for initiating connections
+    // and the one for receiving connections. We set it in its own class to allow for some
+    // synchronized functions.
     private class Peers {
         final private Queue<Peer<Identity, Bytestring>> peers = new LinkedList<>();
 
@@ -207,7 +208,7 @@ public class Connect<Identity> {
     }
 
     /**
-     * This is an implementation of Network which connects the interface defined in com.shuffle.protocol
+     * An implementation of Network which connects the interface defined in com.shuffle.protocol
      * to the channel through which the communication takes place. It manages the opening of channels
      * and the marshalling of messages.
      *

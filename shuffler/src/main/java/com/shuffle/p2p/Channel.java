@@ -1,7 +1,7 @@
 package com.shuffle.p2p;
 
 /**
- * Created by cosmos on 1/25/16.
+ * Created by Daniel Krawisz on 1/25/16.
  */
 
 import java.io.IOException;

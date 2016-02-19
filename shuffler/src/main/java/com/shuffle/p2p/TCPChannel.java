@@ -1,7 +1,5 @@
 package com.shuffle.p2p;
 
-import com.shuffle.protocol.Message;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
@@ -18,7 +16,7 @@ import java.util.concurrent.ConcurrentMap;
  *
  * Created by Daniel Krawisz on 1/25/16.
  */
-public class TCPChannel implements Channel<InetSocketAddress, Bytestring>{
+public class TCPChannel implements Channel<InetSocketAddress, Bytestring>, Runnable {
 
     // A message sent over TCP requires a header to tell how long it is.
     public interface Header {
@@ -146,13 +144,28 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring>{
         }
     }
 
-    ConcurrentMap<InetSocketAddress, TCPPeer> peers = new ConcurrentHashMap<InetSocketAddress, TCPPeer>();
-    InetSocketAddress me;
-    int port;
+    final ConcurrentMap<InetSocketAddress, TCPPeer> peers = new ConcurrentHashMap<InetSocketAddress, TCPPeer>();
+    Listener<InetSocketAddress, com.shuffle.p2p.Bytestring> listener;
+    final InetSocketAddress me;
 
     ServerSocket server;
 
+    public TCPChannel(InetSocketAddress me, Listener<InetSocketAddress, com.shuffle.p2p.Bytestring> listener) {
+        if (me == null || listener == null) {
+            throw new NullPointerException();
+        }
+
+        this.me = me;
+        this.listener = listener;
+    }
+
+
+
     @Override
+    public void run() {
+
+    }
+
     public void listen(Listener<InetSocketAddress, com.shuffle.p2p.Bytestring> listener) throws IOException {
         if (listener == null) {
             throw new NullPointerException();
