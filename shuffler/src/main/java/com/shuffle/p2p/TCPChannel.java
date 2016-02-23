@@ -289,9 +289,13 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring> {
 
         @Override
         // TODO should close all connections and stop listening.
-        public void close() throws IOException {
+        public void close() {
             if (server != null) {
-                server.close();
+                try {
+                    server.close();
+                } catch (IOException e) {
+
+                }
                 server = null;
                 running = false;
             }
@@ -299,7 +303,7 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring> {
     }
 
     @Override
-    public Connection<InetSocketAddress, Bytestring> open(Listener<InetSocketAddress, com.shuffle.p2p.Bytestring> listener) throws IOException {
+    public Connection<InetSocketAddress, Bytestring> open(Listener<InetSocketAddress, com.shuffle.p2p.Bytestring> listener) {
         if (running) return null;
 
         if (listener == null) {
@@ -307,7 +311,11 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring> {
         }
 
         if (server == null) {
-            server = new ServerSocket(me.getPort());
+            try {
+                server = new ServerSocket(me.getPort());
+            } catch (IOException e) {
+                return null;
+            }
         }
 
         executor.execute(new TCPListener());

@@ -9,7 +9,7 @@ import java.io.IOException;
  */
 public interface Session<Identity, Message> {
     // Send a message.
-    boolean send(Message message) throws IOException;
+    boolean send(Message message) ;
     
     // Close the session.
     void close();

@@ -19,7 +19,7 @@ import java.io.IOException;
 public class Multiplexer implements Channel<Identity, Bytestring> {
 
     @Override
-    public Connection<Identity, Bytestring> open(Listener<Identity, Bytestring> listener) throws IOException {
+    public Connection<Identity, Bytestring> open(Listener<Identity, Bytestring> listener) {
         return null;
     }
 

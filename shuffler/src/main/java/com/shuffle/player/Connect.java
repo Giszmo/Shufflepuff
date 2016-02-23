@@ -250,11 +250,7 @@ public class Connect<Identity> {
                 throw new InvalidImplementationError();
             }
 
-            try {
-                session.send(marshall.marshall(packet));
-            } catch (IOException e) {
-                // TODO handle this appropriately.
-            }
+            session.send(marshall.marshall(packet));
         }
 
         @Override

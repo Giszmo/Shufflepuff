@@ -12,7 +12,7 @@ import java.io.IOException;
  */
 public class MediatedChannel<Identity, Message> implements Channel<Identity, Message> {
     @Override
-    public Connection<Identity, Message> open(Listener<Identity, Message> listener) throws IOException {
+    public Connection<Identity, Message> open(Listener<Identity, Message> listener) {
         return null;
     }
 

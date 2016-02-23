@@ -10,7 +10,7 @@ import java.net.URI;
  */
 public class WebsocketChannel implements Channel<URI, Bytestring> {
     @Override
-    public Connection<URI, Bytestring> open(Listener<URI, Bytestring> listener) throws IOException {
+    public Connection<URI, Bytestring> open(Listener<URI, Bytestring> listener) {
         return null;
     }
 
