@@ -2,6 +2,7 @@ package com.shuffle.player;
 
 import com.shuffle.p2p.Bytestring;
 import com.shuffle.p2p.Channel;
+import com.shuffle.p2p.Connection;
 import com.shuffle.p2p.Listener;
 import com.shuffle.p2p.Peer;
 import com.shuffle.p2p.TCPChannel;
@@ -19,8 +20,8 @@ public class Multiplexer implements Channel<Identity, Bytestring> {
     WebsocketChannel websocket;
 
     @Override
-    public void listen(Listener<Identity, Bytestring> listener) throws IOException {
-
+    public Connection<Identity, Bytestring> open(Listener<Identity, Bytestring> listener) throws IOException {
+        return null;
     }
 
     @Override

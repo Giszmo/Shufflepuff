@@ -75,6 +75,10 @@ public class Player<Identity, Format> {
         this.messages = messages;
     }
 
+    static void main(String[] args) {
+
+    }
+
     public List<Machine> coinShuffle(
             Set<Identity> identities,
             Channel<Identity, Format> channel,

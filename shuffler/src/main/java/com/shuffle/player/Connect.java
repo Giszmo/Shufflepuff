@@ -4,6 +4,7 @@ import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.p2p.Bytestring;
 import com.shuffle.p2p.Channel;
+import com.shuffle.p2p.Connection;
 import com.shuffle.p2p.Peer;
 import com.shuffle.p2p.Receiver;
 import com.shuffle.p2p.Session;
@@ -49,17 +50,14 @@ public class Connect<Identity> {
         }
 
         @Override
-        public Receiver<Bytestring> receiver() {
-            return receiver;
-        }
-
-        @Override
-        public void newSession(Session<Identity, Bytestring> session) {
+        public Receiver<Bytestring> newSession(Session<Identity, Bytestring> session) {
             VerificationKey key = keys.get(session.peer().identity());
 
             if(peers.remove(session.peer())) {
                 players.put(key, session);
             }
+
+            return receiver;
         }
     }
 
@@ -127,9 +125,21 @@ public class Connect<Identity> {
             Map<Identity, VerificationKey> keys,
             Marshaller<Bytestring> marshall,
             int timeout,
-            int max) {
+            int max) throws IOException {
 
         Peers peers = new Peers();
+
+        Map<VerificationKey, Session<Identity, Bytestring>> players = new HashMap<>();
+
+        Network<Identity> network = new Network<>(players, marshall, timeout);
+
+        Listener listener = new Listener(peers, keys, network);
+
+        Connection<Identity, Bytestring> connection = channel.open(listener);
+        // TODO need to be able to disconnect the network.
+        if (connection == null) {
+            throw new IOException();
+        }
 
         // Randomly arrange the list of peers.
         // First, put all peers in an array.
@@ -159,17 +169,6 @@ public class Connect<Identity> {
             }
 
             peers.add(p[i]);
-        }
-
-        Map<VerificationKey, Session<Identity, Bytestring>> players = new HashMap<>();
-
-        Network<Identity> network = new Network<>(players, marshall, timeout);
-
-        Listener listener = new Listener(peers, keys, network);
-        try {
-            channel.listen(listener);
-        } catch (IOException e) {
-            e.printStackTrace();
         }
 
         final Retries retries = new Retries();
@@ -251,7 +250,11 @@ public class Connect<Identity> {
                 throw new InvalidImplementationError();
             }
 
-            session.send(marshall.marshall(packet));
+            try {
+                session.send(marshall.marshall(packet));
+            } catch (IOException e) {
+                // TODO handle this appropriately. 
+            }
         }
 
         @Override
@@ -259,6 +262,5 @@ public class Connect<Identity> {
             Bytestring str = received.poll(timeout, TimeUnit.SECONDS);
             return marshall.unmarshall(str);
         }
-
     }
 }

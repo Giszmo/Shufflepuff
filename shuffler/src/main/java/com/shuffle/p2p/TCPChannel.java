@@ -16,7 +16,7 @@ import java.util.concurrent.ConcurrentMap;
  *
  * Created by Daniel Krawisz on 1/25/16.
  */
-public class TCPChannel implements Channel<InetSocketAddress, Bytestring>, Runnable {
+public class TCPChannel implements Channel<InetSocketAddress, Bytestring> {
 
     // A message sent over TCP requires a header to tell how long it is.
     public interface Header {
@@ -97,15 +97,6 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring>, Runna
                 return true;
             }
 
-            @Override
-            public boolean ready() {
-                try {
-                    return in.available() > 0;
-                } catch (IOException e) {
-                    return false;
-                }
-            }
-
             public void check() {
                 try {
                     byte[] headerBytes = new byte[header.headerLength()];
@@ -120,21 +111,13 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring>, Runna
             }
 
             @Override
-            public void close() {
-                try {
-                    socket.close();
-                } catch (IOException e) {
-                    // TODO do something useful.
-                }
+            public void close() throws IOException {
+
+                socket.close();
                 socket = null;
                 in = null;
                 TCPPeer.this.currentSession = null;
                 openSessions.remove(this);
-            }
-
-            @Override
-            public boolean isOpen() {
-                return socket.isConnected();
             }
 
             @Override
@@ -149,6 +132,7 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring>, Runna
     final InetSocketAddress me;
 
     ServerSocket server;
+    private boolean running = false;
 
     public TCPChannel(InetSocketAddress me, Listener<InetSocketAddress, com.shuffle.p2p.Bytestring> listener) {
         if (me == null || listener == null) {
@@ -159,14 +143,22 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring>, Runna
         this.listener = listener;
     }
 
+    private class TCPConnection implements Connection<InetSocketAddress, Bytestring> {
 
-
-    @Override
-    public void run() {
-
+        @Override
+        public void close() throws IOException {
+            if (server != null) {
+                server.close();
+                server = null;
+                running = false;
+            }
+        }
     }
 
-    public void listen(Listener<InetSocketAddress, com.shuffle.p2p.Bytestring> listener) throws IOException {
+    @Override
+    public Connection<InetSocketAddress, Bytestring> open(Listener<InetSocketAddress, com.shuffle.p2p.Bytestring> listener) throws IOException {
+        if (running) return null;
+
         if (listener == null) {
             throw new NullPointerException();
         }
@@ -186,6 +178,8 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring>, Runna
         peers.put(identity, peer);
 
         listener.newSession(peer.currentSession);
+
+        return new TCPConnection();
     }
 
     @Override

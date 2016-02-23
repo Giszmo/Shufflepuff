@@ -64,14 +64,19 @@ public class Player implements Runnable {
     public Machine play(InitialState.PlayerInitialState init, Map<InetSocketAddress, VerificationKey> keys) {
         Channel<InetSocketAddress, Bytestring> tcp = null; // Fill this in.
 
-        return new CoinShuffle(new MockMessageFactory(), crypto, init.coin(crypto)).runProtocol(
-                init.getSession(),
-                init.getAmount(),
-                init.sk,
-                init.keys,
-                null,
-                new Connect<InetSocketAddress>(crypto).connect(tcp, keys, new MockMarshaller(), 1, 3),
-                msg
-        );
+        try {
+            return new CoinShuffle(new MockMessageFactory(), crypto, init.coin(crypto)).runProtocol(
+                    init.getSession(),
+                    init.getAmount(),
+                    init.sk,
+                    init.keys,
+                    null,
+                    new Connect<InetSocketAddress>(crypto).connect(tcp, keys, new MockMarshaller(), 1, 3),
+                    msg
+            );
+        } catch (IOException e) {
+            // TODO handle these problems appropriately.
+            return null;
+        }
     }
 }

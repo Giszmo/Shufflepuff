@@ -1,6 +1,8 @@
 package com.shuffle.p2p;
 
 /**
+ * A channel through which connections can be created to other peers.
+ *
  * Created by Daniel Krawisz on 1/25/16.
  */
 
@@ -17,9 +19,6 @@ import java.io.IOException;
  * Created by Daniel Krawisz on 12/16/15.
  */
 public interface Channel<Identity, Message> {
-
-    // Block until a new peer is found.
-    void listen(final Listener<Identity, Message> listener) throws IOException;
-
     Peer<Identity, Message> getPeer(Identity you);
+    Connection<Identity, Message> open(final Listener<Identity, Message> listener) throws IOException;
 }

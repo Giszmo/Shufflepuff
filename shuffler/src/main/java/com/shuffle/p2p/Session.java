@@ -1,20 +1,18 @@
 package com.shuffle.p2p;
 
+import java.io.IOException;
+
 /**
+ * The session is an open means of communication between two peers.
+ *
  * Created by Daniel Krawisz on 1/25/16.
  */
 public interface Session<Identity, Message> {
     // Send a message.
-    boolean send(Message message);
-
-    // Whether a message is ready.
-    boolean ready();
+    boolean send(Message message) throws IOException;
     
     // Close the session.
-    void close();
-
-    // Whether the session is open.
-    boolean isOpen();
+    void close() throws IOException;
 
     // The peer corresponding to this session.
     Peer<Identity, Message> peer();
