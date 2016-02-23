@@ -12,7 +12,7 @@ public interface Session<Identity, Message> {
     boolean send(Message message) throws IOException;
     
     // Close the session.
-    void close() throws IOException;
+    void close();
 
     // The peer corresponding to this session.
     Peer<Identity, Message> peer();

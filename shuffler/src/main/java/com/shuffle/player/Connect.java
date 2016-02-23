@@ -253,7 +253,7 @@ public class Connect<Identity> {
             try {
                 session.send(marshall.marshall(packet));
             } catch (IOException e) {
-                // TODO handle this appropriately. 
+                // TODO handle this appropriately.
             }
         }
 
