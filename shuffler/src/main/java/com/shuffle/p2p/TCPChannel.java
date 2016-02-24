@@ -7,7 +7,7 @@ import java.net.Socket;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.Executor;
 
 /**
  * A manager for a bunch of tcp connections.
@@ -266,22 +266,20 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring> {
     }
 
     Listener<InetSocketAddress, com.shuffle.p2p.Bytestring> listener;
-    final InetSocketAddress me;
+    final int port;
 
     ServerSocket server;
     private boolean running = false;
-    final ThreadPoolExecutor executor;
+    final Executor executor;
 
     public TCPChannel(
-            InetSocketAddress me,
-            Listener<InetSocketAddress, com.shuffle.p2p.Bytestring> listener,
-            ThreadPoolExecutor executor) {
-        if (me == null || listener == null) {
+            int port,
+            Executor executor) {
+        if (executor == null) {
             throw new NullPointerException();
         }
 
-        this.me = me;
-        this.listener = listener;
+        this.port = port;
         this.executor = executor;
     }
 
@@ -312,7 +310,7 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring> {
 
         if (server == null) {
             try {
-                server = new ServerSocket(me.getPort());
+                server = new ServerSocket(port);
             } catch (IOException e) {
                 return null;
             }
