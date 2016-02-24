@@ -322,9 +322,14 @@ public class MockCoin implements com.shuffle.sim.MockCoin {
     }
 
     @Override
-    public boolean spendsFrom(Address addr, long amount, Transaction t) {
-        Transaction conflict = getConflictingTransaction(addr, amount);
-        return conflict != null && t.equals(conflict);
+    public Transaction getSpendingTransaction(Address addr, long amount) {
+        Output output = blockchain.get(addr);
+
+        if (output == null) {
+            return null;
+        }
+
+        return spend.get(output);
     }
 
     @Override

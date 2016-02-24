@@ -545,8 +545,9 @@ public class CoinShuffle {
                                     matrix.put(vk, from, null /* TODO */);
                                     break;
                                 }
+
                                 // Is the evidence included sufficient?
-                                credible = coin.spendsFrom(blame.accused.address(), amount, blame.t);
+                                credible = blame.t.equals(coin.getConflictingTransaction(blame.accused.address(), amount));
                                 matrix.put(from, blame.accused,
                                         Evidence.InsufficientFunds(credible, blame.t));
                                 break;
@@ -604,7 +605,7 @@ public class CoinShuffle {
                             }
                             case DoubleSpend: {
                                 // Is the evidence included sufficient?
-                                credible = coin.spendsFrom(blame.accused.address(), amount, blame.t);
+                                credible = blame.t.equals(coin.getSpendingTransaction(blame.accused.address(), amount));
                                 matrix.put(from, blame.accused,
                                         Evidence.DoubleSpend(credible, blame.t));
                                 break;

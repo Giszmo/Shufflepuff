@@ -71,6 +71,8 @@ public class InitialState {
     public final long amount;
     private final LinkedList<PlayerInitialState> players = new LinkedList<>();
 
+    private MockCoin mockCoin = null;
+
     public List<PlayerInitialState> getPlayers() {
         List<PlayerInitialState> p = new LinkedList<>();
         p.addAll(players);
@@ -115,25 +117,7 @@ public class InitialState {
         }
 
         public MockCoin coin(Crypto crypto) {
-            MockCoin coin = new com.shuffle.mock.MockCoin();
-
-            for (PlayerInitialState player : players) {
-                if (player.initialAmount > 0) {
-                    Address address = player.sk.VerificationKey().address();
-
-                    Address previousAddress = crypto.makeSigningKey().VerificationKey().address();
-
-                    coin.put(previousAddress, player.initialAmount);
-                    coin.spend(previousAddress, address, player.initialAmount).send();
-
-                    // Plot twist! We spend it all!
-                    if (player.spend > 0) {
-                        coin.spend(address, crypto.makeSigningKey().VerificationKey().address(), player.spend).send();
-                    }
-                }
-            }
-
-            return coin;
+            return InitialState.this.coin(crypto);
         }
 
         public Adversary adversary(Crypto crypto, MessageFactory messages, Network network) {
@@ -240,6 +224,34 @@ public class InitialState {
 
             return bm;
         }
+    }
+
+    public MockCoin coin(Crypto crypto) {
+        if (mockCoin != null) {
+            return mockCoin;
+        }
+
+        MockCoin coin = new com.shuffle.mock.MockCoin();
+
+        for (PlayerInitialState player : players) {
+            if (player.initialAmount > 0) {
+                Address address = player.sk.VerificationKey().address();
+
+                Address previousAddress = crypto.makeSigningKey().VerificationKey().address();
+
+                coin.put(previousAddress, player.initialAmount);
+                coin.spend(previousAddress, address, player.initialAmount).send();
+
+                // Plot twist! We spend it all!
+                if (player.spend > 0) {
+                    coin.spend(address, crypto.makeSigningKey().VerificationKey().address(), player.spend).send();
+                }
+            }
+        }
+
+        mockCoin = coin;
+
+        return mockCoin;
     }
 
     public InitialState(SessionIdentifier session, long amount) {
@@ -373,16 +385,18 @@ public class InitialState {
     ) {
         InitialState init = new InitialState(session, amount);
 
-        for (int i = 1; i <= numPlayers; i++) {
+        pit : for (int i = 1; i <= numPlayers; i++) {
             init.player(crypto.makeSigningKey()).initialFunds(20);
             for (int deadbeat : deadbeats) {
                 if (deadbeat == i) {
                     init.initialFunds(0);
+                    continue pit;
                 }
             }
             for (int aPoor : poor) {
                 if (aPoor == i) {
                     init.initialFunds(10);
+                    continue pit;
                 }
             }
             for (int spender : spenders) {
