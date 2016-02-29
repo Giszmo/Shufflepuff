@@ -3,14 +3,10 @@ package com.shuffle.protocol;
 import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.CryptographyError;
 import com.shuffle.bitcoin.SigningKey;
-import com.shuffle.bitcoin.Transaction;
-import com.shuffle.mock.MockCoin;
 import com.shuffle.mock.MockCrypto;
 import com.shuffle.mock.MockMessageFactory;
 import com.shuffle.mock.MockSessionIdentifier;
 import com.shuffle.protocol.blame.Matrix;
-import com.shuffle.protocol.blame.Evidence;
-import com.shuffle.protocol.blame.Reason;
 import com.shuffle.sim.InitialState;
 import com.shuffle.sim.Simulator;
 
@@ -22,12 +18,8 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
 
 /**
  * Integration tests for the protocol.
@@ -91,6 +83,96 @@ public class TestShuffleMachine {
         }
     }
 
+    private abstract class TestCaseFactory {
+        protected abstract InitialState initialState(SessionIdentifier session, long amount, Crypto crypto);
+
+        protected TestCase construct(String type, int caseNo, Simulator sim) {
+
+
+            SessionIdentifier session = new MockSessionIdentifier("" + caseNo);
+            long amount = 17;
+            TestCase test = new TestCase(session, amount, type, caseNo);
+            Crypto crypto = new MockCrypto(++seed);
+
+            InitialState init = initialState(session, amount, crypto);
+
+            Map<SigningKey, Machine> results = sim.run(init, crypto);
+            Map<SigningKey, Matrix> expected = init.expectedBlame();
+
+            for(SigningKey i : results.keySet()) {
+
+                test.put(i,
+                        new Machine(session, null, null, expected.get(i)),
+                        results.get(i));
+            }
+
+            return test;
+        }
+    }
+
+    private class SuccessfulTestCase extends TestCaseFactory {
+        final int numPlayers;
+
+        public SuccessfulTestCase(int numPlayers) {
+            this.numPlayers = numPlayers;
+        }
+
+        @Override
+        protected InitialState initialState(SessionIdentifier session, long amount, Crypto crypto) {
+            return InitialState.successful(session, numPlayers, amount, crypto);
+        }
+    }
+
+    private class InsufficientFundsTestCase extends TestCaseFactory {
+        final int numPlayers;
+        int[] deadbeats;
+        int[] poor;
+        int[] spenders;
+
+        public InsufficientFundsTestCase(
+                int numPlayers,
+                int[] deadbeats,
+                int[] poor,
+                int[] spenders) {
+            this.numPlayers = numPlayers;
+            this.deadbeats = deadbeats;
+            this.poor = poor;
+            this.spenders = spenders;
+        }
+
+        @Override
+        protected InitialState initialState(SessionIdentifier session, long amount, Crypto crypto) {
+            return InitialState.insufficientFunds(session, numPlayers, deadbeats, poor, spenders, amount, crypto);
+        }
+    }
+
+    private class DoubleSpendTestCase extends TestCaseFactory {
+        final int[] views;
+        final Set<Integer> doubleSpenders = new HashSet<>();
+
+        public DoubleSpendTestCase(int[] views, int[] doubleSpenders) {
+            this.views = views;
+
+            for (int d : doubleSpenders) {
+                this.doubleSpenders.add(d);
+            }
+        }
+
+        @Override
+        protected InitialState initialState(SessionIdentifier session, long amount, Crypto crypto) {
+
+            InitialState init = new InitialState(session, amount);
+            for (int i = 1; i < views.length; i ++) {
+                init.player(crypto.makeSigningKey()).initialFunds(20).networkPoint(views[i]);
+
+                if (doubleSpenders.contains(i)) {
+                    init.doubleSpend(13);
+                }
+            }
+            return init;
+        }
+    }
+
     private class Equivocation {
         final int equivocator;
         final int[] equivocation;
@@ -119,6 +201,119 @@ public class TestShuffleMachine {
         }
     }
 
+    private class EquivocateAnnouncementTestCase extends TestCaseFactory {
+        final int numPlayers;
+        final Equivocation[] equivocators;
+
+        public EquivocateAnnouncementTestCase(int numPlayers, Equivocation[] equivocators) {
+            this.numPlayers = numPlayers;
+            this.equivocators = equivocators;
+        }
+
+        @Override
+        protected InitialState initialState(SessionIdentifier session, long amount, Crypto crypto) {
+            InitialState init = new InitialState(session, amount);
+
+            int eq = 0;
+            for (int i = 1; i <= numPlayers; i ++) {
+                SigningKey key = crypto.makeSigningKey();
+                init.player(key).initialFunds(20);
+
+                while(eq < equivocators.length && equivocators[eq].equivocator < i) {
+                    eq++;
+                }
+
+                if (eq < equivocators.length && equivocators[eq].equivocator == i) {
+                    init.equivocateAnnouncement(equivocators[eq].equivocation);
+                }
+            }
+
+            return init;
+        }
+    }
+
+    private class EquivocateOutputTestCase extends TestCaseFactory {
+        final int numPlayers;
+        final int[] equivocation;
+
+        public EquivocateOutputTestCase(int numPlayers, int[] equivocation) {
+            this.numPlayers = numPlayers;
+            this.equivocation = equivocation;
+        }
+
+        @Override
+        protected InitialState initialState(SessionIdentifier session, long amount, Crypto crypto) {
+            InitialState init = new InitialState(session, amount);
+
+            // Only the last player can equivocate.
+            for (int i = 1; i < numPlayers; i ++) {
+                init.player(crypto.makeSigningKey()).initialFunds(20);
+            }
+
+            // Add the malicious equivocator.
+            init.player(crypto.makeSigningKey()).initialFunds(20).equivocateOutputVector(equivocation);
+
+            return init;
+        }
+    }
+
+    private class DropTestCase extends TestCaseFactory {
+        final int numPlayers;
+
+        Map<Integer, Integer> drop = new HashMap<>();
+        Map<Integer, Integer> replaceNew = new HashMap<>();
+        Map<Integer, Integer[]> replaceDuplicate = new HashMap<>();
+
+        public DropTestCase(int numPlayers, int[][] drop, int[][] replaceNew, int[][] replaceDuplicate) {
+            this.numPlayers = numPlayers;
+
+            if (drop != null) {
+                for (int[] d : drop) {
+                    if (d.length == 2 && d[1] < d[0]) {
+                        this.drop.put(d[0], d[1]);
+                    }
+                }
+            }
+
+            if (replaceDuplicate != null) {
+                for (int[] d : replaceDuplicate) {
+                    if (d.length == 2 && d[1] < d[0]) {
+                        this.replaceDuplicate.put(d[0], new Integer[]{d[1], d[2]});
+                    }
+                }
+            }
+
+            if (replaceNew != null) {
+                for (int[] d : replaceNew) {
+                    if (d.length == 2 && d[1] < d[0]) {
+                        this.replaceNew.put(d[0], d[1]);
+                    }
+                }
+            }
+        }
+
+        @Override
+        protected InitialState initialState(SessionIdentifier session, long amount, Crypto crypto) {
+            InitialState init = new InitialState(session, amount);
+
+            for (int i = 1; i < numPlayers; i ++) {
+
+                init.player(crypto.makeSigningKey()).initialFunds(20);
+
+                if (drop.containsKey(i)) {
+                    init.drop(drop.get(i));
+                } else if (replaceDuplicate.containsKey(i)) {
+                    Integer[] dup = replaceDuplicate.get(i);
+                    init.replace(dup[0], dup[1]);
+                } else if (replaceNew.containsKey(i)) {
+                    init.replace(replaceNew.get(i));
+                }
+            }
+
+            return init;
+        }
+    }
+
     int seed = 99;
 
     TestCase successfulExpectation(TestCase test, Map<SigningKey, Machine> results) {
@@ -130,14 +325,7 @@ public class TestShuffleMachine {
 
     // Create a test case representing a successful run.
     public TestCase SuccessfulRun(int caseNo, int numPlayer, Simulator sim) {
-        SessionIdentifier session = new MockSessionIdentifier("success" + caseNo);
-        Crypto crypto = new MockCrypto(++seed);
-        long amount = 17;
-
-        return successfulExpectation(
-                new TestCase(session, amount, "successful run with " + numPlayer + " players.", caseNo),
-                sim.run(InitialState.successful(session, numPlayer, amount, crypto), crypto)
-        );
+        return new SuccessfulTestCase(numPlayer).construct("successful run with " + numPlayer + " players.", caseNo, sim);
     }
     
     public TestCase InsufficientFunds(
@@ -148,108 +336,12 @@ public class TestShuffleMachine {
             int[] spenders,
             Simulator sim) {
 
-        SessionIdentifier session = new MockSessionIdentifier("fund" + caseNo);
-        long amount = 17;
-        TestCase test = new TestCase(session, amount, "Insufficient funds test case.", caseNo);
-        Crypto crypto = new MockCrypto(++seed);
-
-        InitialState init = InitialState.insufficientFunds(session, numPlayers, deadbeats, poor, spenders, amount, crypto);
-
-        Map<SigningKey, Machine> results = sim.run(init, crypto);
-        Map<SigningKey, Matrix> expected = init.expectedBlame();
-
-        for(SigningKey i : results.keySet()) {
-
-            test.put(i,
-                    new Machine(session, null, null, expected.get(i)),
-                    results.get(i));
-        }
-
-        return test;
+        return new InsufficientFundsTestCase(numPlayers, deadbeats, poor, spenders).construct("Insufficient funds test case.", caseNo, sim);
     }
 
-    // TODO fix this.
-    /*public TestCase DoubleSpend(int caseNo, int[] views, int[] doubleSpenders, Simulator sim) {
-
-        SessionIdentifier session = new MockSessionIdentifier("spend" + caseNo);
-        long amount = 17;
-        TestCase test = new TestCase(session, amount, "Double spending test case.", caseNo);
-
-        Set<com.shuffle.sim.MockCoin> coinNets = new HashSet<>();
-        Map<Integer, com.shuffle.sim.MockCoin> coinNetMap = new HashMap<>();
-        List<com.shuffle.sim.MockCoin> coinNetList = new LinkedList<>();
-
-        for (int view : views) {
-            if (!coinNetMap.containsKey(view)) {
-                com.shuffle.sim.MockCoin coin = new MockCoin();
-                coinNetMap.put(view, coin);
-                coinNets.add(coin);
-            }
-            coinNetList.add(coinNetMap.get(view));
-        }
-
-        Crypto crypto = new MockCrypto(++seed);
-        InitialState init = InitialState.doubleSpend(session, coinNets, coinNetList, doubleSpenders, amount, crypto);
-
-        Map<SigningKey, Machine> results = sim.run(init, crypto);
-
-        // The set of offending transactions.
-        Map<SigningKey, Transaction> offenders = new HashMap<>();
-        Map<SigningKey, com.shuffle.sim.MockCoin> playerToCoin = new HashMap<>();
-
-        SortedSet<SigningKey> players = new TreeSet<>();
-        players.addAll(results.keySet());
-
-        {int i = 0;
-        for (SigningKey key : players) {
-
-            com.shuffle.sim.MockCoin coin = coinNetMap.get(views[i]);
-            playerToCoin.put(key, coin);
-
-            Transaction t = coin.getConflictingTransaction(key.VerificationKey().address(), 17);
-
-            if (t != null) {
-                offenders.put(key, t);
-            }
-
-            i++;
-        }}
-
-        for (SigningKey i : results.keySet()) {
-            Matrix bm;
-            Phase phase;
-
-            if (offenders.containsKey(i)) {
-                bm = InitialState.anyMatrix;
-                phase = null;
-            } else {
-                bm = new Matrix();
-                phase = Phase.Blame;
-                for (SigningKey j : results.keySet()) {
-                    for (SigningKey k : results.keySet()) {
-
-                        if (offenders.containsKey(j)) {
-                            // We don't care who the malicious players accuse.
-                            bm.put(j.VerificationKey(), k.VerificationKey(), InitialState.anyReason);
-                        } else if(offenders.containsKey(k)) {
-                            if (playerToCoin.get(j) == playerToCoin.get(k)) {
-                                // Only include the transaction if the player has the same view
-                                // of the network as the double spender.
-                                bm.put(j.VerificationKey(), k.VerificationKey(),
-                                        Evidence.DoubleSpend(true, offenders.get(k)));
-                            }
-                        }
-                    }
-                }
-            }
-
-            test.put(i,
-                    new Machine(session, phase, null, bm),
-                    results.get(i));
-        }
-
-        return test;
-    }*/
+    public TestCase DoubleSpend(int caseNo, int[] views, int[] doubleSpenders, Simulator sim) {
+        return new DoubleSpendTestCase(views, doubleSpenders).construct("Double spend test case.", caseNo, sim);
+    }
 
     // Run a test case for equivocation during phase 1.
     public TestCase EquivocateAnnouncement(
@@ -258,71 +350,17 @@ public class TestShuffleMachine {
             Equivocation[] equivocators,
             Simulator sim
     ) {
-        long amount = 17;
-        SessionIdentifier session = new MockSessionIdentifier("eqv" + caseNo);
-        InitialState init = new InitialState(session, amount);
-
-        Crypto crypto = new MockCrypto(++seed);
-
-        int eq = 0;
-        for (int i = 1; i <= numPlayers; i ++) {
-            SigningKey key = crypto.makeSigningKey();
-            init.player(key).initialFunds(20);
-
-            while(eq < equivocators.length && equivocators[eq].equivocator < i) {
-                eq++;
-            }
-
-            if (eq < equivocators.length && equivocators[eq].equivocator == i) {
-                init.equivocateAnnouncement(equivocators[eq].equivocation);
-            }
-        }
-
-        log.info("Announcement equivocation test case: " + Arrays.toString(equivocators));
-
-        TestCase test = new TestCase(session, amount, "Announcement phase equivocation test case.", caseNo);
-        Map<SigningKey, Machine> results = sim.run(init, crypto);
-        Map<SigningKey, Matrix> expected = init.expectedBlame();
-
-        for(SigningKey i : results.keySet()) {
-
-            test.put(i,
-                    new Machine(session, null, null, expected.get(i)),
-                    results.get(i));
-        }
-
-        return test;
+        return new EquivocateAnnouncementTestCase(numPlayers, equivocators).construct("Announcement phase equivocation test case.", caseNo, sim);
     }
 
     // Run a test case for equivocation during phase 3.
     public TestCase EquivocateOutput(int caseNo, int numPlayers, int[] equivocation, Simulator sim) {
-        long amount = 17;
-        SessionIdentifier session = new MockSessionIdentifier("eqv" + caseNo);
-        InitialState init = new InitialState(session, amount);
+        return new EquivocateOutputTestCase(numPlayers, equivocation).construct("Broadcast phase equivocation test case.", caseNo, sim);
+    }
 
-        Crypto crypto = new MockCrypto(++seed);
-
-        // Only the last player can equivocate.
-        for (int i = 1; i < numPlayers; i ++) {
-            init.player(crypto.makeSigningKey()).initialFunds(20);
-        }
-
-        // Add the malicious equivocator.
-        init.player(crypto.makeSigningKey()).initialFunds(20).equivocateOutputVector(equivocation);
-
-        log.info("Broadcast equivocation test case: " + Arrays.toString(equivocation));
-
-        TestCase test = new TestCase(session, amount, "Broadcast phase equivocation test case.", caseNo);
-        Map<SigningKey, Machine> results = sim.run(init, crypto);
-        Map<SigningKey, Matrix> expected = init.expectedBlame();
-
-        for (SigningKey i : results.keySet()) {
-            test.put(i,
-                    new Machine(session, null, null, expected.get(i)),
-                    results.get(i));
-        }
-
-        return test;
+    // Run a test case for a player who drops an address in phase 2.
+    public TestCase DropAddress(int caseNo, int numPlayers, int[][] drop, int[][] replaceNew, int[][] replaceDuplicate, Simulator sim) {
+        return new DropTestCase(numPlayers, drop, replaceNew, replaceDuplicate).construct("Shuffle phase mischief test case.", caseNo, sim);
     }
 
     // TODO fix this.
@@ -393,60 +431,6 @@ public class TestShuffleMachine {
 
         return test;
     }*/
-
-    class Dropper {
-        final int player;
-        final int drop;
-        final int duplicate;
-
-        Dropper(int player, int drop, int duplicate) {
-            this.player = player;
-            this.drop = drop;
-            this.duplicate = duplicate;
-        }
-
-        @Override
-        public String toString() {
-            return " drop " + drop;
-        }
-    }
-
-    public TestCase DropAddress(int caseNo, int numPlayers, Dropper dropper, Simulator sim) {
-
-        long amount = 17;
-        SessionIdentifier session = new MockSessionIdentifier("drop" + caseNo);
-        InitialState init = new InitialState(session, amount);
-
-        Crypto crypto = new MockCrypto(++seed);
-
-        // Set a player to drop an address.
-        for (int i = 1; i <= numPlayers; i ++) {
-            init.player(crypto.makeSigningKey()).initialFunds(20);
-
-            if (i == dropper.player) {
-                if (dropper.duplicate > 0) {
-                    init.replace(dropper.drop, dropper.duplicate);
-                } else {
-                    init.drop(dropper.drop);
-                }
-            }
-        }
-
-        log.info("drop address test case: " + dropper.toString());
-
-        TestCase test = new TestCase(session, amount, "Drop address test case.", caseNo);
-        Map<SigningKey, Machine> results = sim.run(init, crypto);
-
-        // Find malicious player.
-
-        // Construct expected matrix.
-
-        return null; // TODO
-    }
-
-    public TestCase DropAddressReplaceNew(int caseNo, int numPlayers, int drop, Simulator sim) {
-        return null; // TODO
-    }
 
     @Test
     // Tests for successful runs of the protocol.
@@ -527,6 +511,24 @@ public class TestShuffleMachine {
                         new Equivocation(8, new int[]{9})}, sim).check();
     }
 
+    @Test
+    // Tests for failures during the shuffle phase.
+    public void testShuffleMalice() {
+        Simulator sim = new Simulator(new MockMessageFactory());
+        int caseNo = 0;
+
+        DropAddress(caseNo++, 3, new int[][]{}, null, null, sim).check();
+
+        // A player drops an address during phase 2.
+
+
+        // A player drops an address and adds another one in phase 2.
+
+
+        // A player drops an address and adds a duplicate in phase 2.
+        Assert.fail();
+    }
+
     // TODO make these work.
     /*@Test
     public void testTransactionDisagreement() {
@@ -554,22 +556,6 @@ public class TestShuffleMachine {
         DoubleSpend(caseNo, new int[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1}, new int[]{4, 6, 7, 8}, sim).check();
 
     }*/
-
-    @Test
-    // Tests for failures during the shuffle phase.
-    public void testShuffleMalice() {
-        Simulator sim = new Simulator(new MockMessageFactory());
-        int caseNo = 0;
-
-        // A player drops an address during phase 2.
-
-
-        // A player drops an address and adds another one in phase 2.
-
-
-        // A player drops an address and adds a duplicate in phase 2.
-        Assert.fail();
-    }
 
     @Test
     public void testLies() {

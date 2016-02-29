@@ -125,7 +125,7 @@ public class Connect<Identity> {
             Map<Identity, VerificationKey> keys,
             Marshaller<Bytestring> marshall,
             int timeout,
-            int max) throws IOException {
+            int maxRetries) throws IOException {
 
         Peers peers = new Peers();
 
@@ -190,7 +190,7 @@ public class Connect<Identity> {
 
             int r = retries.increment(peer);
 
-            if(r > max) {
+            if(r > maxRetries) {
                 return null;
             }
 

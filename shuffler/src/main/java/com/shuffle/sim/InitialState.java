@@ -70,7 +70,6 @@ public class InitialState {
     public final SessionIdentifier session;
     public final long amount;
     private final LinkedList<PlayerInitialState> players = new LinkedList<>();
-
     private MockCoin mockCoin = null;
 
     public List<PlayerInitialState> getPlayers() {
@@ -87,6 +86,7 @@ public class InitialState {
         long spend = 0;
         long doubleSpend = 0;
         boolean change = false; // Whether to make a change address.
+        int viewpoint = 1;
 
         // Whether the adversary should equivocate during the announcement phase and to whom.
         int[] equivocateAnnouncement = new int[]{};
@@ -117,7 +117,35 @@ public class InitialState {
         }
 
         public MockCoin coin(Crypto crypto) {
-            return InitialState.this.coin(crypto);
+            MockCoin coin = networkPoints.get(viewpoint);
+
+            if (coin != null) {
+                return coin;
+            }
+
+            if (mockCoin == null) {
+
+                mockCoin = new com.shuffle.mock.MockCoin();
+
+                for (PlayerInitialState player : players) {
+                    if (player.initialAmount > 0) {
+                        Address address = player.sk.VerificationKey().address();
+
+                        Address previousAddress = crypto.makeSigningKey().VerificationKey().address();
+
+                        mockCoin.put(previousAddress, player.initialAmount);
+                        mockCoin.spend(previousAddress, address, player.initialAmount).send();
+
+                        // Plot twist! We spend it all!
+                        if (player.spend > 0) {
+                            mockCoin.spend(address, crypto.makeSigningKey().VerificationKey().address(), player.spend).send();
+                        }
+                    }
+                }
+            }
+
+            networkPoints.put(viewpoint, mockCoin.copy());
+            return mockCoin;
         }
 
         public Adversary adversary(Crypto crypto, MessageFactory messages, Network network) {
@@ -226,33 +254,7 @@ public class InitialState {
         }
     }
 
-    public MockCoin coin(Crypto crypto) {
-        if (mockCoin != null) {
-            return mockCoin;
-        }
-
-        MockCoin coin = new com.shuffle.mock.MockCoin();
-
-        for (PlayerInitialState player : players) {
-            if (player.initialAmount > 0) {
-                Address address = player.sk.VerificationKey().address();
-
-                Address previousAddress = crypto.makeSigningKey().VerificationKey().address();
-
-                coin.put(previousAddress, player.initialAmount);
-                coin.spend(previousAddress, address, player.initialAmount).send();
-
-                // Plot twist! We spend it all!
-                if (player.spend > 0) {
-                    coin.spend(address, crypto.makeSigningKey().VerificationKey().address(), player.spend).send();
-                }
-            }
-        }
-
-        mockCoin = coin;
-
-        return mockCoin;
-    }
+    public Map<Integer, MockCoin> networkPoints = new HashMap<>();
 
     public InitialState(SessionIdentifier session, long amount) {
 
@@ -282,6 +284,11 @@ public class InitialState {
 
     public InitialState spend(long amount) {
         players.getLast().spend = amount;
+        return this;
+    }
+
+    public InitialState networkPoint(int i) {
+        players.getLast().viewpoint = i;
         return this;
     }
 
@@ -408,30 +415,4 @@ public class InitialState {
 
         return init;
     }
-
-    // TODO fix this to work.
-    /*public static InitialState doubleSpend(
-            SessionIdentifier session,
-            Set<MockCoin> coinNets,
-            List<MockCoin> coinNetList,
-            int[] doubleSpenders,
-            long amount,
-            Crypto crypto
-    ) {
-        InitialState init = new InitialState(session, amount);
-
-        int i = 1;
-        for (MockCoin coinNet : coinNetList) {
-            init.player(crypto.makeSigningKey()).initialFunds(20).coin(coinNet);
-
-            for (int doubleSpender : doubleSpenders) {
-                if (doubleSpender == i) {
-                    init.spend(16);
-                }
-            }
-            i++;
-        }
-
-        return init;
-    }*/
 }

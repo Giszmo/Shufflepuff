@@ -13,4 +13,6 @@ public interface MockCoin extends Coin {
     void put(Address addr, long value);
 
     Transaction spend(Address from, Address to, long amount);
+
+    MockCoin copy();
 }

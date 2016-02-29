@@ -336,4 +336,15 @@ public class MockCoin implements com.shuffle.sim.MockCoin {
     public String toString() {
         return "{" + blockchain.values().toString() + ", " + spend.toString() + "}";
     }
+
+    @Override
+    public com.shuffle.sim.MockCoin copy() {
+        MockCoin newCoin = new MockCoin();
+
+        newCoin.blockchain.putAll(blockchain);
+        newCoin.spend.putAll(spend);
+        newCoin.sent.putAll(sent);
+
+        return newCoin;
+    }
 }

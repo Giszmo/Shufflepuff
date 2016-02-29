@@ -16,11 +16,14 @@ import com.shuffle.protocol.Phase;
 
 import java.io.IOException;
 import java.io.PrintStream;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -127,17 +130,29 @@ public class Player implements Runnable {
         int i = options.get("-identity") - 1;
         Crypto crypto = new MockCrypto(7777);
 
-        InitialState.PlayerInitialState pinit = InitialState.successful(
+        List<InitialState.PlayerInitialState> inits = InitialState.successful(
                 new MockSessionIdentifier("tcp test"),
                 options.get("-players"),
                 options.get("-amount"),
-                crypto).getPlayers().get(i);
+                crypto).getPlayers();
+
+        // Create keys object.
+        int port = options.get("-minport");
+        try {
+            for (InitialState.PlayerInitialState p : inits) {
+                    keys.put(new InetSocketAddress(InetAddress.getLocalHost(), port), p.vk);
+                port ++;
+            }
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
+
+        InitialState.PlayerInitialState pinit = inits.get(i);
 
         return new Parameters(
                 options.get("-minport") + i,
                 options.get("-threads"),
-                pinit,
-                keys, crypto);
+                pinit, keys, crypto);
     }
 
     public static void main(String[] args) {
