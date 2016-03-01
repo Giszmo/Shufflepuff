@@ -371,7 +371,6 @@ public class InitialState {
             long amount,
             Crypto crypto
     ) {
-
         InitialState init = new InitialState(session, amount);
 
         for (int i = 1; i <= numPlayers; i++) {

@@ -73,6 +73,7 @@ public class Player implements Runnable {
 
     static Map<String, Integer> readOptions(String[] args) {
         if (args.length % 2 != 0) {
+            System.out.println("Invalid argument list: " + args.length + " elements found; should be even.");
             throw new IllegalArgumentException();
         }
 
@@ -94,14 +95,17 @@ public class Player implements Runnable {
             String optVal = args[2 * p + 1];
 
             if (!opt.matcher(optName).matches()) {
+                System.out.println("Error: invalid argument type found " + optName);
                 throw new IllegalArgumentException();
             }
 
             if (!val.matcher(optVal).matches()) {
+                System.out.println("Error: invalid argument value found " + optVal);
                 throw new IllegalArgumentException();
             }
 
             if (!defaults.containsKey(optName)) {
+                System.out.println("Error: unknown argument type found " + optName);
                 throw new IllegalArgumentException();
             }
 
@@ -114,6 +118,7 @@ public class Player implements Runnable {
         for (Map.Entry<String, Integer> entry : defaults.entrySet()) {
             if (!map.containsKey(entry.getKey())) {
                 if (entry.getValue() == null) {
+                    System.out.println("Error: no default value defined for " + entry.getKey());
                     throw new IllegalArgumentException();
                 }
 
@@ -127,7 +132,6 @@ public class Player implements Runnable {
     public static Parameters readParameters(String[] args) {
         Map<String, Integer> options = readOptions(args);
         Map<InetSocketAddress, VerificationKey> keys = new HashMap<>();
-        int i = options.get("-identity") - 1;
         Crypto crypto = new MockCrypto(7777);
 
         List<InitialState.PlayerInitialState> inits = InitialState.successful(
@@ -147,6 +151,7 @@ public class Player implements Runnable {
             e.printStackTrace();
         }
 
+        int i = options.get("-identity") - 1;
         InitialState.PlayerInitialState pinit = inits.get(i);
 
         return new Parameters(
@@ -163,7 +168,8 @@ public class Player implements Runnable {
             thread.start();
 
             player.report();
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
+            System.out.println("Invalid arguments.");
             return;
         }
 
