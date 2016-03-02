@@ -200,6 +200,8 @@ public class Player implements Runnable {
         Channel<InetSocketAddress, Bytestring> tcp = new TCPChannel(param.port, exec);
         Crypto crypto = param.crypto;
 
+        Connect<InetSocketAddress> connect = (Connect<InetSocketAddress>) new Connect<InetSocketAddress>(crypto);
+
         try {
             return new CoinShuffle(new MockMessageFactory(), crypto, param.init.coin(crypto)).runProtocol(
                     param.init.getSession(),
@@ -207,12 +209,14 @@ public class Player implements Runnable {
                     param.init.sk,
                     param.init.keys,
                     null,
-                    new Connect<InetSocketAddress>(crypto).connect(tcp, param.keys, new MockMarshaller(), 1, 3),
+                    connect.connect(tcp, param.keys, new MockMarshaller(), 1, 3),
                     msg
             );
         } catch (IOException e) {
             // TODO handle these problems appropriately.
             return null;
+        } finally {
+            connect.shutdown();
         }
     }
 

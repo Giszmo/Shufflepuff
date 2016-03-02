@@ -1,0 +1,14 @@
+package com.shuffle.monad;
+
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
+/**
+ * Created by Daniel Krawisz on 3/2/16.
+ */
+public interface SummableFuture<X> extends Summable.SummableElement<X>, Future<X> {
+    Summable.SummableElement<X> getSummable() throws InterruptedException, ExecutionException;
+    Summable.SummableElement<X> getSummable(long l, TimeUnit t) throws InterruptedException, ExecutionException, TimeoutException;
+}

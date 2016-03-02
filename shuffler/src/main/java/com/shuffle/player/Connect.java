@@ -119,6 +119,8 @@ public class Connect<Identity> {
         }
     }
 
+    Connection<Identity, Bytestring> connection;
+
     // Connect to all peers; remote peers can be initiating connections to us as well.
     public com.shuffle.protocol.Network connect(
             Channel<Identity, Bytestring> channel,
@@ -126,6 +128,10 @@ public class Connect<Identity> {
             Marshaller<Bytestring> marshall,
             int timeout,
             int maxRetries) throws IOException {
+
+        if (connection != null) {
+            return null;
+        }
 
         Peers peers = new Peers();
 
@@ -135,7 +141,7 @@ public class Connect<Identity> {
 
         Listener listener = new Listener(peers, keys, network);
 
-        Connection<Identity, Bytestring> connection = channel.open(listener);
+        connection = channel.open(listener);
         // TODO need to be able to disconnect the network.
         if (connection == null) {
             throw new IOException();
@@ -204,6 +210,15 @@ public class Connect<Identity> {
         }
 
         return network;
+    }
+
+    public void shutdown() {
+        if (connection == null) {
+            return;
+        }
+
+        connection.close();
+        connection = null;
     }
 
     /**
