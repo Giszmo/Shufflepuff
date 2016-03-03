@@ -1023,17 +1023,18 @@ public class CoinShuffle {
             throw new NullPointerException();
         }
 
-        Thread thread = new Thread(new Runnable() {
+        new Thread(new Runnable() {
             @Override
             public void run() {
-                q.send(runProtocol(session, amount, sk, players, change, network, null));
+                boolean sent = q.send(runProtocol(session, amount, sk, players, change, network, null));
+
                 q.close();
             }
-        });
-
-        thread.start();
+        }).start();
 
         return new Future<Machine>() {
+            Machine result = null;
+            boolean done = false;
 
             @Override
             public boolean cancel(boolean b) {
@@ -1047,17 +1048,39 @@ public class CoinShuffle {
 
             @Override
             public boolean isDone() {
-                return q.closed();
+                return done || q.closed();
             }
 
             @Override
-            public Machine get() throws InterruptedException, ExecutionException {
-                return q.receive();
+            public synchronized Machine get() throws InterruptedException, ExecutionException {
+                if (done) {
+                    return result;
+                }
+
+                result = q.receive();
+                done = true;
+                return result;
             }
 
             @Override
-            public Machine get(long l, TimeUnit timeUnit) throws InterruptedException, ExecutionException, TimeoutException {
-                return q.receive(l, timeUnit);
+            public synchronized Machine get(long l, TimeUnit timeUnit) throws InterruptedException, ExecutionException, TimeoutException {
+                if (done) {
+                    return result;
+                }
+
+                Machine r = q.receive(l, timeUnit);
+
+                if (r != null) {
+                    result = r;
+                    done = true;
+                    return result;
+                }
+
+                if (q.closed()) {
+                    done = true;
+                }
+
+                return null;
             }
         };
     }

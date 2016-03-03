@@ -4,52 +4,66 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 /**
- * This class is intended to work just like
+ * This class is intended to work similar to the chan type in golang.
  *
  * Created by Daniel Krawisz on 3/3/16.
  */
 public class Chan<X> implements ReceiveChan<X>, SendChan<X> {
-    volatile boolean closed = false;
-    LinkedBlockingQueue<X> queue = new LinkedBlockingQueue<>();
+    private class Message {
+        public X x;
 
-    @Override
-    public X receive() {
-        if (closed && queue.size() == 0) {
-            return null;
+        Message() {
+            x = null;
         }
 
-        try {
-            return queue.take();
-        } catch (InterruptedException e) {
-            close();
-            return null;
+        Message(X x) {
+            if (x == null) {
+                throw new NullPointerException();
+            }
+            this.x = x;
         }
     }
 
-    @Override
-    public X receive(long l, TimeUnit u) {
-        if (closed && queue.size() == 0) {
-            return null;
+    boolean sendClosed = false;
+    boolean receiveClosed = false;
+    LinkedBlockingQueue<Message> queue = new LinkedBlockingQueue<>();
+
+    private X receiveMessage(Message m) {
+        if (m.x == null) {
+            receiveClosed = true;
         }
 
-        try {
-            return queue.poll(l, u);
-        } catch (InterruptedException e) {
-            close();
-            return null;
-        }
+        return m.x;
     }
 
     @Override
-    public boolean send(X x) {
-        if (closed) {
-            return false;
+    public synchronized X receive() throws InterruptedException {
+        if (receiveClosed) {
+            return null;
         }
 
-        try {
-            queue.put(x);
-        } catch (InterruptedException e) {
-            close();
+        return receiveMessage(queue.take());
+    }
+
+    @Override
+    public synchronized X receive(long l, TimeUnit u) throws InterruptedException {
+        if (receiveClosed) {
+            return null;
+        }
+
+        Message m = queue.poll(l, u);
+        if (m == null) {
+            return null;
+        }
+        return receiveMessage(m);
+    }
+
+    private boolean sendMessage(Message x) {
+        boolean sent = queue.offer(x);
+
+        if (!sent) {
+            receiveClosed = true;
+            sendClosed = true;
             return false;
         }
 
@@ -57,12 +71,24 @@ public class Chan<X> implements ReceiveChan<X>, SendChan<X> {
     }
 
     @Override
-    public synchronized void close() {
-        closed = true;
+    public boolean send(X x) {
+        if (x == null) {
+            throw new NullPointerException();
+        }
+
+        return !sendClosed && sendMessage(new Message(x));
+
+    }
+
+    @Override
+    public void close() {
+        sendClosed = true;
+
+        sendMessage(new Message());
     }
 
     @Override
     public boolean closed() {
-        return closed;
+        return receiveClosed;
     }
 }

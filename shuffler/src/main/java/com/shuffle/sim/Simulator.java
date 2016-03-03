@@ -72,7 +72,7 @@ public final class Simulator {
         }
 
         public void deliver(SignedPacket packet) throws InterruptedException {
-            inbox.send(packet);
+            boolean sent = inbox.send(packet);
         }
     }
 
@@ -120,9 +120,7 @@ public final class Simulator {
         try {
             return wait.get();
         } catch (InterruptedException | ExecutionException e) {
-            e.printStackTrace();
+            return null;
         }
-
-        return null;
     }
 }

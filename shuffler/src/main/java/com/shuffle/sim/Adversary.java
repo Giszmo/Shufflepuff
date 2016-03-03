@@ -31,7 +31,6 @@ public class Adversary {
 
     private final SessionIdentifier session;
     private final CoinShuffle shuffle;
-    private final Machine machine;
     private final Network network;
     private final SigningKey sk;
     private final SortedSet<VerificationKey> players;
@@ -42,10 +41,7 @@ public class Adversary {
             long amount,
             SigningKey sk,
             SortedSet<VerificationKey> players,
-            Coin coin,
-            Transaction t,
             CoinShuffle shuffle,
-            Machine machine,
             Network network) {
         this.session = session;
         this.amount = amount;
@@ -53,7 +49,6 @@ public class Adversary {
         this.network = network;
         this.players = players;
         this.shuffle = shuffle;
-        this.machine = machine;
     }
 
     public SessionIdentifier session() {
@@ -81,6 +76,9 @@ public class Adversary {
             }
 
             private Summable.SummableElement<Map<SigningKey, Machine>> g(Machine m) {
+                if (m == null) {
+                    return null;
+                }
                 return new SummableMap<SigningKey, Machine>(sk, m);
             }
 
@@ -95,10 +93,6 @@ public class Adversary {
             }
 
         };
-    }
-
-    public Phase currentPhase() {
-        return machine.phase();
     }
 
     public SigningKey identity() {

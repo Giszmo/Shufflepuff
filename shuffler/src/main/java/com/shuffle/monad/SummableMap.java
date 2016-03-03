@@ -25,6 +25,10 @@ public class SummableMap<X, Y> implements Summable.SummableElement<Map<X, Y>> {
 
     @Override
     public Summable.SummableElement<Map<X, Y>> plus(Summable.SummableElement<Map<X, Y>> x) {
+        if (x == null) {
+            return this;
+        }
+
         if (!(x instanceof SummableMap)) {
             return null;
         }

@@ -176,24 +176,28 @@ public class Player implements Runnable {
     }
 
     void report() {
-        Machine machine = msg.receive();
-        stream.println("Protocol has started.");
-        Phase phase = Phase.Uninitiated;
+        try {
+            Machine machine = msg.receive();
+            stream.println("Protocol has started.");
+            Phase phase = Phase.Uninitiated;
 
-        while (true) {
-            Phase next = machine.phase();
-            if (next != phase) {
-                stream.println("Protocol enters phase " + next.toString());
-                phase = next;
+            while (true) {
+                Phase next = machine.phase();
+                if (next != phase) {
+                    stream.println("Protocol enters phase " + next.toString());
+                    phase = next;
 
-                if (phase == Phase.Completed || phase == Phase.Blame) {
-                    break;
+                    if (phase == Phase.Completed || phase == Phase.Blame) {
+                        break;
+                    }
                 }
             }
-        }
 
-        // Wait until the other thread signals us to finish.
-        msg.receive() ;
+            // Wait until the other thread signals us to finish.
+            msg.receive();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     private Machine play() {

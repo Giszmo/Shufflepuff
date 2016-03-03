@@ -164,7 +164,6 @@ public class InitialState {
             }
 
             CoinShuffle shuffle;
-            Machine machine = new Machine(session, amount, sk, keys);
 
             if (equivocateAnnouncement != null && equivocateAnnouncement.length > 0) {
                 shuffle = MaliciousMachine.announcementEquivocator(messages, crypto, coin, fromSet(keys, equivocateAnnouncement));
@@ -180,7 +179,7 @@ public class InitialState {
                 shuffle = new CoinShuffle(messages, crypto, coin);
             }
 
-            return new Adversary(session, amount, sk, keys, coin, doubleSpendTrans, shuffle, machine, network);
+            return new Adversary(session, amount, sk, keys, shuffle, network);
         }
 
         public Reason maliciousBehavior() {

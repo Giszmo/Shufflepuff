@@ -120,7 +120,8 @@ public class TestConnect {
 
             Map<Integer, Network> map = new HashMap<>();
             map.put(me, net);
-            return new SummableMap<>(map);
+            this.net = new SummableMap<>(map);
+            return this.net;
         }
 
         @Override
@@ -133,8 +134,11 @@ public class TestConnect {
                 return null;
             }
 
-            net = getMap(netChan.receive());
-            return net;
+            try {
+                return getMap(netChan.receive());
+            } catch (InterruptedException e) {
+                return null;
+            }
         }
 
         @Override
@@ -148,8 +152,7 @@ public class TestConnect {
                 return null;
             }
 
-            net = getMap(netChan.receive(l, timeUnit));
-            return net;
+            return getMap(netChan.receive(l, timeUnit));
         }
     }
 
