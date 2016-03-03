@@ -4,15 +4,13 @@ import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.monad.NaturalSummableFuture;
-import com.shuffle.monad.Summable;
 import com.shuffle.monad.SummableFuture;
 import com.shuffle.monad.SummableFutureZero;
-import com.shuffle.monad.SummableMap;
+import com.shuffle.chan.Chan;
 import com.shuffle.protocol.InvalidImplementationError;
 import com.shuffle.protocol.Machine;
 import com.shuffle.protocol.MessageFactory;
 import com.shuffle.protocol.Network;
-import com.shuffle.protocol.SessionIdentifier;
 import com.shuffle.protocol.SignedPacket;
 import com.shuffle.protocol.TimeoutError;
 
@@ -20,14 +18,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -44,7 +36,7 @@ public final class Simulator {
      * Created by Daniel Krawisz on 2/8/16.
      */
     private class NetworkSim implements Network {
-        final BlockingQueue<SignedPacket> inbox = new LinkedBlockingQueue<>();
+        final Chan<SignedPacket> inbox = new Chan<>();
         final Map<VerificationKey, NetworkSim> networks;
 
         NetworkSim(Map<VerificationKey, NetworkSim> networks) {
@@ -69,7 +61,7 @@ public final class Simulator {
         @Override
         public SignedPacket receive() throws TimeoutError, InterruptedException {
             for (int i = 0; i < 2; i++) {
-                SignedPacket next = inbox.poll(1, TimeUnit.SECONDS);
+                SignedPacket next = inbox.receive(1, TimeUnit.SECONDS);
 
                 if (next != null) {
                     return next;
@@ -80,7 +72,7 @@ public final class Simulator {
         }
 
         public void deliver(SignedPacket packet) throws InterruptedException {
-            inbox.put(packet);
+            inbox.send(packet);
         }
     }
 

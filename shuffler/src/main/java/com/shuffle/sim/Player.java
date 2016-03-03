@@ -10,6 +10,7 @@ import com.shuffle.p2p.Bytestring;
 import com.shuffle.p2p.Channel;
 import com.shuffle.p2p.TCPChannel;
 import com.shuffle.player.Connect;
+import com.shuffle.chan.Chan;
 import com.shuffle.protocol.CoinShuffle;
 import com.shuffle.protocol.Machine;
 import com.shuffle.protocol.Phase;
@@ -27,7 +28,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.regex.Pattern;
 
 /**
@@ -54,7 +54,7 @@ public class Player implements Runnable {
         }
     }
 
-    final LinkedBlockingQueue<Machine> msg = new LinkedBlockingQueue<>();
+    final Chan<Machine> msg = new Chan<>();
     final Executor exec;
     final Parameters param;
     final PrintStream stream;
@@ -176,7 +176,7 @@ public class Player implements Runnable {
     }
 
     void report() {
-        Machine machine = msg.poll();
+        Machine machine = msg.receive();
         stream.println("Protocol has started.");
         Phase phase = Phase.Uninitiated;
 
@@ -193,7 +193,7 @@ public class Player implements Runnable {
         }
 
         // Wait until the other thread signals us to finish.
-        msg.poll();
+        msg.receive() ;
     }
 
     private Machine play() {
@@ -223,14 +223,7 @@ public class Player implements Runnable {
     @Override
     public void run() {
         // Run the protocol and signal to the other thread when it's done.
-        Machine machine = play();
-
-        try {
-            if (machine != null) {
-                msg.put(machine);
-            }
-        } catch (InterruptedException e) {
-            return;
-        }
+        play();
+        msg.close();
     }
 }

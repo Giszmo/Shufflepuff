@@ -17,7 +17,9 @@ import java.util.Map;
  * Created by Daniel Krawisz on 3/2/16.
  */
 public class MockChannel implements Channel<Integer, Bytestring> {
+    final Map<Integer, MockChannel> knownHosts;
     Map<Integer, MockPeer.MockSession> openSessions = new HashMap<>();
+    Map<Integer, MockPeer> peers = new HashMap<>();
     MockConnection connection;
     Listener<Integer, Bytestring> listener;
 
@@ -45,15 +47,22 @@ public class MockChannel implements Channel<Integer, Bytestring> {
         }
     }
 
-    final Map<Integer, MockChannel> knownHosts;
-
     class MockPeer implements Peer<Integer, Bytestring> {
-        Integer you;
+        final Integer you;
         MockSession session;
+
+        MockPeer(Integer you) {
+            this.you = you;
+        }
 
         @Override
         public Integer identity() {
             return null;
+        }
+
+        @Override
+        public String toString() {
+            return "MockPeer[" + you + "]";
         }
 
         @Override
@@ -124,7 +133,15 @@ public class MockChannel implements Channel<Integer, Bytestring> {
 
     @Override
     public Peer<Integer, Bytestring> getPeer(Integer you) {
-        return null;
+        MockPeer peer = peers.get(you);
+
+        if (peer == null && knownHosts.containsKey(you)) {
+            peer = new MockPeer(you);
+
+            peers.put(you, peer);
+        }
+
+        return peer;
     }
 
     @Override

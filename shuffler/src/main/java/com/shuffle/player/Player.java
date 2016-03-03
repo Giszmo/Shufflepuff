@@ -6,6 +6,7 @@ import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.p2p.Channel;
+import com.shuffle.chan.Chan;
 import com.shuffle.protocol.CoinShuffle;
 import com.shuffle.protocol.Machine;
 import com.shuffle.protocol.Mailbox;
@@ -24,7 +25,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
-import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  *
@@ -85,7 +85,7 @@ public class Player<Identity, Format> {
             Marshaller<Format> marshaller,
             Map<Identity, VerificationKey> keys, // Can be null.
             Settings settings,
-            LinkedBlockingQueue<Machine> queue
+            Chan<Machine> chan
     ) {
         SessionIdentifier session = settings.session;
 
@@ -142,7 +142,7 @@ public class Player<Identity, Format> {
             // this round of the protocol.
             // TODO
 
-            Machine machine = shuffle.runProtocol(session, settings.amount, sk, validPlayers, settings.change, net, queue);
+            Machine machine = shuffle.runProtocol(session, settings.amount, sk, validPlayers, settings.change, net, chan);
 
             if (machine.exception() == null && machine.phase() != Phase.Blame) {
                 break;

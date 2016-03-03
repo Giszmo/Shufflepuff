@@ -11,6 +11,8 @@ import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.chan.Chan;
+import com.shuffle.chan.SendChan;
 import com.shuffle.protocol.blame.Blame;
 import com.shuffle.protocol.blame.BlameException;
 import com.shuffle.protocol.blame.Matrix;
@@ -34,7 +36,6 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -986,9 +987,9 @@ public class CoinShuffle {
             SortedSet<VerificationKey> players, // The set of players, sorted alphabetically by address.
             Address change, // Change address. (can be null)
             Network network, // The network that connects us to the other players.
-            // If this is not null, the machine is put in this queue so that another thread can
+            // If this is not null, the machine is put in this channel so that another thread can
             // query the phase as it runs.
-            LinkedBlockingQueue<Machine> queue
+            SendChan<Machine> queue
     ) {
         if (amount <= 0) {
             throw new IllegalArgumentException();
@@ -998,7 +999,7 @@ public class CoinShuffle {
         }
         Machine machine = new Machine(session, amount, sk, players);
         if (queue != null) {
-            queue.add(machine);
+            queue.send(machine);
         }
 
         return run(machine, change, network);
@@ -1013,7 +1014,7 @@ public class CoinShuffle {
             final Address change, // Change address. (can be null)
             final Network network // The network that connects us to the other players.
     ) {
-        final LinkedBlockingQueue<Machine> q = new LinkedBlockingQueue<>();
+        final Chan<Machine> q = new Chan<>();
 
         if (amount <= 0) {
             throw new IllegalArgumentException();
@@ -1025,7 +1026,8 @@ public class CoinShuffle {
         Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {
-                q.add(runProtocol(session, amount, sk, players, change, network, null));
+                q.send(runProtocol(session, amount, sk, players, change, network, null));
+                q.close();
             }
         });
 
@@ -1045,17 +1047,17 @@ public class CoinShuffle {
 
             @Override
             public boolean isDone() {
-                return !q.isEmpty();
+                return q.closed();
             }
 
             @Override
             public Machine get() throws InterruptedException, ExecutionException {
-                return q.take();
+                return q.receive();
             }
 
             @Override
             public Machine get(long l, TimeUnit timeUnit) throws InterruptedException, ExecutionException, TimeoutException {
-                return q.poll(l, timeUnit);
+                return q.receive(l, timeUnit);
             }
         };
     }

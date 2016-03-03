@@ -8,6 +8,7 @@ import com.shuffle.p2p.Connection;
 import com.shuffle.p2p.Peer;
 import com.shuffle.p2p.Receiver;
 import com.shuffle.p2p.Session;
+import com.shuffle.chan.Chan;
 import com.shuffle.protocol.FormatException;
 import com.shuffle.protocol.InvalidImplementationError;
 import com.shuffle.protocol.SignedPacket;
@@ -18,7 +19,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -97,6 +97,9 @@ public class Connect<Identity> {
         private Peers() { }
 
         public void add(Peer<Identity, Bytestring> peer) {
+            if (peer == null) {
+                throw new NullPointerException();
+            }
             peers.add(peer);
         }
 
@@ -116,6 +119,11 @@ public class Connect<Identity> {
 
         synchronized boolean remove(Peer<Identity, Bytestring> peer) {
             return peers.remove(peer);
+        }
+
+        @Override
+        public String toString() {
+            return peers.toString();
         }
     }
 
@@ -154,6 +162,9 @@ public class Connect<Identity> {
         int i = 0;
         for (Identity identity : keys.keySet()) {
             Peer<Identity, Bytestring> peer = channel.getPeer(identity);
+            if (peer == null) {
+                throw new NullPointerException();
+            }
             p[i] = peer;
             i++;
         }
@@ -163,24 +174,14 @@ public class Connect<Identity> {
         for (int rmax = size - 1; rmax >= 0; rmax--) {
             int rand = crypto.getRandom(rmax);
 
-            int r = 0;
-            while (r < rand) {
-                i++;
-                if(i >= size) {
-                    i = 0;
-                }
-                if(p[i] != null) {
-                    r++;
-                }
-            }
+            peers.add(p[rand]);
 
-            peers.add(p[i]);
+            p[rand] = p[rmax];
         }
 
         final Retries retries = new Retries();
 
         while(true) {
-
             Peer<Identity, Bytestring> peer = peers.peek();
 
             if (peer == null) {
@@ -232,7 +233,7 @@ public class Connect<Identity> {
 
         final Map<VerificationKey, Session<Identity, Bytestring>> players;
         final Marshaller<Bytestring> marshall;
-        final LinkedBlockingQueue<Bytestring> received = new LinkedBlockingQueue<>();
+        final Chan<Bytestring> received = new Chan<>();
         final int timeout;
 
         Network(Map<VerificationKey, Session<Identity, Bytestring>> players,
@@ -249,7 +250,7 @@ public class Connect<Identity> {
 
         @Override
         public void receive(Bytestring bytestring) {
-            received.add(bytestring);
+            received.send(bytestring);
         }
 
         // Network.
@@ -270,7 +271,7 @@ public class Connect<Identity> {
 
         @Override
         public SignedPacket receive() throws TimeoutError, InvalidImplementationError, InterruptedException, FormatException {
-            Bytestring str = received.poll(timeout, TimeUnit.SECONDS);
+            Bytestring str = received.receive(timeout, TimeUnit.SECONDS);
             return marshall.unmarshall(str);
         }
     }
