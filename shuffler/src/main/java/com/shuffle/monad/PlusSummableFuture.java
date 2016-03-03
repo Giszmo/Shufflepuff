@@ -53,7 +53,7 @@ public class PlusSummableFuture<X> extends SummableFutureAbstract<X> {
     }
 
     @Override
-    public Summable.SummableElement<X> getSummable(long l, TimeUnit t) throws InterruptedException, ExecutionException {
+    public Summable.SummableElement<X> getSummable(long l, TimeUnit t) throws InterruptedException, ExecutionException, TimeoutException {
         // TODO: this is not correct.
         return fore.getSummable(l, t).plus(aft.getSummable(l, t));
     }

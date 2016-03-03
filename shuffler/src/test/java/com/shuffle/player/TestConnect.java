@@ -6,6 +6,7 @@ import com.shuffle.mock.MockCrypto;
 import com.shuffle.mock.MockMarshaller;
 import com.shuffle.monad.NaturalSummableFuture;
 import com.shuffle.monad.Summable;
+import com.shuffle.monad.SummableFuture;
 import com.shuffle.monad.SummableFutureZero;
 import com.shuffle.monad.SummableMap;
 import com.shuffle.p2p.Bytestring;
@@ -135,7 +136,7 @@ public class TestConnect {
         }
 
         Map<Integer, MockChannel> knownHosts = new HashMap<>();
-        Summable.SummableElement<Map<Integer, Network>> future = new SummableFutureZero<Map<Integer, Network>>();
+        SummableFuture<Map<Integer, Network>> future = new SummableFutureZero<Map<Integer, Network>>();
         for (int i = 1; i <= n; i++) {
             MockChannel channel = new MockChannel(i, knownHosts);
             knownHosts.put(i, new MockChannel(i, knownHosts));
@@ -145,10 +146,18 @@ public class TestConnect {
             pKeys.putAll(keys);
             pKeys.remove(i);
 
-            future = future.plus(new NaturalSummableFuture<>(new ConnectFuture(i, new Connect<Integer>(new MockCrypto(i + seed)), channel, pKeys)));
+            future = future.plus(new NaturalSummableFuture<>(
+                    new ConnectFuture(i, new Connect<Integer>(new MockCrypto(i + seed)), channel, pKeys)));
         }
 
-        // TODO collect all the outputs.
+        Map<Integer, Network> nets = null;
+        try {
+            nets = future.get();
+        } catch (InterruptedException | ExecutionException e) {
+            e.printStackTrace();
+        }
+
+
 
         return true;
     }

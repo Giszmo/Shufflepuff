@@ -41,6 +41,11 @@ public class SummableFutureZero<X> extends Summable.Zero<X> implements SummableF
     }
 
     @Override
+    public SummableFuture<X> plus(SummableFuture<X> x) {
+        return x;
+    }
+
+    @Override
     public Summable.SummableElement<X> getSummable() throws InterruptedException, ExecutionException {
         return this;
     }

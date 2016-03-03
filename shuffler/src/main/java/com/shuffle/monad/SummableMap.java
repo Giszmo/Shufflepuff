@@ -9,6 +9,11 @@ import java.util.Map;
 public class SummableMap<X, Y> implements Summable.SummableElement<Map<X, Y>> {
     Map<X, Y> map;
 
+    public SummableMap(X x, Y y) {
+        map = new HashMap<>();
+        map.put(x, y);
+    }
+
     public SummableMap(Map<X, Y> m) {
         map = m;
     }

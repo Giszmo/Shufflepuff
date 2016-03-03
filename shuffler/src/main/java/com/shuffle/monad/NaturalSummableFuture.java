@@ -6,6 +6,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
+ * Transforms a future of a summable into a summable future.
+ *
  * Created by Daniel Krawisz on 3/2/16.
  */
 public class NaturalSummableFuture<X> extends SummableFutureAbstract<X> {

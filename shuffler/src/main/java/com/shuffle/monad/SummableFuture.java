@@ -9,6 +9,7 @@ import java.util.concurrent.TimeoutException;
  * Created by Daniel Krawisz on 3/2/16.
  */
 public interface SummableFuture<X> extends Summable.SummableElement<X>, Future<X> {
+    SummableFuture<X> plus(SummableFuture<X> x);
     Summable.SummableElement<X> getSummable() throws InterruptedException, ExecutionException;
     Summable.SummableElement<X> getSummable(long l, TimeUnit t) throws InterruptedException, ExecutionException, TimeoutException;
 }

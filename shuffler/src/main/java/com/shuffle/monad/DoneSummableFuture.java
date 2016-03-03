@@ -5,7 +5,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
- * Created by cosmos on 3/2/16.
+ * A summable future that is already done.
+ *
+ * Created by Daniel Krawisz on 3/2/16.
  */
 public class DoneSummableFuture<X> extends SummableFutureAbstract<X> {
     final X x;

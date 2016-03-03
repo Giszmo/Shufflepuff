@@ -3,6 +3,11 @@ package com.shuffle.sim;
 import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.monad.NaturalSummableFuture;
+import com.shuffle.monad.Summable;
+import com.shuffle.monad.SummableFuture;
+import com.shuffle.monad.SummableFutureZero;
+import com.shuffle.monad.SummableMap;
 import com.shuffle.protocol.InvalidImplementationError;
 import com.shuffle.protocol.Machine;
 import com.shuffle.protocol.MessageFactory;
@@ -112,32 +117,20 @@ public final class Simulator {
     private static synchronized Map<SigningKey, Machine> runSimulation(
             Map<SigningKey, Adversary> machines)  {
 
-        Map<SigningKey, Future<Machine>> wait = new HashMap<>();
-        Map<SigningKey, Machine> results = new HashMap<>();
+        // Create a future for the set of entries.
+        SummableFuture<Map<SigningKey, Machine>> wait = new SummableFutureZero<Map<SigningKey, Machine>>();
 
-        // Start the simulation.
-        for (Map.Entry<SigningKey, Adversary> in : machines.entrySet()) {
-            wait.put(in.getKey(), in.getValue().turnOn());
+        // Start the simulations.
+        for (Adversary in : machines.values()) {
+            wait = wait.plus(new NaturalSummableFuture<Map<SigningKey, Machine>>(in.turnOn()));
         }
 
-        while (wait.size() != 0) {
-            Iterator<Map.Entry<SigningKey, Future<Machine>>> i = wait.entrySet().iterator();
-            while (i.hasNext()) {
-                Map.Entry<SigningKey, Future<Machine>> entry = i.next();
-                Future<Machine> future = entry.getValue();
-                if (future.isDone()) {
-                    try {
-                        Machine machine = future.get();
-                        results.put(entry.getKey(), machine);
-                    } catch (InterruptedException | ExecutionException e) {
-                        e.printStackTrace();
-                    }
-
-                    i.remove();
-                }
-            }
+        try {
+            return wait.get();
+        } catch (InterruptedException | ExecutionException e) {
+            e.printStackTrace();
         }
 
-        return results;
+        return null;
     }
 }

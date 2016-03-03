@@ -11,4 +11,12 @@ public abstract class SummableFutureAbstract<X> implements SummableFuture<X> {
 
         return new PlusSummableFuture<X>(this, (SummableFuture<X>) x);
     }
+
+    public SummableFuture<X> plus(SummableFuture<X> x) {
+        if (!((x instanceof NaturalSummableFuture) || (x instanceof PlusSummableFuture))) {
+            return null;
+        }
+
+        return new PlusSummableFuture<X>(this, (SummableFuture<X>) x);
+    }
 }
