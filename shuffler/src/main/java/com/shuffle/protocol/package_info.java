@@ -5,7 +5,7 @@
  *
  * The purpose of this package is only to define the CoinShuffle protocol in terms of
  * primitive cryptographic operations, interactions with other players, and interactions with the
- * Bitcoin network. It follows the paper referenced above, and it assumes all relevant checks are
+ * BitcoinCrypto network. It follows the paper referenced above, and it assumes all relevant checks are
  * performed correctly by the underlying implementations, exactly as would a mathematical paper
  * written to exposit the protocol.
  *

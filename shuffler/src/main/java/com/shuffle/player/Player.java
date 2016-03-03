@@ -63,7 +63,7 @@ public class Player<Identity, Format> {
             SigningKey sk,
             MessageFactory messages, // Object that knows how to create and copy messages.
             Crypto crypto, // Connects to the cryptography.
-            Coin coin // Connects us to the Bitcoin or other cryptocurrency netork.
+            Coin coin // Connects us to the BitcoinCrypto or other cryptocurrency netork.
     ) {
         if (sk == null || crypto == null || coin == null || messages == null) {
             throw new NullPointerException();
