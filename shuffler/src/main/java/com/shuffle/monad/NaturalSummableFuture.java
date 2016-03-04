@@ -19,7 +19,8 @@ public class NaturalSummableFuture<X> extends SummableFutureAbstract<X> {
 
     @Override
     public Summable.SummableElement<X> getSummable() throws InterruptedException, ExecutionException {
-        return f.get();
+        Summable.SummableElement<X> z = f.get();
+        return z;
     }
 
     @Override
@@ -44,16 +45,28 @@ public class NaturalSummableFuture<X> extends SummableFutureAbstract<X> {
 
     @Override
     public X get() throws InterruptedException, ExecutionException {
-        return null;
+        Summable.SummableElement<X> r = getSummable();
+        if (r == null) {
+            return null;
+        }
+        return r.value();
     }
 
     @Override
     public X get(long l, TimeUnit timeUnit) throws InterruptedException, ExecutionException, TimeoutException {
-        return null;
+        Summable.SummableElement<X> r = getSummable(l, timeUnit);
+        if (r == null) {
+            return null;
+        }
+        return r.value();
     }
 
     @Override
     public X value() {
-        return null;
+        try {
+            return get();
+        } catch (InterruptedException | ExecutionException e) {
+            return null;
+        }
     }
 }

@@ -98,10 +98,7 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring> {
     OpenSessions openSessions = null;
 
     // Class definition for representation of a particular tcppeer.
-    public class TCPPeer implements Peer<InetSocketAddress, com.shuffle.p2p.Bytestring>{
-        InetSocketAddress identity;
-
-        Receiver<Bytestring> receiver;
+    public class TCPPeer extends Peer<InetSocketAddress, com.shuffle.p2p.Bytestring>{
 
         List<Session<InetSocketAddress, com.shuffle.p2p.Bytestring>> history;
 
@@ -109,12 +106,13 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring> {
 
         // Constructor for initiating a connection.
         public TCPPeer(InetSocketAddress identity) {
-            this.identity = identity;
+            super(identity);
         }
 
         // Constructor for a connection that is initiated by a remote peer.
+        // TODO it would make more sense to have a socket rather than a session here.
         public TCPPeer(InetSocketAddress identity, TCPSession session) {
-            this.identity = identity;
+            super(identity);
             this.currentSession = session;
         }
 
@@ -123,12 +121,8 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring> {
             return this;
         }
 
-        @Override
-        public InetSocketAddress identity() {
-            return identity;
-        }
-
         TCPPeer.TCPSession newSession() {
+            InetSocketAddress identity = identity();
 
             try {
                 return new TCPSession(new Socket(identity.getAddress(), identity.getPort()));
@@ -143,7 +137,7 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring> {
                 return null;
             }
 
-            TCPSession session = openSessions.putNewSession(identity, this);
+            TCPSession session = openSessions.putNewSession(identity(), this);
 
             if (session == null) {
                 return null;
@@ -188,7 +182,12 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring> {
                 socket = null;
                 in = null;
                 TCPPeer.this.currentSession = null;
-                openSessions.remove(TCPPeer.this.identity);
+                openSessions.remove(TCPPeer.this.identity());
+            }
+
+            @Override
+            public boolean closed() {
+                return socket == null || socket.isClosed();
             }
 
             @Override

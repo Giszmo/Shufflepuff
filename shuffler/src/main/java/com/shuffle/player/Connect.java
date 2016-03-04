@@ -15,6 +15,7 @@ import com.shuffle.protocol.SignedPacket;
 import com.shuffle.protocol.TimeoutError;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
@@ -135,7 +136,7 @@ public class Connect<Identity> {
             Map<Identity, VerificationKey> keys,
             Marshaller<Bytestring> marshall,
             int timeout,
-            int maxRetries) throws IOException {
+            int maxRetries) throws IOException, InterruptedException {
 
         if (connection != null) {
             return null;
@@ -181,16 +182,22 @@ public class Connect<Identity> {
 
         final Retries retries = new Retries();
 
+        int l = 0;
         while(true) {
             Peer<Identity, Bytestring> peer = peers.peek();
-
             if (peer == null) {
                 break;
+            }
+
+            if (peer.open()) {
+                peers.remove(peer);
+                continue;
             }
 
             Session<Identity, Bytestring> session = peer.openSession(network);
 
             if (session != null) {
+                peers.remove(peer);
                 listener.newSession(session);
                 continue;
             }
@@ -198,13 +205,14 @@ public class Connect<Identity> {
             int r = retries.increment(peer);
 
             if(r > maxRetries) {
+                // Maximum number of retries has prevented us from making all connections.
+                // TODO In some instances, it should be possible to run coin shuffle with fewer
+                // players, so we should still return the network object.
                 return null;
             }
 
-            // It is possible that next could be null if the list had only 1 element
-            // and the peer corresponding to it initiated a connection to us.
-            // It is also possible that next could be not null, but not equal to peer. It doesn't
-            // matter if it is; we'll get to it eventually.
+            // We were not able to connect to this peer this time,
+            // so we move on to the next one for now.
             if (!peers.rotate()) {
                 break;
             }

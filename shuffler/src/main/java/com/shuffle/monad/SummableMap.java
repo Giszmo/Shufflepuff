@@ -4,6 +4,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
+ * Two maps can be summed by creating a third map having the values of both.
+ *
  * Created by Daniel Krawisz on 3/2/16.
  */
 public class SummableMap<X, Y> implements Summable.SummableElement<Map<X, Y>> {
@@ -39,5 +41,10 @@ public class SummableMap<X, Y> implements Summable.SummableElement<Map<X, Y>> {
         m.putAll(map);
         m.putAll(w.value());
         return new SummableMap<X, Y>(m);
+    }
+
+    @Override
+    public String toString() {
+        return map.toString();
     }
 }

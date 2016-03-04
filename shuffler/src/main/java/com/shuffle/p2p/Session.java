@@ -14,6 +14,9 @@ public interface Session<Identity, Message> {
     // Close the session.
     void close();
 
+    // Whether the session has been closed.
+    boolean closed();
+
     // The peer corresponding to this session.
     Peer<Identity, Message> peer();
 }

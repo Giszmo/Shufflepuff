@@ -216,7 +216,7 @@ public class Player implements Runnable {
                     connect.connect(tcp, param.keys, new MockMarshaller(), 1, 3),
                     msg
             );
-        } catch (IOException e) {
+        } catch (IOException | InterruptedException e) {
             // TODO handle these problems appropriately.
             return null;
         } finally {

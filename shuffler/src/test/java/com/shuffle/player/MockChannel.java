@@ -1,6 +1,5 @@
 package com.shuffle.player;
 
-import com.shuffle.p2p.Bytestring;
 import com.shuffle.p2p.Channel;
 import com.shuffle.p2p.Connection;
 import com.shuffle.p2p.Listener;
@@ -16,19 +15,18 @@ import java.util.Map;
  *
  * Created by Daniel Krawisz on 3/2/16.
  */
-public class MockChannel implements Channel<Integer, Bytestring> {
-    final Map<Integer, MockChannel> knownHosts;
-    Map<Integer, MockPeer.MockSession> openSessions = new HashMap<>();
+public class MockChannel<X> implements Channel<Integer, X> {
+    final Map<Integer, MockChannel<X>> knownHosts;
     Map<Integer, MockPeer> peers = new HashMap<>();
     MockConnection connection;
-    Listener<Integer, Bytestring> listener;
+    Listener<Integer, X> listener;
 
-    public MockChannel(Integer me, Map<Integer, MockChannel> knownHosts) {
+    public MockChannel(Integer me, Map<Integer, MockChannel<X>> knownHosts) {
         this.knownHosts = knownHosts;
         this.me = me;
     }
 
-    class MockConnection implements Connection<Integer, Bytestring> {
+    class MockConnection implements Connection<Integer, X> {
 
         @Override
         public void close() {
@@ -36,94 +34,102 @@ public class MockChannel implements Channel<Integer, Bytestring> {
                 return;
             }
 
-            for(MockPeer.MockSession session : openSessions.values()) {
-                session.close();
+            for(MockPeer peer : peers.values()) {
+                peer.close();
             }
 
-            openSessions.clear();
+            peers.clear();
 
             connection = null;
             listener = null;
         }
     }
 
-    class MockPeer implements Peer<Integer, Bytestring> {
-        final Integer you;
-        MockSession session;
+    public class MockPeer extends Peer<Integer, X> {
 
         MockPeer(Integer you) {
-            this.you = you;
+            super(you);
         }
 
-        @Override
-        public Integer identity() {
-            return null;
+        Session<Integer, X> getSession() {
+            return currentSession;
+        }
+
+        void setSession(Session<Integer, X> session) {
+            currentSession = session;
         }
 
         @Override
         public String toString() {
-            return "MockPeer[" + you + "]";
+            return "MockPeer[" + identity() + "]";
         }
 
         @Override
-        public Session<Integer, Bytestring> openSession(Receiver<Bytestring> receiver) {
-            if (session != null) {
+        // Open a session with a mock remote peer. Include a function which is to be
+        // called when a X is received.
+        public synchronized Session<Integer, X> openSession(Receiver<X> receiver) throws InterruptedException {
+            // if there is already an open session, fail.
+            if (currentSession != null) {
                 return null;
             }
 
-            MockChannel remote = knownHosts.get(you);
+            Integer identity = identity();
+
+            // Do we know this remote peer?
+            MockChannel<X> remote = knownHosts.get(identity);
             if (remote == null) {
                 return null;
             }
 
-            MockSession session = new MockSession();
-
-            session.receiver = remote.connect(session);
-
-            if (session.receiver == null) {
+            if (!equals(peers.get(identity))) {
                 return null;
             }
 
-            this.session = session;
+            // Create a new session and register it with the remote peer.
+            MockSession session = this.new MockSession(remote.connect(me, receiver));
+
+            // If the session is not open, the connection didn't work for some reason.
+            if (session.closed()) {
+                return null;
+            }
+
+            // Set the new session as the officially connected one for this peer.
+            this.currentSession = session;
             return session;
         }
 
-        void closeSession() {
-            if (session == null) {
-                return;
-            }
+        public class MockSession implements Session<Integer, X> {
+            Receiver<X> receiver;
+            boolean closed;
 
-            session = null;
-            openSessions.remove(you);
-        }
-
-        class MockSession implements Session<Integer, Bytestring> {
-            Receiver<Bytestring> receiver;
-
-            MockSession() { }
-
-            MockSession(Receiver<Bytestring> receiver) {
+            MockSession(Receiver<X> receiver) {
                 this.receiver = receiver;
+                closed = receiver == null;
             }
 
             @Override
-            public boolean send(Bytestring bytestring) {
+            public boolean send(X X) {
                 if (receiver == null) {
                     return false;
                 }
 
-                receiver.receive(bytestring);
+                receiver.receive(X);
                 return true;
             }
 
             @Override
             public void close() {
-                closeSession();
-                receiver = null;
+                closed = true;
+                MockPeer.this.currentSession = null;
             }
 
             @Override
-            public Peer<Integer, Bytestring> peer() {
+            public boolean closed() {
+                return closed;
+            }
+
+            @Override
+            public Peer<Integer, X> peer() {
                 return MockPeer.this;
             }
         }
@@ -132,7 +138,12 @@ public class MockChannel implements Channel<Integer, Bytestring> {
     final Integer me;
 
     @Override
-    public Peer<Integer, Bytestring> getPeer(Integer you) {
+    public Peer<Integer, X> getPeer(Integer you) {
+        // Can't establish a connection to myself.
+        if (you.equals(me)) {
+            return null;
+        }
+
         MockPeer peer = peers.get(you);
 
         if (peer == null && knownHosts.containsKey(you)) {
@@ -145,7 +156,7 @@ public class MockChannel implements Channel<Integer, Bytestring> {
     }
 
     @Override
-    public Connection<Integer, Bytestring> open(Listener<Integer, Bytestring> listener) {
+    public Connection<Integer, X> open(Listener<Integer, X> listener) {
         if (this.listener != null) {
             return null;
         }
@@ -155,11 +166,26 @@ public class MockChannel implements Channel<Integer, Bytestring> {
         return this.connection;
     }
 
-    Receiver<Bytestring> connect(Session<Integer, Bytestring> session) {
-        if (listener == null) {
+    Receiver<X> connect(Integer you, Receiver<X> receiver) throws InterruptedException {
+        Thread.sleep(100);
+
+        if (listener == null || receiver == null) {
             return null;
         }
 
-        return listener.newSession(session);
+        // Do we know this remote peer?
+        MockPeer peer = (MockPeer) getPeer(you);
+        if (peer == null) {
+            return null;
+        }
+
+        // An open session already exists.
+        if (peer.open()) {
+            return null;
+        }
+
+        peer.setSession(peer.new MockSession(receiver));
+
+        return listener.newSession(peer.getSession());
     }
 }

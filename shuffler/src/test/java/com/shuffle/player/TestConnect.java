@@ -68,7 +68,7 @@ public class TestConnect {
                 if (network != null) {
                     net.send(network);
                 }
-            } catch (IOException e) {
+            } catch (IOException | InterruptedException e) {
                 e.printStackTrace();
             }
             net.close();
@@ -125,7 +125,7 @@ public class TestConnect {
         }
 
         @Override
-        public SummableMap<Integer, Network> get() {
+        public SummableMap<Integer, Network> get() throws InterruptedException {
             if (net != null) {
                 return net;
             }
@@ -134,11 +134,7 @@ public class TestConnect {
                 return null;
             }
 
-            try {
-                return getMap(netChan.receive());
-            } catch (InterruptedException e) {
-                return null;
-            }
+            return getMap(netChan.receive());
         }
 
         @Override
@@ -166,9 +162,9 @@ public class TestConnect {
         Crypto crypto = new MockCrypto(seed);
 
         // Create the set of known hosts for each player.
-        Map<Integer, MockChannel> knownHosts = new ConcurrentHashMap<>();
+        Map<Integer, MockChannel<Bytestring>> knownHosts = new ConcurrentHashMap<>();
         for (int i = 1; i <= n; i++) {
-            MockChannel channel = new MockChannel(i, knownHosts);
+            MockChannel<Bytestring> channel = new MockChannel<Bytestring>(i, knownHosts);
             knownHosts.put(i, channel);
         }
 
@@ -180,6 +176,7 @@ public class TestConnect {
 
         // Construct the future which represents all players trying to connect to one another.
         SummableFuture<Map<Integer, Network>> future = new SummableFutureZero<Map<Integer, Network>>();
+
         for (int i = 1; i <= n; i++) {
             // Make new set of keys (missing the one corresponding to this node).
             Map<Integer, VerificationKey> pKeys = new HashMap<>();
