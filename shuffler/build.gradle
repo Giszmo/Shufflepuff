@@ -11,6 +11,7 @@ dependencies {
     compile 'com.madgag.spongycastle:core:1.53.0.0'
     compile 'org.apache.logging.log4j:log4j-api:2.5'
     compile 'org.apache.logging.log4j:log4j-core:2.5'
+    compile 'org.json:json:20160212'
     compile 'com.googlecode.json-simple:json-simple:1.1.1'
 }
 
