@@ -1,4 +1,4 @@
-package com.shuffle.bitcoin;
+package com.shuffle.bitcoin.blockchain;
 
 import java.net.URL;
 import java.io.BufferedReader;

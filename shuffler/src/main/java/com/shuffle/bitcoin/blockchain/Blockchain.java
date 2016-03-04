@@ -1,4 +1,4 @@
-package com.shuffle.bitcoin;
+package com.shuffle.bitcoin.blockchain;
 
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.store.BlockStoreException;
