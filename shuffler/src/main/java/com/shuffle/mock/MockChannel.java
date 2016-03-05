@@ -1,4 +1,4 @@
-package com.shuffle.player;
+package com.shuffle.mock;
 
 import com.shuffle.p2p.Channel;
 import com.shuffle.p2p.Connection;

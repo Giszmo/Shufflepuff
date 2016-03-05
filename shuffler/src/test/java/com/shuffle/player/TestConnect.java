@@ -2,6 +2,7 @@ package com.shuffle.player;
 
 import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.mock.MockChannel;
 import com.shuffle.mock.MockCrypto;
 import com.shuffle.mock.MockMarshaller;
 import com.shuffle.monad.NaturalSummableFuture;

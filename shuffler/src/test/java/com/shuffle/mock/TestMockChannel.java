@@ -1,10 +1,10 @@
-package com.shuffle.player;
+package com.shuffle.mock;
 
+import com.shuffle.mock.MockChannel;
 import com.shuffle.p2p.Connection;
 import com.shuffle.p2p.Listener;
 import com.shuffle.p2p.Receiver;
 import com.shuffle.p2p.Session;
-import com.shuffle.protocol.Message;
 
 import org.junit.Assert;
 import org.junit.Test;
