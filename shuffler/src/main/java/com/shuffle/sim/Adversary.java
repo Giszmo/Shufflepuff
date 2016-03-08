@@ -6,6 +6,7 @@ import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.monad.Summable;
 import com.shuffle.monad.SummableMap;
+import com.shuffle.monad.SummableMaps;
 import com.shuffle.protocol.CoinShuffle;
 import com.shuffle.protocol.InvalidImplementationError;
 import com.shuffle.protocol.Machine;
@@ -77,7 +78,7 @@ public class Adversary {
 
             private Summable.SummableElement<Map<SigningKey, Machine>> g(Machine m) {
                 if (m == null) {
-                    return null;
+                    return new SummableMaps.Zero<SigningKey, Machine>();
                 }
                 return new SummableMap<SigningKey, Machine>(sk, m);
             }

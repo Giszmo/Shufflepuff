@@ -184,12 +184,9 @@ public class CoinShuffle {
                 }
             } catch (BlameException e) {
                 switch (e.packet.message.readBlame().reason) {
-                    case ShuffleFailure: {
+                    case ShuffleFailure:
+                    case MissingOutput: {
                         blameShuffleMisbehavior(dk);
-                        return;
-                    }
-                    case EquivocationFailure: {
-
                         return;
                     }
                     default: {
@@ -313,6 +310,7 @@ public class CoinShuffle {
             return queue;
         }
 
+        // The shuffle phase.
         Message shufflePhase(Message shuffled, Address addr_new) throws InterruptedException, BlameException, SignatureException, ValueException, FormatException {
 
             // Add our own address to the mix. Note that if me == N, ie, the last player, then no
@@ -327,6 +325,8 @@ public class CoinShuffle {
             return shuffle(shuffled.attach(encrypted));
         }
 
+        // In the broadcast phase, we have to either receive all the
+        // new addresses or send them all out.
         Deque<Address> readAndBroadcastNewAddresses(Message shuffled)
                 throws FormatException, InterruptedException,
                 SignatureException, ValueException, BlameException {
@@ -342,7 +342,9 @@ public class CoinShuffle {
             return newAddresses;
         }
 
-        Message decryptAll(Message message, DecryptionKey key, int expected) throws InvalidImplementationError, FormatException {
+        // In the shuffle phase, we have to receive a set of strings from the previous player and
+        // decrypt them all.
+        final Message decryptAll(Message message, DecryptionKey key, int expected) throws InvalidImplementationError, FormatException {
             Message decrypted = messages.make();
 
             int count = 0;
@@ -363,6 +365,7 @@ public class CoinShuffle {
             }
 
             if (addrs.size() != count || count != expected) {
+                machine.phase = Phase.Blame;
                 mailbox.broadcast(messages.make().attach(Blame.MissingOutput(players.get(N))), machine.phase);
                 return null;
             }
@@ -397,10 +400,6 @@ public class CoinShuffle {
             hashes.put(vk, equivocationCheck);
 
             if (areEqual(hashes.values())) {
-                if (mailbox.blameReceived()) {
-                    fillBlameMatrix(new Matrix());
-                }
-
                 return null;
             }
 
@@ -409,8 +408,7 @@ public class CoinShuffle {
             machine.phase = Phase.Blame;
             Queue<SignedPacket> evidence = mailbox.getPacketsByPhase(Phase.Announcement);
             evidence.addAll(mailbox.getPacketsByPhase(Phase.BroadcastOutput));
-            Message blameMessage = messages.make().attach(Blame.EquivocationFailure(evidence));
-            mailbox.broadcast(blameMessage, machine.phase);
+            mailbox.broadcast(messages.make().attach(Blame.EquivocationFailure(evidence)), machine.phase);
 
             return fillBlameMatrix(new Matrix());
         }
@@ -457,13 +455,15 @@ public class CoinShuffle {
             return fillBlameMatrix(matrix);
         }
 
-        // Some misbehavior that has occurred during the shuffle phase.
-        final private Matrix blameShuffleMisbehavior(DecryptionKey dk)
+        // Some misbehavior that has occurred during the shuffle phase and we want to
+        // find out what happened!
+        private Matrix blameShuffleMisbehavior(DecryptionKey dk)
                 throws InterruptedException,
                 FormatException,
                 ValueException,
                 ProtocolException,
                 SignatureException {
+
             // First skip to phase 4 and do an equivocation check.
             machine.phase = Phase.EquivocationCheck;
             Matrix matrix = equivocationCheck(encryptionKeys, null);
@@ -476,14 +476,14 @@ public class CoinShuffle {
             // Otherwise, there are some more things we have to check.
             machine.phase = Phase.Blame;
 
-            // Collect all packets from phase 2 and 3.
-            Message blameMessage = messages.make();
-            Queue<SignedPacket> evidence = mailbox.getPacketsByPhase(Phase.Shuffling);
-            evidence.addAll(mailbox.getPacketsByPhase(Phase.BroadcastOutput));
+            // Collect all packets from phase 2 and 3. Player 1 doesn't have to bother with this part.
+            if (me != 1) {
+                Queue<SignedPacket> evidence = mailbox.getPacketsByPhase(Phase.Shuffling);
+                evidence.addAll(mailbox.getPacketsByPhase(Phase.BroadcastOutput));
 
-            // Send them all with the decryption key.
-            blameMessage.attach(Blame.ShuffleAndEquivocationFailure(dk, evidence));
-            mailbox.broadcast(blameMessage, machine.phase);
+                // Send them all with the decryption key.
+                mailbox.broadcast(messages.make().attach(Blame.ShuffleAndEquivocationFailure(dk, evidence)), machine.phase);
+            }
 
             return fillBlameMatrix(new Matrix());
         }
@@ -496,6 +496,7 @@ public class CoinShuffle {
                 ValueException,
                 SignatureException {
             Map<VerificationKey, Queue<SignedPacket>> blameMessages = mailbox.receiveAllBlame();
+            System.out.println("Player " + me + " receives blame messages " + blameMessages.toString());
 
             // Get all hashes received in phase 4 so that we can check that they were reported correctly.
             Map<VerificationKey, Message> hashes = new HashMap<>();
@@ -586,9 +587,6 @@ public class CoinShuffle {
 
                                 break;
                             }
-                            case ShuffleFailure: {
-                                break; // Should have already been handled.
-                            }
                             case ShuffleAndEquivocationFailure: {
                                 if (decryptionKeys.containsKey(from)) {
                                     // TODO blame someone here.
@@ -624,7 +622,15 @@ public class CoinShuffle {
 
                                 break;
                             }
+                            // These should already have been handled.
+                            case MissingOutput: {
+                                break;
+                            }
+                            case ShuffleFailure: {
+                                break;
+                            }
                             default:
+                                System.out.println("Processing blame reason " + blame.reason);
                                 throw new InvalidImplementationError();
                         }
                     }
@@ -768,6 +774,7 @@ public class CoinShuffle {
             return set;
         }
 
+        // get the set of all players for this round.
         final public Set<VerificationKey> playerSet() throws CryptographyError, InvalidImplementationError {
             return playerSet(1, N);
         }
@@ -786,6 +793,10 @@ public class CoinShuffle {
                 check = check.attach(encryptionKeys.get(players.get(i)));
             }
 
+            // During a normal round of the protocol, the players have all received a
+            // new set of addresses by this point and those also need to be included. However,
+            // there is also an error case in which we don't have the new addresses yet, in which
+            // case, they are not included.
             if (newAddresses != null) {
                 for (Address address : newAddresses) {
                     check = check.attach(address);
@@ -873,7 +884,10 @@ public class CoinShuffle {
         return true;
     }
 
-    static final void readAnnouncements(Map<VerificationKey, Message> messages,
+    // In phase 1, everybody announces their new encryption keys to one another. They also
+    // optionally send change addresses to one another. This function reads that information
+    // from a message and puts it in some nice data structures.
+    static void readAnnouncements(Map<VerificationKey, Message> messages,
                            Map<VerificationKey, EncryptionKey> encryptionKeys,
                            Map<VerificationKey, Address> change) throws FormatException {
         for (Map.Entry<VerificationKey, Message> entry : messages.entrySet()) {
@@ -1026,7 +1040,14 @@ public class CoinShuffle {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                boolean sent = q.send(runProtocol(session, amount, sk, players, change, network, null));
+                try {
+                    boolean sent = q.send(runProtocol(session, amount, sk, players, change, network, null));
+                } catch (TimeoutError e) {
+                    log.error("Protocol timeout error.");
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    log.error("Exception caught: " + e.toString());
+                }
 
                 q.close();
             }

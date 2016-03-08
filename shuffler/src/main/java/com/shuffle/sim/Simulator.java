@@ -11,6 +11,7 @@ import com.shuffle.protocol.InvalidImplementationError;
 import com.shuffle.protocol.Machine;
 import com.shuffle.protocol.MessageFactory;
 import com.shuffle.protocol.Network;
+import com.shuffle.protocol.Phase;
 import com.shuffle.protocol.SignedPacket;
 import com.shuffle.protocol.TimeoutError;
 

@@ -19,7 +19,7 @@ public class SummableMaps<X, Y> implements Summable<Map<X,Y>> {
         return null;
     }
 
-    public class Zero<X, Y> extends Summable.Zero<Map<X, Y>> {
+    public static class Zero<X, Y> extends Summable.Zero<Map<X, Y>> {
 
         @Override
         public Map<X, Y> value() {

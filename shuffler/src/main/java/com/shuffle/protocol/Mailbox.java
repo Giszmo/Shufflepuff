@@ -45,10 +45,7 @@ public class Mailbox {
 
     public void broadcast(Message message, Phase phase) throws TimeoutError, CryptographyError, InvalidImplementationError {
         for (VerificationKey to : players) {
-            // Don't send a message to myself!
-            if (!to.equals(sk.VerificationKey())) {
-                send(new Packet(message, session, phase, sk.VerificationKey(), to));
-            }
+            send(new Packet(message, session, phase, sk.VerificationKey(), to));
         }
     }
 
@@ -56,8 +53,16 @@ public class Mailbox {
     public void send(Packet packet) throws TimeoutError, CryptographyError, InvalidImplementationError {
         SignedPacket signed = new SignedPacket(packet, sk.makeSignature(packet));
 
-        // Don't send anything to ourselves or to a nonexistent player.
-        if (!packet.recipient.equals(sk.VerificationKey()) && players.contains(packet.recipient)) {
+        // Don't send anything to a nonexistent player.
+        if (!players.contains(packet.recipient)) {
+            return;
+        }
+
+        // If this is a message to myself, don't send it. Just pretend we received it.
+        // This is useful later when we have to collect all blame messages later.
+        if (packet.recipient.equals(sk.VerificationKey())) {
+            history.add(signed);
+        } else {
             network.sendTo(packet.recipient, signed);
             sent.add(signed);
         }
@@ -235,7 +240,7 @@ public class Mailbox {
 
     // When the blame phase it reached, there may be a lot of blame going around. This function
     // waits to receive all blame messages until a timeout exception is caught, and then returns
-    // the list of blame messages, organized by player.
+    // the list of blame messages, organized by player, including those sent by the current player.
     public Map<VerificationKey, Queue<SignedPacket>> receiveAllBlame() throws
             InterruptedException,
             FormatException,

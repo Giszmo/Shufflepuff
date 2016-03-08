@@ -86,7 +86,7 @@ public class TestShuffleMachine {
     private abstract class TestCaseFactory {
         protected abstract InitialState initialState(SessionIdentifier session, long amount, Crypto crypto);
 
-        protected TestCase construct(String type, int caseNo, Simulator sim) {
+        final protected TestCase construct(String type, int caseNo, Simulator sim) {
 
 
             SessionIdentifier session = new MockSessionIdentifier("" + caseNo);
@@ -99,7 +99,7 @@ public class TestShuffleMachine {
             Map<SigningKey, Machine> results = sim.run(init, crypto);
             Map<SigningKey, Matrix> expected = init.expectedBlame();
 
-            for(SigningKey i : results.keySet()) {
+            for(SigningKey i : expected.keySet()) {
 
                 test.put(i,
                         new Machine(session, null, null, expected.get(i)),
@@ -296,7 +296,7 @@ public class TestShuffleMachine {
         protected InitialState initialState(SessionIdentifier session, long amount, Crypto crypto) {
             InitialState init = new InitialState(session, amount);
 
-            for (int i = 1; i < numPlayers; i ++) {
+            for (int i = 1; i <= numPlayers; i ++) {
 
                 init.player(crypto.makeSigningKey()).initialFunds(20);
 
@@ -517,16 +517,18 @@ public class TestShuffleMachine {
         Simulator sim = new Simulator(new MockMessageFactory());
         int caseNo = 0;
 
-        DropAddress(caseNo++, 3, new int[][]{}, null, null, sim).check();
-
         // A player drops an address during phase 2.
-
+        DropAddress(caseNo++, 3, new int[][]{new int[]{2, 1}}, null, null, sim).check();
+        DropAddress(caseNo++, 3, new int[][]{new int[]{3, 2}}, null, null, sim).check();
+        DropAddress(caseNo++, 4, new int[][]{new int[]{3, 2}}, null, null, sim).check();
 
         // A player drops an address and adds another one in phase 2.
-
+        DropAddress(caseNo++, 3, null, new int[][]{new int[]{2, 1}}, null, sim).check();
+        DropAddress(caseNo++, 3, null, new int[][]{new int[]{3, 2}}, null, sim).check();
+        DropAddress(caseNo++, 4, null, new int[][]{new int[]{3, 2}}, null, sim).check();
 
         // A player drops an address and adds a duplicate in phase 2.
-        Assert.fail();
+
     }
 
     // TODO make these work.
