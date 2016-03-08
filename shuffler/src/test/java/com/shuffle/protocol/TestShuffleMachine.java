@@ -70,6 +70,8 @@ public class TestShuffleMachine {
                 SigningKey key = ex.getKey();
                 Machine result = results.get(key);
                 Machine expected = ex.getValue();
+                log.info("  expected: " + expected.toString());
+                log.info("  results:  " + result.toString());
 
                 Assert.assertNotNull(result);
 
@@ -519,13 +521,13 @@ public class TestShuffleMachine {
 
         // A player drops an address during phase 2.
         DropAddress(caseNo++, 3, new int[][]{new int[]{2, 1}}, null, null, sim).check();
-        DropAddress(caseNo++, 3, new int[][]{new int[]{3, 2}}, null, null, sim).check();
+        /*DropAddress(caseNo++, 3, new int[][]{new int[]{3, 2}}, null, null, sim).check();
         DropAddress(caseNo++, 4, new int[][]{new int[]{3, 2}}, null, null, sim).check();
 
         // A player drops an address and adds another one in phase 2.
         DropAddress(caseNo++, 3, null, new int[][]{new int[]{2, 1}}, null, sim).check();
         DropAddress(caseNo++, 3, null, new int[][]{new int[]{3, 2}}, null, sim).check();
-        DropAddress(caseNo++, 4, null, new int[][]{new int[]{3, 2}}, null, sim).check();
+        DropAddress(caseNo++, 4, null, new int[][]{new int[]{3, 2}}, null, sim).check();*/
 
         // A player drops an address and adds a duplicate in phase 2.
 

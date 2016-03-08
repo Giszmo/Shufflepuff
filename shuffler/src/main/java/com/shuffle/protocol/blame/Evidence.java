@@ -1,5 +1,6 @@
 package com.shuffle.protocol.blame;
 
+import com.shuffle.bitcoin.DecryptionKey;
 import com.shuffle.bitcoin.EncryptionKey;
 import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.Transaction;
@@ -7,6 +8,10 @@ import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.protocol.Packet;
 import com.shuffle.protocol.SignedPacket;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -16,21 +21,26 @@ import java.util.Map;
  * This format is not sent over the internet and is for the user's records only.
  */
 public class Evidence {
+    private static Logger log = LogManager.getLogger(Evidence.class);
+
+    public final VerificationKey accused;
     public final Reason reason;
     public final boolean credible; // Do we believe this evidence?
     public final Transaction t;
     public final Signature signature;
     private final Map<VerificationKey, SignedPacket> output;
     private final Map<VerificationKey, EncryptionKey> sent;
+    private final Map<VerificationKey, DecryptionKey> keys;
 
     protected Evidence(
+            VerificationKey accused,
             Reason reason,
             boolean credible,
             Transaction t,
             Signature signature,
             Map<VerificationKey, SignedPacket> output,
             Map<VerificationKey, EncryptionKey> sent,
-            SignedPacket packet) {
+            Map<VerificationKey, DecryptionKey> keys) {
 
         if (reason == null) {
             throw new IllegalArgumentException();
@@ -56,21 +66,13 @@ public class Evidence {
                 break;
             }
             case ShuffleFailure: {
-                // TODO
-                throw new IllegalArgumentException();
-            }
-            case MissingOutput: {
-                // TODO
-                throw new IllegalArgumentException();
-            }
-            case InvalidSignature: {
-                if (signature == null) {
+                if (output == null || keys == null) {
                     throw new IllegalArgumentException();
                 }
                 break;
             }
-            case Liar: {
-                if (packet == null) {
+            case InvalidSignature: {
+                if (signature == null) {
                     throw new IllegalArgumentException();
                 }
                 break;
@@ -82,21 +84,25 @@ public class Evidence {
             }
         }
 
+        this.accused = accused;
         this.reason = reason;
         this.credible = credible;
         this.t = t;
         this.signature = signature;
         this.output = output;
         this.sent = sent;
+        this.keys = keys;
     }
 
-    private Evidence(Reason reason, boolean credible) {
+    private Evidence(VerificationKey accused, Reason reason, boolean credible) {
+        this.accused = accused;
         this.reason = reason;
         this.credible = credible;
         this.t = null;
         this.signature = null;
         this.output = null;
         this.sent = null;
+        this.keys = null;
     }
 
     @Override
@@ -137,35 +143,43 @@ public class Evidence {
         return str;
     }
 
-    static public Evidence NoFundsAtAll(boolean credible) {
-        return new Evidence(Reason.NoFundsAtAll, credible, null, null, null, null, null);
+    static public Evidence NoFundsAtAll(VerificationKey accused, boolean credible) {
+        return new Evidence(accused, Reason.NoFundsAtAll, credible, null, null, null, null, null);
     }
 
-    static public Evidence InsufficientFunds(boolean credible, Transaction t) {
-        return new Evidence(Reason.InsufficientFunds, credible, t, null, null, null, null);
+    static public Evidence InsufficientFunds(VerificationKey accused, boolean credible, Transaction t) {
+        return new Evidence(accused, Reason.InsufficientFunds, credible, t, null, null, null, null);
     }
 
-    static public Evidence DoubleSpend(boolean credible, Transaction t) {
-        return new Evidence(Reason.DoubleSpend, credible, t, null, null, null, null);
+    static public Evidence DoubleSpend(VerificationKey accused, boolean credible, Transaction t) {
+        return new Evidence(accused, Reason.DoubleSpend, credible, t, null, null, null, null);
     }
 
-    static public Evidence InvalidSignature(boolean credible, Signature signature) {
-        return new Evidence(Reason.InvalidSignature, credible, null, signature, null, null, null);
+    static public Evidence InvalidSignature(VerificationKey accused, boolean credible, Signature signature) {
+        return new Evidence(accused, Reason.InvalidSignature, credible, null, signature, null, null, null);
     }
 
-    static public Evidence EquivocationFailureAnnouncement(Map<VerificationKey, EncryptionKey> sent) {
-        return new Evidence(Reason.EquivocationFailure, true, null, null, null, sent, null);
+    static public Evidence EquivocationFailureAnnouncement(VerificationKey accused, Map<VerificationKey, EncryptionKey> sent) {
+        return new Evidence(accused, Reason.EquivocationFailure, true, null, null, null, sent, null);
     }
 
-    static public Evidence EquivocationFailureBroadcast(Map<VerificationKey, SignedPacket> output) {
-        return new Evidence(Reason.EquivocationFailure, true, null, null, output, null, null);
+    static public Evidence EquivocationFailureBroadcast(VerificationKey accused, Map<VerificationKey, SignedPacket> output) {
+        return new Evidence(accused, Reason.EquivocationFailure, true, null, null, output, null, null);
     }
 
-    static public Evidence Liar(SignedPacket packet) {
-        return new Evidence(Reason.Liar, true, null, null, null, null, packet);
+    static public Evidence ShuffleMisbehaviorDropAddress(VerificationKey accused,
+                                                         Map<VerificationKey, DecryptionKey> keys,
+                                                         Map<VerificationKey, SignedPacket> output) {
+        return new Evidence(accused, Reason.ShuffleFailure, true, null, null, output, null, keys);
     }
 
-    static public Evidence Expected(Reason reason, boolean credible) {
-        return new Evidence(reason, credible);
+    static public Evidence Expected(VerificationKey accused, Reason reason, boolean credible) {
+        return new Evidence(accused, reason, credible);
+    }
+
+    // TODO remove this function when the protocol is finally done.
+    static public Evidence Placeholder(VerificationKey accused, Reason reason, boolean credible) {
+        log.warn("placeholder evidence.");
+        return new Evidence(accused, reason, credible);
     }
 }

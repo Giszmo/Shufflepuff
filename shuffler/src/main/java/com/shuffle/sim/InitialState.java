@@ -48,8 +48,8 @@ public class InitialState {
     }
 
     private final static class BlameEvidencePatternAny extends Evidence {
-        private BlameEvidencePatternAny() {
-            super(Reason.NoFundsAtAll, false, null, null, null, null, null);
+        private BlameEvidencePatternAny(VerificationKey accused) {
+            super(accused, Reason.NoFundsAtAll, false, null, null, null, null, null);
 
         }
 
@@ -65,7 +65,6 @@ public class InitialState {
     }
 
     static public MatrixPatternAny anyMatrix = new MatrixPatternAny();
-    static public BlameEvidencePatternAny anyReason = new BlameEvidencePatternAny();
 
     public final SessionIdentifier session;
     public final long amount;
@@ -230,7 +229,7 @@ public class InitialState {
                 for (PlayerInitialState j : players) {
                     // We don't care who malicious players blame because they aren't trustworthy anyway.
                     if (i.maliciousBehavior() != null) {
-                        bm.put(i.vk, j.vk, anyReason);
+                        bm.put(i.vk, new BlameEvidencePatternAny(j.vk));
                         continue;
                     }
 
@@ -243,7 +242,7 @@ public class InitialState {
 
                     if (reason != null) {
                         if (equals(i) || reason == Reason.NoFundsAtAll || reason == Reason.InsufficientFunds) {
-                            bm.put(i.vk, j.vk, Evidence.Expected(reason, true));
+                            bm.put(i.vk, Evidence.Expected(j.vk, reason, true));
                         }
                     }
                 }

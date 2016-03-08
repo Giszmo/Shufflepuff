@@ -24,15 +24,12 @@ public class Matrix {
     // Who blames who?
     Map<VerificationKey, Map<VerificationKey, Evidence>> blame = new HashMap<>();
 
-    public void put(VerificationKey accuser, VerificationKey accused, Evidence evidence) {
-        if (accuser == null || accused == null) {
+    public void put(VerificationKey accuser, Evidence evidence) {
+        if (accuser == null || evidence == null) {
             throw new NullPointerException();
         }
 
-        if(evidence == null) {
-            log.warn("null blame evidence given for " + accuser.toString() + " to " + accused.toString() + " " + Arrays.toString(
-                new Throwable().getStackTrace()));
-        }
+        VerificationKey accused = evidence.accused;
 
         Map<VerificationKey, Evidence> blames = blame.get(accuser);
 
