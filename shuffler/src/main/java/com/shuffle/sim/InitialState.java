@@ -5,6 +5,7 @@ import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.mock.TransactionMutator;
 import com.shuffle.protocol.CoinShuffle;
 import com.shuffle.protocol.Machine;
 import com.shuffle.protocol.MaliciousMachine;
@@ -77,6 +78,7 @@ public class InitialState {
         return p;
     }
 
+    // The initial state of an individual player. (includes malicious players)
     public class PlayerInitialState {
         final SigningKey sk;
         final VerificationKey vk;
@@ -86,6 +88,7 @@ public class InitialState {
         long doubleSpend = 0;
         boolean change = false; // Whether to make a change address.
         int viewpoint = 1;
+        boolean mutate = false; // Whether to create a mutated transaction.
 
         // Whether the adversary should equivocate during the announcement phase and to whom.
         int[] equivocateAnnouncement = new int[]{};
@@ -147,6 +150,7 @@ public class InitialState {
             return mockCoin;
         }
 
+        // Turn the initial state into an Adversary object that can be run in the simulator.
         public Adversary adversary(Crypto crypto, MessageFactory messages, Network network) {
             if (sk == null) {
                 return null;
@@ -174,6 +178,8 @@ public class InitialState {
                 shuffle = MaliciousMachine.addressDropperDuplicator(messages, crypto, coin, drop, duplicate);
             } else if (drop != 0) {
                 shuffle = MaliciousMachine.addressDropper(messages, crypto, coin, drop);
+            } else if (mutate) {
+                shuffle = new CoinShuffle(messages, crypto, coin.mutated());
             } else {
                 shuffle = new CoinShuffle(messages, crypto, coin);
             }
@@ -181,6 +187,7 @@ public class InitialState {
             return new Adversary(session, amount, sk, keys, shuffle, network);
         }
 
+        // The sort of malicious behavior to be performed by this player, if any.
         public Reason maliciousBehavior() {
             // Does the player have enough funds?
             if (initialAmount == 0) {
@@ -214,9 +221,15 @@ public class InitialState {
                 return Reason.DoubleSpend;
             }
 
+            // Is the player going to produce the wrong transaction?
+            if (mutate) {
+                return Reason.InvalidSignature;
+            }
+
             return null;
         }
 
+        // How is the player expected to interpret what happened during the protocol?
         public Matrix expectedBlame() {
             // Malicious players aren't tested, so they can blame anyone.
             if (maliciousBehavior() != null) {
@@ -328,6 +341,11 @@ public class InitialState {
         players.getLast().drop = drop;
         players.getLast().duplicate = 0;
         players.getLast().replace = true;
+        return this;
+    }
+
+    public InitialState mutateTransaction() {
+        players.getLast().mutate = true;
         return this;
     }
 

@@ -156,7 +156,7 @@ public class CoinShuffle {
                 if (me != 1) {
                     shuffled = decryptAll(shuffled.attach(mailbox.receiveFrom(players.get(me - 1), machine.phase)), dk, me - 1);
                     if (shuffled == null) {
-                        machine.matrix = blameShuffleMisbehavior(dk);
+                        machine.matrix = blameShuffleMisbehavior();
                         return;
                     }
                 }
@@ -178,15 +178,15 @@ public class CoinShuffle {
                 // Everyone else receives the broadcast and checks to make sure their message was included.
                 if (!newAddresses.contains(addr_new)) {
                     machine.phase = Phase.Blame;
+                    System.out.println("Player " + me + " is about to send a missing output message.");
                     mailbox.broadcast(messages.make().attach(Blame.MissingOutput(players.get(N))), machine.phase);
-                    machine.matrix = blameShuffleMisbehavior(dk);
-                    return;
+                    // We keep going because we need to do an equivocation check anyway.
                 }
             } catch (BlameException e) {
                 switch (e.packet.message.readBlame().reason) {
                     case ShuffleFailure:
                     case MissingOutput: {
-                        machine.matrix = blameShuffleMisbehavior(dk);
+                        machine.matrix = blameShuffleMisbehavior();
                         return;
                     }
                     default: {
@@ -203,6 +203,14 @@ public class CoinShuffle {
 
             machine.matrix = equivocationCheck(encryptionKeys, newAddresses);
             if (machine.matrix != null) {
+                return;
+            }
+
+            // Check for blame messages received during this phase. This happens if
+            // a player received bad addresses in phase 3 and the problem was not resolved
+            // with the
+            if(mailbox.blame()) {
+                machine.matrix = blameBroadcastShuffleMessages();
                 return;
             }
 
@@ -373,11 +381,6 @@ public class CoinShuffle {
             return decrypted;
         }
 
-        // In certain cases, it is possible for an equivocation message to be sent but
-        // for the equivocation check to be delayed. We keep track of whether the equivoction
-        // message has already been sent.
-        boolean equivocationCheckSent = false;
-
         // Players run an equivocation check when they must confirm that they all have
         // the same information.
         Matrix equivocationCheck(
@@ -388,11 +391,7 @@ public class CoinShuffle {
                 SignatureException {
 
             Message equivocationCheck = equivocationCheckHash(players, encryptonKeys, newAddresses);
-
-            if (!equivocationCheckSent) {
-                mailbox.broadcast(equivocationCheck, machine.phase);
-                equivocationCheckSent = true;
-            }
+            mailbox.broadcast(equivocationCheck, machine.phase);
 
             // Wait for a similar message from everyone else and check that the result is the name.
             Map<VerificationKey, Message> hashes = null;
@@ -455,7 +454,7 @@ public class CoinShuffle {
 
         // Some misbehavior that has occurred during the shuffle phase and we want to
         // find out what happened!
-        private Matrix blameShuffleMisbehavior(DecryptionKey dk)
+        private Matrix blameShuffleMisbehavior()
                 throws InterruptedException,
                 FormatException,
                 ValueException,
@@ -472,6 +471,10 @@ public class CoinShuffle {
             }
 
             // Otherwise, there are some more things we have to check.
+            return blameBroadcastShuffleMessages();
+        }
+
+        private Matrix blameBroadcastShuffleMessages() throws InterruptedException, SignatureException, ValueException, FormatException {
             machine.phase = Phase.Blame;
 
             // Collect all packets from phase 2 and 3. Player 1 doesn't have to bother with this part.

@@ -5,13 +5,11 @@ import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.protocol.blame.BlameException;
 
-import java.io.IOException;
 import java.net.ProtocolException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
@@ -30,7 +28,7 @@ public class Mailbox {
     final private Queue<SignedPacket> delivered = new LinkedList<>(); // A queue of messages that has been delivered that we aren't ready to look at yet.
     final private Queue<SignedPacket> history = new LinkedList<>(); // All messages received (does not include those in delivered).
     final private Queue<SignedPacket> sent = new LinkedList<>();
-    private boolean blameReceived = false;
+    private boolean blame = false;
 
     public Mailbox(SessionIdentifier session, SigningKey sk, Collection<VerificationKey> players, Network network) {
         this.sk = sk;
@@ -39,8 +37,8 @@ public class Mailbox {
         this.players = players;
     }
 
-    public boolean blameReceived() {
-        return blameReceived;
+    public boolean blame() {
+        return blame;
     }
 
     public void broadcast(Message message, Phase phase) throws TimeoutError, CryptographyError, InvalidImplementationError {
@@ -62,6 +60,9 @@ public class Mailbox {
         // This is useful later when we have to collect all blame messages later.
         if (packet.recipient.equals(sk.VerificationKey())) {
             history.add(signed);
+            if (packet.phase == Phase.Blame) {
+                blame = true;
+            }
         } else {
             network.sendTo(packet.recipient, signed);
             sent.add(signed);
@@ -125,7 +126,7 @@ public class Mailbox {
 
         history.add(found);
         if (found.payload.phase == Phase.Blame) {
-            blameReceived = true;
+            blame = true;
         }
         return found;
     }

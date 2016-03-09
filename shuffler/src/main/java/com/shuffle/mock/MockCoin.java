@@ -164,9 +164,9 @@ public class MockCoin implements com.shuffle.sim.MockCoin {
     public MockCoin() {
     }
 
-    public MockCoin setZ(int z) {
-        this.z = z;
-        return this;
+    @Override
+    public com.shuffle.bitcoin.Coin mutated() {
+        return new TransactionMutator(this);
     }
 
     @Override

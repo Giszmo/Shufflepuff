@@ -5,14 +5,17 @@ import com.shuffle.bitcoin.Coin;
 import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.DecryptionKey;
 import com.shuffle.bitcoin.EncryptionKey;
+import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.protocol.blame.Blame;
 import com.shuffle.protocol.blame.BlameException;
 import com.shuffle.protocol.blame.Matrix;
+import com.shuffle.sim.MockCoin;
 
 import java.net.ProtocolException;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
@@ -81,12 +84,8 @@ final public class MaliciousMachine extends CoinShuffle {
             Message equivocationCheck = equivocationCheckHash(players, encryptonKeys, newAddresses);
             Message otherCheck = equivocationCheckHash(players, otherKeys, newAddresses);
 
-            if (!equivocationCheckSent) {
-                for (VerificationKey to : players.values()) {
-                    mailbox.send(new Packet((equivocate.contains(to) ? otherCheck : equivocationCheck), session, machine.phase, vk, to));
-                }
-
-                equivocationCheckSent = true;
+            for (VerificationKey to : players.values()) {
+                mailbox.send(new Packet((equivocate.contains(to) ? otherCheck : equivocationCheck), session, machine.phase, vk, to));
             }
 
             // Wait for a similar message from everyone else and check that the result is the name.
@@ -94,7 +93,7 @@ final public class MaliciousMachine extends CoinShuffle {
             hashes.put(vk, equivocationCheck);
 
             if (areEqual(hashes.values())) {
-                if (mailbox.blameReceived()) {
+                if (mailbox.blame()) {
                     fillBlameMatrix(new Matrix());
                 }
 
@@ -158,12 +157,8 @@ final public class MaliciousMachine extends CoinShuffle {
             Message equivocationCheck = equivocationCheckHash(players, encryptonKeys, newAddresses);
             Message otherCheck = equivocationCheckHash(players, encryptonKeys, otherAddresses);
 
-            if (!equivocationCheckSent) {
-                for (VerificationKey to : players.values()) {
-                    mailbox.send(new Packet((equivocate.contains(to) ? otherCheck : equivocationCheck), session, machine.phase, vk, to));
-                }
-
-                equivocationCheckSent = true;
+            for (VerificationKey to : players.values()) {
+                mailbox.send(new Packet((equivocate.contains(to) ? otherCheck : equivocationCheck), session, machine.phase, vk, to));
             }
 
             // Wait for a similar message from everyone else and check that the result is the name.
@@ -171,7 +166,7 @@ final public class MaliciousMachine extends CoinShuffle {
             hashes.put(vk, equivocationCheck);
 
             if (areEqual(hashes.values())) {
-                if (mailbox.blameReceived()) {
+                if (mailbox.blame()) {
                     fillBlameMatrix(new Matrix());
                 }
 
@@ -290,6 +285,20 @@ final public class MaliciousMachine extends CoinShuffle {
         }
     }
 
+    // Coin Shuffle says that everyone should generate the same transaction indepentently. They then
+    // Exchange signatures and everyone has to make sure all signatures apply to all transactions.
+    // This malicious player creates a different transaction than everyone else (possibly still
+    // valid). The nonmalicious players must correctly detect that the signature he sends them is
+    // not valid.
+    public class MutateTransaction extends Round {
+        final MockCoin coin;
+
+        MutateTransaction(Machine machine, Map<Integer, VerificationKey> players, Address change, Mailbox mailbox, MockCoin coin) throws InvalidParticipantSetException {
+            super(machine, players, change, mailbox);
+            this.coin = coin;
+        }
+    }
+
     final Phase maliciousPhase;
     final Set<VerificationKey> equivocate;
     final int drop;
@@ -361,14 +370,17 @@ final public class MaliciousMachine extends CoinShuffle {
     private MaliciousMachine(MessageFactory messages, Crypto crypto,
                              Coin coin, Phase phase,
                              Set<VerificationKey> equivocate,
-                             int drop, int duplicate, boolean replaceNew) {
+                             int drop, int duplicate, boolean replaceNew, boolean mutate) {
         super(messages, crypto, coin);
 
+        // First check for valid input values.
         if (phase == null) {
             throw new NullPointerException();
         }
 
-        if (phase != Phase.Announcement && phase != Phase.BroadcastOutput && phase != Phase.Shuffling) {
+        if (phase != Phase.Announcement && phase != Phase.BroadcastOutput
+                && phase != Phase.Shuffling
+                && phase != Phase.VerificationAndSubmission) {
             throw new IllegalArgumentException();
         }
 
@@ -378,6 +390,10 @@ final public class MaliciousMachine extends CoinShuffle {
             }
 
             if (drop != 0 || duplicate != 0 || replaceNew) {
+                throw new IllegalArgumentException();
+            }
+
+            if (mutate) {
                 throw new IllegalArgumentException();
             }
         }
@@ -394,6 +410,16 @@ final public class MaliciousMachine extends CoinShuffle {
             if (replaceNew && duplicate != 0) {
                 throw new IllegalArgumentException();
             }
+
+            if (mutate) {
+                throw new IllegalArgumentException();
+            }
+        }
+
+        if (phase == Phase.VerificationAndSubmission) {
+            if (!mutate) {
+                throw new IllegalArgumentException();
+            }
         }
 
         this.maliciousPhase = phase;
@@ -404,22 +430,26 @@ final public class MaliciousMachine extends CoinShuffle {
     }
 
     public static CoinShuffle announcementEquivocator(MessageFactory messages, Crypto crypto, Coin coin, Set<VerificationKey> equivocate) {
-        return new MaliciousMachine(messages, crypto, coin, Phase.Announcement, equivocate, 0, 0, false);
+        return new MaliciousMachine(messages, crypto, coin, Phase.Announcement, equivocate, 0, 0, false, false);
     }
 
     public static CoinShuffle broadcastEquivocator(MessageFactory messages, Crypto crypto, Coin coin, Set<VerificationKey> equivocate) {
-        return new MaliciousMachine(messages, crypto, coin, Phase.BroadcastOutput, equivocate, 0, 0, false);
+        return new MaliciousMachine(messages, crypto, coin, Phase.BroadcastOutput, equivocate, 0, 0, false, false);
     }
 
     public static CoinShuffle addressDropper(MessageFactory messages, Crypto crypto, Coin coin, int drop) {
-       return new MaliciousMachine(messages, crypto, coin, Phase.Shuffling, null, drop, 0, false);
+       return new MaliciousMachine(messages, crypto, coin, Phase.Shuffling, null, drop, 0, false, false);
     }
 
     public static CoinShuffle addressDropperDuplicator(MessageFactory messages, Crypto crypto, Coin coin, int drop, int duplicate) {
-        return new MaliciousMachine(messages, crypto, coin, Phase.Shuffling, null, drop, duplicate, false);
+        return new MaliciousMachine(messages, crypto, coin, Phase.Shuffling, null, drop, duplicate, false, false);
     }
 
     public static CoinShuffle addressDropperReplacer(MessageFactory messages, Crypto crypto, Coin coin, int drop) {
-        return new MaliciousMachine(messages, crypto, coin, Phase.Shuffling, null, drop, 0, true);
+        return new MaliciousMachine(messages, crypto, coin, Phase.Shuffling, null, drop, 0, true, false);
+    }
+
+    public static CoinShuffle mutator(MessageFactory messages, Crypto crypto, Coin coin) {
+        return new MaliciousMachine(messages, crypto, coin, Phase.VerificationAndSubmission, null, 0, 0, false, true);
     }
 }

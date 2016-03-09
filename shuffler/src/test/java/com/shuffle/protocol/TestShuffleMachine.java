@@ -316,6 +316,34 @@ public class TestShuffleMachine {
         }
     }
 
+    private class InvalidTransactionSignatureTestCase extends TestCaseFactory {
+        final int numPlayers;
+        final Set<Integer> mutants = new HashSet<>();
+
+        public InvalidTransactionSignatureTestCase(int numPlayers, int[] mutants) {
+            this.numPlayers = numPlayers;
+
+            for (int mutant : mutants) {
+                this.mutants.add(mutant);
+            }
+        }
+
+        @Override
+        protected InitialState initialState(SessionIdentifier session, long amount, Crypto crypto) {
+            InitialState init = new InitialState(session, amount);
+
+            for (int i = 1; i <= numPlayers; i ++) {
+                init.player(crypto.makeSigningKey()).initialFunds(20);
+
+                if(mutants.contains(i)) {
+                    init.mutateTransaction();
+                }
+            }
+
+            return init;
+        }
+    }
+
     int seed = 99;
 
     TestCase successfulExpectation(TestCase test, Map<SigningKey, Machine> results) {
@@ -365,74 +393,9 @@ public class TestShuffleMachine {
         return new DropTestCase(numPlayers, drop, replaceNew, replaceDuplicate).construct("Shuffle phase mischief test case.", caseNo, sim);
     }
 
-    // TODO fix this.
-    /*public TestCase InvalidTransactionSignature(int caseNo, int numPlayers, int[] weirdos, Simulator sim) {
-        Set<Integer> class2 = new HashSet<>();
-
-        for (int weirdo : weirdos) {
-            class2.add(weirdo);
-        }
-
-        MockCoin coin1 = new MockCoin().setZ(1);
-        MockCoin coin2 = new MockCoin().setZ(2);
-
-        Crypto crypto = new MockCrypto(++seed);
-
-        long amount = 17;
-        SessionIdentifier session = new MockSessionIdentifier("sig" + caseNo);
-        InitialState init = new InitialState(session, amount);
-
-        for (int i = 1; i <= numPlayers; i ++) {
-            if (class2.contains(i)) {
-                init.player(crypto.makeSigningKey()).initialFunds(20).coin(coin2);
-            } else {
-                init.player(crypto.makeSigningKey()).initialFunds(20).coin(coin1);
-            }
-        }
-
-        TestCase test = new TestCase(session, amount, "invalid signature test case.", caseNo);
-        Map<SigningKey, Machine> results = sim.run(init, crypto);
-        SortedSet<SigningKey> players = new TreeSet<>();
-        players.addAll(results.keySet());
-
-        // Results should be that every player blames all players in the other class.
-        Set<SigningKey> keyClass2 = new HashSet<>();
-        int index = 1;
-        for (SigningKey key : players) {
-            if (class2.contains(index)) {
-                keyClass2.add(key);
-            }
-            index ++;
-        }
-
-        for (Map.Entry<SigningKey, Machine> result : results.entrySet()) {
-            SigningKey i = result.getKey();
-            Machine returnState = result.getValue();
-
-            Matrix bm = null;
-
-            if (class2.contains(i)) { // <-- TODO this is definitely an error but I don't know what should go here.
-                bm = InitialState.anyMatrix;
-            } else {
-
-                bm = new Matrix();
-
-                for (SigningKey j : results.keySet()) {
-                    for (SigningKey k : results.keySet()) {
-                        boolean inClass2 = keyClass2.contains(j);
-                        if (inClass2 != keyClass2.contains(k)) {
-                            bm.put(j.VerificationKey(), k.VerificationKey(),
-                                    Evidence.Expected(Reason.InvalidSignature, inClass2 == keyClass2.contains(i)));
-                        }
-                    }
-                }
-            }
-
-            test.put(i, new Machine(session, Phase.Blame, null, bm), returnState);
-        }
-
-        return test;
-    }*/
+    public TestCase InvalidTransactionSignature(int caseNo, int numPlayers, int[] mutants, Simulator sim) {
+        return new InvalidTransactionSignatureTestCase(numPlayers, mutants).construct("invalid transaction signature test case", caseNo, sim);
+    }
 
     @Test
     // Tests for successful runs of the protocol.
@@ -521,20 +484,22 @@ public class TestShuffleMachine {
 
         // A player drops an address during phase 2.
         DropAddress(caseNo++, 3, new int[][]{new int[]{2, 1}}, null, null, sim).check();
-        /*DropAddress(caseNo++, 3, new int[][]{new int[]{3, 2}}, null, null, sim).check();
+        DropAddress(caseNo++, 3, new int[][]{new int[]{3, 2}}, null, null, sim).check();
         DropAddress(caseNo++, 4, new int[][]{new int[]{3, 2}}, null, null, sim).check();
 
         // A player drops an address and adds another one in phase 2.
         DropAddress(caseNo++, 3, null, new int[][]{new int[]{2, 1}}, null, sim).check();
         DropAddress(caseNo++, 3, null, new int[][]{new int[]{3, 2}}, null, sim).check();
-        DropAddress(caseNo++, 4, null, new int[][]{new int[]{3, 2}}, null, sim).check();*/
+        DropAddress(caseNo++, 4, null, new int[][]{new int[]{3, 2}}, null, sim).check();
 
         // A player drops an address and adds a duplicate in phase 2.
-
+        DropAddress(caseNo++, 4, null, null, new int[][]{new int[]{3, 1, 2}}, sim).check();
+        DropAddress(caseNo++, 4, null, null, new int[][]{new int[]{4, 3, 2}}, sim).check();
+        DropAddress(caseNo++, 5, null, null, new int[][]{new int[]{4, 3, 2}}, sim).check();
     }
 
     // TODO make these work.
-    /*@Test
+    @Test
     public void testTransactionDisagreement() {
         Simulator sim = new Simulator(new MockMessageFactory());
         int caseNo = 0;
@@ -546,7 +511,7 @@ public class TestShuffleMachine {
         InvalidTransactionSignature(caseNo, 10, new int[]{2, 5, 6, 7}, sim).check();
     }
 
-    @Test
+    /*@Test
     public void testDoubleSpending() {
         Simulator sim = new Simulator(new MockMessageFactory());
         int caseNo = 0;
