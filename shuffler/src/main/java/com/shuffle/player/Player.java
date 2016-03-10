@@ -6,10 +6,12 @@ import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.p2p.Channel;
+import com.shuffle.chan.Chan;
 import com.shuffle.protocol.CoinShuffle;
 import com.shuffle.protocol.Machine;
 import com.shuffle.protocol.Mailbox;
 import com.shuffle.protocol.MessageFactory;
+import com.shuffle.protocol.Network;
 import com.shuffle.protocol.Phase;
 import com.shuffle.protocol.SessionIdentifier;
 
@@ -23,7 +25,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
-import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  *
@@ -74,16 +75,22 @@ public class Player<Identity, Format> {
         this.messages = messages;
     }
 
+    static void main(String[] args) {
+
+    }
+
     public List<Machine> coinShuffle(
             Set<Identity> identities,
             Channel<Identity, Format> channel,
             Marshaller<Format> marshaller,
             Map<Identity, VerificationKey> keys, // Can be null.
             Settings settings,
-            LinkedBlockingQueue<Machine> queue
+            Chan<Machine> chan
     ) {
         SessionIdentifier session = settings.session;
-        Network<Identity, Format> net = new Network<>(channel, marshaller, settings.timeout);
+
+        // TODO make this work.
+        Network net = null; // new Connect.Network<>(channel, marshaller, settings.timeout);
 
         // Start by making connections to all the identies.
         for (Identity identity : identities) {
@@ -135,7 +142,7 @@ public class Player<Identity, Format> {
             // this round of the protocol.
             // TODO
 
-            Machine machine = shuffle.runProtocol(session, settings.amount, sk, validPlayers, settings.change, net, queue);
+            Machine machine = shuffle.runProtocol(session, settings.amount, sk, validPlayers, settings.change, net, chan);
 
             if (machine.exception() == null && machine.phase() != Phase.Blame) {
                 break;

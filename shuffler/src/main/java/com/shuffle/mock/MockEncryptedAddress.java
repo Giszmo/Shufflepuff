@@ -19,4 +19,9 @@ public class MockEncryptedAddress implements Address {
     public String toString() {
         return "encrypted[" + encrypted.toString() + ", " + key.toString() + "]";
     }
+
+    @Override
+    public int compareTo(Address address) {
+        return encrypted.compareTo(address);
+    }
 }

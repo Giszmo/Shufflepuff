@@ -3,11 +3,15 @@ package com.shuffle.sim;
 import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.monad.NaturalSummableFuture;
+import com.shuffle.monad.SummableFuture;
+import com.shuffle.monad.SummableFutureZero;
+import com.shuffle.chan.Chan;
 import com.shuffle.protocol.InvalidImplementationError;
 import com.shuffle.protocol.Machine;
 import com.shuffle.protocol.MessageFactory;
 import com.shuffle.protocol.Network;
-import com.shuffle.protocol.SessionIdentifier;
+import com.shuffle.protocol.Phase;
 import com.shuffle.protocol.SignedPacket;
 import com.shuffle.protocol.TimeoutError;
 
@@ -15,14 +19,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -39,7 +37,7 @@ public final class Simulator {
      * Created by Daniel Krawisz on 2/8/16.
      */
     private class NetworkSim implements Network {
-        final BlockingQueue<SignedPacket> inbox = new LinkedBlockingQueue<>();
+        final Chan<SignedPacket> inbox = new Chan<>();
         final Map<VerificationKey, NetworkSim> networks;
 
         NetworkSim(Map<VerificationKey, NetworkSim> networks) {
@@ -64,7 +62,7 @@ public final class Simulator {
         @Override
         public SignedPacket receive() throws TimeoutError, InterruptedException {
             for (int i = 0; i < 2; i++) {
-                SignedPacket next = inbox.poll(1, TimeUnit.SECONDS);
+                SignedPacket next = inbox.receive(1, TimeUnit.SECONDS);
 
                 if (next != null) {
                     return next;
@@ -75,7 +73,7 @@ public final class Simulator {
         }
 
         public void deliver(SignedPacket packet) throws InterruptedException {
-            inbox.put(packet);
+            boolean sent = inbox.send(packet);
         }
     }
 
@@ -112,32 +110,18 @@ public final class Simulator {
     private static synchronized Map<SigningKey, Machine> runSimulation(
             Map<SigningKey, Adversary> machines)  {
 
-        Map<SigningKey, Future<Machine>> wait = new HashMap<>();
-        Map<SigningKey, Machine> results = new HashMap<>();
+        // Create a future for the set of entries.
+        SummableFuture<Map<SigningKey, Machine>> wait = new SummableFutureZero<Map<SigningKey, Machine>>();
 
-        // Start the simulation.
-        for (Map.Entry<SigningKey, Adversary> in : machines.entrySet()) {
-            wait.put(in.getKey(), in.getValue().turnOn());
+        // Start the simulations.
+        for (Adversary in : machines.values()) {
+            wait = wait.plus(new NaturalSummableFuture<Map<SigningKey, Machine>>(in.turnOn()));
         }
 
-        while (wait.size() != 0) {
-            Iterator<Map.Entry<SigningKey, Future<Machine>>> i = wait.entrySet().iterator();
-            while (i.hasNext()) {
-                Map.Entry<SigningKey, Future<Machine>> entry = i.next();
-                Future<Machine> future = entry.getValue();
-                if (future.isDone()) {
-                    try {
-                        Machine machine = future.get();
-                        results.put(entry.getKey(), machine);
-                    } catch (InterruptedException | ExecutionException e) {
-                        e.printStackTrace();
-                    }
-
-                    i.remove();
-                }
-            }
+        try {
+            return wait.get();
+        } catch (InterruptedException | ExecutionException e) {
+            return null;
         }
-
-        return results;
     }
 }

@@ -7,5 +7,5 @@ import com.shuffle.player.Marshaller;
  *
  * Created by Daniel Krawisz on 12/26/15.
  */
-public interface Address {
+public interface Address extends Comparable<Address> {
 }

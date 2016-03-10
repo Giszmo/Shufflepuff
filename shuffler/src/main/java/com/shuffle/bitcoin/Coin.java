@@ -29,5 +29,5 @@ public interface Coin {
     Transaction getConflictingTransaction(Address addr, long amount);
 
     // Whether the given transaction spends the funds in the given address.
-    boolean spendsFrom(Address addr, long amount, Transaction t);
+    Transaction getSpendingTransaction(Address addr, long amount);
 }

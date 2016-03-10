@@ -164,9 +164,9 @@ public class MockCoin implements com.shuffle.sim.MockCoin {
     public MockCoin() {
     }
 
-    public MockCoin setZ(int z) {
-        this.z = z;
-        return this;
+    @Override
+    public com.shuffle.bitcoin.Coin mutated() {
+        return new TransactionMutator(this);
     }
 
     @Override
@@ -322,13 +322,29 @@ public class MockCoin implements com.shuffle.sim.MockCoin {
     }
 
     @Override
-    public boolean spendsFrom(Address addr, long amount, Transaction t) {
-        Transaction conflict = getConflictingTransaction(addr, amount);
-        return conflict != null && t.equals(conflict);
+    public Transaction getSpendingTransaction(Address addr, long amount) {
+        Output output = blockchain.get(addr);
+
+        if (output == null) {
+            return null;
+        }
+
+        return spend.get(output);
     }
 
     @Override
     public String toString() {
         return "{" + blockchain.values().toString() + ", " + spend.toString() + "}";
+    }
+
+    @Override
+    public com.shuffle.sim.MockCoin copy() {
+        MockCoin newCoin = new MockCoin();
+
+        newCoin.blockchain.putAll(blockchain);
+        newCoin.spend.putAll(spend);
+        newCoin.sent.putAll(sent);
+
+        return newCoin;
     }
 }

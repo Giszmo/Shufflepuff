@@ -1,7 +1,9 @@
 package com.shuffle.p2p;
 
 /**
- * Created by cosmos on 1/25/16.
+ * A channel through which connections can be created to other peers.
+ *
+ * Created by Daniel Krawisz on 1/25/16.
  */
 
 import java.io.IOException;
@@ -11,15 +13,12 @@ import java.io.IOException;
  *
  * Message  -- the object which will be sent back and forth over this channel.
  *
- * Token    -- the information that defines a particular session. For example, for an ecrypted chat
- *             there is a key.
- *
  * Created by Daniel Krawisz on 12/16/15.
  */
 public interface Channel<Identity, Message> {
-
-    // Block until a new peer is found.
-    void listen(final Listener<Identity, Message> listener) throws IOException;
-
+    // Returns null if a peer could not be created for this identity.
     Peer<Identity, Message> getPeer(Identity you);
+
+    // Returns null if the connection could not be opened.
+    Connection<Identity, Message> open(final Listener<Identity, Message> listener);
 }

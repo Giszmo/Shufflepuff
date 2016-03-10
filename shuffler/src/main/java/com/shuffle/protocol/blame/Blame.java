@@ -52,9 +52,7 @@ public class Blame implements Serializable {
                 }
                 break;
             }
-            case ShuffleFailure:
-            case NoFundsAtAll:
-            case MissingOutput: {
+            case NoFundsAtAll: {
                 if (accused == null) {
                     throw new IllegalArgumentException();
                 }
@@ -70,6 +68,10 @@ public class Blame implements Serializable {
                 if (invalid == null || accused == null) {
                     throw new IllegalArgumentException();
                 }
+                break;
+            }
+            case MissingOutput:
+            case ShuffleFailure: {
                 break;
             }
         }
@@ -151,6 +153,6 @@ public class Blame implements Serializable {
 
     // Sent when there is a failure in phase two and in the subsequent equivocation check.
     public static Blame ShuffleAndEquivocationFailure(DecryptionKey privateKey, Queue<SignedPacket> packets) {
-        return new Blame(Reason.ShuffleFailure, null, null, privateKey, packets, null);
+        return new Blame(Reason.ShuffleAndEquivocationFailure, null, null, privateKey, packets, null);
     }
 }

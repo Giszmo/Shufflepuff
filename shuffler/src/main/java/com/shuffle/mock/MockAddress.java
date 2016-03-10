@@ -36,4 +36,23 @@ public class MockAddress implements Address, Serializable {
     public String toString(){
         return "ad[" + index + "]";
     }
+
+    @Override
+    public int compareTo(Address address) {
+        if (!(address instanceof MockAddress)) {
+            return 0;
+        }
+
+        int index = ((MockAddress)address).index;
+
+        if (index < this.index) {
+            return -1;
+        }
+
+        if (index > this.index) {
+            return 1;
+        }
+
+        return 0;
+    }
 }
