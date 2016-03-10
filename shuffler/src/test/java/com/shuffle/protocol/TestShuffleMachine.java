@@ -148,6 +148,7 @@ public class TestShuffleMachine {
         }
     }
 
+    // Test cases for a player who spents his coins while the protocol is going on.
     private class DoubleSpendTestCase extends TestCaseFactory {
         final int[] views;
         final Set<Integer> doubleSpenders = new HashSet<>();
@@ -495,7 +496,7 @@ public class TestShuffleMachine {
         // A player drops an address and adds a duplicate in phase 2.
         DropAddress(caseNo++, 4, null, null, new int[][]{new int[]{3, 1, 2}}, sim).check();
         DropAddress(caseNo++, 4, null, null, new int[][]{new int[]{4, 3, 2}}, sim).check();
-        DropAddress(caseNo++, 5, null, null, new int[][]{new int[]{4, 3, 2}}, sim).check();
+        DropAddress(caseNo,   5, null, null, new int[][]{new int[]{4, 3, 2}}, sim).check();
     }
 
     // TODO make these work.
@@ -511,7 +512,7 @@ public class TestShuffleMachine {
         InvalidTransactionSignature(caseNo, 10, new int[]{2, 5, 6, 7}, sim).check();
     }
 
-    /*@Test
+    @Test
     public void testDoubleSpending() {
         Simulator sim = new Simulator(new MockMessageFactory());
         int caseNo = 0;
@@ -521,10 +522,9 @@ public class TestShuffleMachine {
         DoubleSpend(caseNo++, new int[]{0, 1, 0}, new int[]{1}, sim).check();
         DoubleSpend(caseNo++, new int[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1}, new int[]{6}, sim).check();
         DoubleSpend(caseNo++, new int[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1}, new int[]{3, 10}, sim).check();
-        DoubleSpend(caseNo++, new int[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1}, new int[]{1, 7, 8}, sim).check();
-        DoubleSpend(caseNo, new int[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1}, new int[]{4, 6, 7, 8}, sim).check();
+        DoubleSpend(caseNo,   new int[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1}, new int[]{1, 7}, sim).check();
 
-    }*/
+    }
 
     @Test
     public void testLies() {

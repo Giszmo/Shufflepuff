@@ -157,15 +157,7 @@ public class InitialState {
             }
 
             Address address = sk.VerificationKey().address();
-            Transaction doubleSpendTrans = null;
-
             MockCoin coin = coin(crypto);
-
-            if (doubleSpend > 0) {
-                // is he going to double spend? If so, make a new transaction for him.
-                doubleSpendTrans = coin.spend(address, crypto.makeSigningKey().VerificationKey().address(), doubleSpend);
-            }
-
             CoinShuffle shuffle;
 
             if (equivocateAnnouncement != null && equivocateAnnouncement.length > 0) {
@@ -178,6 +170,10 @@ public class InitialState {
                 shuffle = MaliciousMachine.addressDropperDuplicator(messages, crypto, coin, drop, duplicate);
             } else if (drop != 0) {
                 shuffle = MaliciousMachine.addressDropper(messages, crypto, coin, drop);
+            } else if (doubleSpend > 0) {
+                // is he going to double spend? If so, make a new transaction for him.
+                shuffle = MaliciousMachine.doubleSpender(messages, crypto, coin,
+                        coin.spend(address, crypto.makeSigningKey().VerificationKey().address(), doubleSpend));
             } else if (mutate) {
                 shuffle = new CoinShuffle(messages, crypto, coin.mutated());
             } else {
@@ -254,7 +250,8 @@ public class InitialState {
                     Reason reason = j.maliciousBehavior();
 
                     if (reason != null) {
-                        if (equals(i) || reason == Reason.NoFundsAtAll || reason == Reason.InsufficientFunds) {
+                        if (reason == Reason.NoFundsAtAll || reason == Reason.InsufficientFunds
+                                || (equals(i) && (reason != Reason.DoubleSpend || viewpoint == i.viewpoint))) {
                             bm.put(i.vk, Evidence.Expected(j.vk, reason, true));
                         }
                     }
