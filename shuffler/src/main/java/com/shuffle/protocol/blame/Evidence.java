@@ -28,9 +28,11 @@ public class Evidence {
     public final boolean credible; // Do we believe this evidence?
     public final Transaction t;
     public final Signature signature;
-    private final Map<VerificationKey, SignedPacket> output;
-    private final Map<VerificationKey, EncryptionKey> sent;
-    private final Map<VerificationKey, DecryptionKey> keys;
+    public final Map<VerificationKey, SignedPacket> output;
+    public final Map<VerificationKey, EncryptionKey> sent;
+    public final Map<VerificationKey, SignedPacket> shuffle;
+    public final Map<VerificationKey, SignedPacket> broadcast;
+    public final Map<VerificationKey, DecryptionKey> keys;
 
     protected Evidence(
             VerificationKey accused,
@@ -40,6 +42,8 @@ public class Evidence {
             Signature signature,
             Map<VerificationKey, SignedPacket> output,
             Map<VerificationKey, EncryptionKey> sent,
+            Map<VerificationKey, SignedPacket> shuffle,
+            Map<VerificationKey, SignedPacket> broadcast,
             Map<VerificationKey, DecryptionKey> keys) {
 
         if (reason == null) {
@@ -66,7 +70,7 @@ public class Evidence {
                 break;
             }
             case ShuffleFailure: {
-                if (output == null || keys == null) {
+                if (shuffle == null || broadcast == null || keys == null) {
                     throw new IllegalArgumentException();
                 }
                 break;
@@ -92,6 +96,8 @@ public class Evidence {
         this.output = output;
         this.sent = sent;
         this.keys = keys;
+        this.shuffle = shuffle;
+        this.broadcast = broadcast;
     }
 
     private Evidence(VerificationKey accused, Reason reason, boolean credible) {
@@ -103,6 +109,8 @@ public class Evidence {
         this.output = null;
         this.sent = null;
         this.keys = null;
+        this.broadcast = null;
+        this.shuffle = null;
     }
 
     @Override
@@ -144,33 +152,34 @@ public class Evidence {
     }
 
     static public Evidence NoFundsAtAll(VerificationKey accused, boolean credible) {
-        return new Evidence(accused, Reason.NoFundsAtAll, credible, null, null, null, null, null);
+        return new Evidence(accused, Reason.NoFundsAtAll, credible, null, null, null, null, null, null, null);
     }
 
     static public Evidence InsufficientFunds(VerificationKey accused, boolean credible, Transaction t) {
-        return new Evidence(accused, Reason.InsufficientFunds, credible, t, null, null, null, null);
+        return new Evidence(accused, Reason.InsufficientFunds, credible, t, null, null, null, null, null, null);
     }
 
     static public Evidence DoubleSpend(VerificationKey accused, boolean credible, Transaction t) {
-        return new Evidence(accused, Reason.DoubleSpend, credible, t, null, null, null, null);
+        return new Evidence(accused, Reason.DoubleSpend, credible, t, null, null, null, null, null, null);
     }
 
     static public Evidence InvalidSignature(VerificationKey accused, boolean credible, Signature signature) {
-        return new Evidence(accused, Reason.InvalidSignature, credible, null, signature, null, null, null);
+        return new Evidence(accused, Reason.InvalidSignature, credible, null, signature, null, null, null, null, null);
     }
 
     static public Evidence EquivocationFailureAnnouncement(VerificationKey accused, Map<VerificationKey, EncryptionKey> sent) {
-        return new Evidence(accused, Reason.EquivocationFailure, true, null, null, null, sent, null);
+        return new Evidence(accused, Reason.EquivocationFailure, true, null, null, null, sent, null, null, null);
     }
 
     static public Evidence EquivocationFailureBroadcast(VerificationKey accused, Map<VerificationKey, SignedPacket> output) {
-        return new Evidence(accused, Reason.EquivocationFailure, true, null, null, output, null, null);
+        return new Evidence(accused, Reason.EquivocationFailure, true, null, null, output, null, null, null, null);
     }
 
     static public Evidence ShuffleMisbehaviorDropAddress(VerificationKey accused,
                                                          Map<VerificationKey, DecryptionKey> keys,
-                                                         Map<VerificationKey, SignedPacket> output) {
-        return new Evidence(accused, Reason.ShuffleFailure, true, null, null, output, null, keys);
+                                                         Map<VerificationKey, SignedPacket> shuffleMessages,
+                                                         Map<VerificationKey, SignedPacket> broadcastMessages) {
+        return new Evidence(accused, Reason.ShuffleFailure, true, null, null, null, null, shuffleMessages, broadcastMessages, keys);
     }
 
     static public Evidence Expected(VerificationKey accused, Reason reason, boolean credible) {
@@ -179,7 +188,8 @@ public class Evidence {
 
     // TODO remove this function when the protocol is finally done.
     static public Evidence Placeholder(VerificationKey accused, Reason reason, boolean credible) {
-        log.warn("placeholder evidence.");
+        log.warn("placeholder evidence!");
+        new Exception().printStackTrace();
         return new Evidence(accused, reason, credible);
     }
 }

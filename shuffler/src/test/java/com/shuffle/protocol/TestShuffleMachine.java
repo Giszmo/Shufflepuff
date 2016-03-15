@@ -70,8 +70,6 @@ public class TestShuffleMachine {
                 SigningKey key = ex.getKey();
                 Machine result = results.get(key);
                 Machine expected = ex.getValue();
-                log.info("  expected: " + expected.toString());
-                log.info("  results:  " + result.toString());
 
                 Assert.assertNotNull(result);
 

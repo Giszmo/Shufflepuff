@@ -59,7 +59,7 @@ public class Blame implements Serializable {
                 break;
             }
             case ShuffleAndEquivocationFailure: {
-                if (privateKey == null || packets == null) {
+                if (packets == null) {
                     throw new IllegalArgumentException();
                 }
                 break;

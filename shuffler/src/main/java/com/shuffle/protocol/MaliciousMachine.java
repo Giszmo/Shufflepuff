@@ -69,7 +69,8 @@ final public class MaliciousMachine extends CoinShuffle {
         @Override
         Matrix equivocationCheck(
                 Map<VerificationKey, EncryptionKey> encryptonKeys,
-                Queue<Address> newAddresses)
+                Queue<Address> newAddresses,
+                boolean errorCase)
                 throws InterruptedException, ValueException,
                 FormatException, ProtocolException,
                 SignatureException {
@@ -93,8 +94,8 @@ final public class MaliciousMachine extends CoinShuffle {
             hashes.put(vk, equivocationCheck);
 
             if (areEqual(hashes.values())) {
-                if (mailbox.blame()) {
-                    fillBlameMatrix(new Matrix());
+                if (mailbox.blame() || errorCase) {
+                    return blameBroadcastShuffleMessages();
                 }
 
                 return null;
@@ -130,6 +131,7 @@ final public class MaliciousMachine extends CoinShuffle {
         Deque<Address> readAndBroadcastNewAddresses(Message shuffled)
                 throws FormatException, InterruptedException,
                 SignatureException, ValueException, BlameException {
+
             Deque<Address> newAddresses;
             if (me == N) {
                 newAddresses = readNewAddresses(shuffled);
@@ -149,7 +151,8 @@ final public class MaliciousMachine extends CoinShuffle {
         @Override
         Matrix equivocationCheck(
                 Map<VerificationKey, EncryptionKey> encryptonKeys,
-                Queue<Address> newAddresses)
+                Queue<Address> newAddresses,
+                boolean errorCase)
                 throws InterruptedException, ValueException,
                 FormatException, ProtocolException,
                 SignatureException {
@@ -166,11 +169,9 @@ final public class MaliciousMachine extends CoinShuffle {
             hashes.put(vk, equivocationCheck);
 
             if (areEqual(hashes.values())) {
-                if (mailbox.blame()) {
-                    fillBlameMatrix(new Matrix());
+                if (mailbox.blame() || errorCase) {
+                    return blameBroadcastShuffleMessages();
                 }
-
-                return null;
             }
 
             // If the hashes are not equal, enter the blame phase.
@@ -297,7 +298,8 @@ final public class MaliciousMachine extends CoinShuffle {
         @Override
         Matrix equivocationCheck(
                 Map<VerificationKey, EncryptionKey> encryptonKeys,
-                Queue<Address> newAddresses)
+                Queue<Address> newAddresses,
+                boolean errorCase)
                 throws InterruptedException, ValueException,
                 FormatException, ProtocolException,
                 SignatureException {
@@ -307,7 +309,7 @@ final public class MaliciousMachine extends CoinShuffle {
 
             spent = true;
 
-            return super.equivocationCheck(encryptonKeys, newAddresses);
+            return super.equivocationCheck(encryptonKeys, newAddresses, errorCase);
         }
     }
 
@@ -455,7 +457,7 @@ final public class MaliciousMachine extends CoinShuffle {
     }
 
     public static CoinShuffle addressDropper(MessageFactory messages, Crypto crypto, Coin coin, int drop) {
-       return new MaliciousMachine(messages, crypto, coin, Phase.Shuffling, null, drop, 0, false, null);
+        return new MaliciousMachine(messages, crypto, coin, Phase.Shuffling, null, drop, 0, false, null);
     }
 
     public static CoinShuffle addressDropperDuplicator(MessageFactory messages, Crypto crypto, Coin coin, int drop, int duplicate) {

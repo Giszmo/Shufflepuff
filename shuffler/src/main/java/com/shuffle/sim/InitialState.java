@@ -50,7 +50,7 @@ public class InitialState {
 
     private final static class BlameEvidencePatternAny extends Evidence {
         private BlameEvidencePatternAny(VerificationKey accused) {
-            super(accused, Reason.NoFundsAtAll, false, null, null, null, null, null);
+            super(accused, Reason.NoFundsAtAll, false, null, null, null, null, null, null, null);
 
         }
 
@@ -202,7 +202,7 @@ public class InitialState {
             // Is the player going to drop an address during the shuffle phase?
             if (drop != 0) {
                 if (replace) {
-                    return Reason.ShuffleAndEquivocationFailure;
+                    return Reason.ShuffleFailure;
                 }
                 return Reason.ShuffleFailure;
             }
@@ -249,11 +249,9 @@ public class InitialState {
 
                     Reason reason = j.maliciousBehavior();
 
-                    if (reason != null) {
-                        if (reason == Reason.NoFundsAtAll || reason == Reason.InsufficientFunds
-                                || (equals(i) && (reason != Reason.DoubleSpend || viewpoint == i.viewpoint))) {
-                            bm.put(i.vk, Evidence.Expected(j.vk, reason, true));
-                        }
+                    if (reason != null && (reason == Reason.NoFundsAtAll || reason == Reason.InsufficientFunds
+                                || (equals(i) && (reason != Reason.DoubleSpend || viewpoint == i.viewpoint)))) {
+                        bm.put(i.vk, Evidence.Expected(j.vk, reason, true));
                     }
                 }
             }
