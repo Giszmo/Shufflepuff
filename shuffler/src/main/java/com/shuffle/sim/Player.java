@@ -41,16 +41,14 @@ public class Player implements Runnable {
         public final int threads;
         public final InitialState.PlayerInitialState init;
         public final Map<InetSocketAddress, VerificationKey> keys;
-        public final Crypto crypto;
 
         public Parameters(int port, int threads, InitialState.PlayerInitialState init,
-                          Map<InetSocketAddress, VerificationKey> keys, Crypto crypto) {
+                          Map<InetSocketAddress, VerificationKey> keys) {
 
             this.port = port;
             this.threads = threads;
             this.init = init;
             this.keys = keys;
-            this.crypto = crypto;
         }
     }
 
@@ -136,9 +134,9 @@ public class Player implements Runnable {
 
         List<InitialState.PlayerInitialState> inits = InitialState.successful(
                 new MockSessionIdentifier("tcp test"),
-                options.get("-players"),
                 options.get("-amount"),
-                crypto).getPlayers();
+                crypto,
+                options.get("-players")).getPlayers();
 
         // Create keys object.
         int port = options.get("-minport");
@@ -157,7 +155,7 @@ public class Player implements Runnable {
         return new Parameters(
                 options.get("-minport") + i,
                 options.get("-threads"),
-                pinit, keys, crypto);
+                pinit, keys);
     }
 
     public static void main(String[] args) {
@@ -202,12 +200,11 @@ public class Player implements Runnable {
 
     private Machine play() {
         Channel<InetSocketAddress, Bytestring> tcp = new TCPChannel(param.port, exec);
-        Crypto crypto = param.crypto;
 
-        Connect<InetSocketAddress> connect = (Connect<InetSocketAddress>) new Connect<InetSocketAddress>(crypto);
+        Connect<InetSocketAddress> connect = (Connect<InetSocketAddress>) new Connect<InetSocketAddress>(param.init.crypto());
 
         try {
-            return new CoinShuffle(new MockMessageFactory(), crypto, param.init.coin(crypto)).runProtocol(
+            return new CoinShuffle(new MockMessageFactory(), param.init.crypto(), param.init.coin()).runProtocol(
                     param.init.getSession(),
                     param.init.getAmount(),
                     param.init.sk,

@@ -1,6 +1,5 @@
 package com.shuffle.sim;
 
-import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.monad.NaturalSummableFuture;
@@ -11,7 +10,6 @@ import com.shuffle.protocol.InvalidImplementationError;
 import com.shuffle.protocol.Machine;
 import com.shuffle.protocol.MessageFactory;
 import com.shuffle.protocol.Network;
-import com.shuffle.protocol.Phase;
 import com.shuffle.protocol.SignedPacket;
 import com.shuffle.protocol.TimeoutError;
 
@@ -36,7 +34,7 @@ public final class Simulator {
      *
      * Created by Daniel Krawisz on 2/8/16.
      */
-    private class NetworkSim implements Network {
+    private static class NetworkSim implements Network {
         final Chan<SignedPacket> inbox = new Chan<>();
         final Map<VerificationKey, NetworkSim> networks;
 
@@ -77,13 +75,10 @@ public final class Simulator {
         }
     }
 
-    final MessageFactory messages;
-
-    public Simulator(MessageFactory messages)  {
-        this.messages = messages;
+    private Simulator() {
     }
 
-    public Map<SigningKey, Machine> run(InitialState init, Crypto crypto) {
+    public static Map<SigningKey, Machine> run(InitialState init, MessageFactory messages) {
 
         final Map<SigningKey, Adversary> machines = new HashMap<>();
         final Map<VerificationKey, NetworkSim> networks = new HashMap<>();
@@ -97,7 +92,7 @@ public final class Simulator {
             NetworkSim network = new NetworkSim(networks);
             networks.put(player.vk, network);
 
-            Adversary adversary = player.adversary(crypto, messages, network);
+            Adversary adversary = player.adversary(messages, network);
             machines.put(player.sk, adversary);
         }
 
