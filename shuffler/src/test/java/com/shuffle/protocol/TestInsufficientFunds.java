@@ -26,7 +26,7 @@ public class TestInsufficientFunds extends TestShuffleMachine{
 
         // Tests for players who initially have insufficient funds.
         InsufficientFunds(caseNo++, 2, new int[]{1}, new int[]{}, new int[]{});
-        InsufficientFunds(caseNo++, 2, new int[]{}, new int[]{1}, new int[]{});
+        /*InsufficientFunds(caseNo++, 2, new int[]{}, new int[]{1}, new int[]{});
         InsufficientFunds(caseNo++, 2, new int[]{}, new int[]{}, new int[]{1});
         InsufficientFunds(caseNo++, 2, new int[]{1, 2}, new int[]{}, new int[]{});
         InsufficientFunds(caseNo++, 3, new int[]{1}, new int[]{}, new int[]{});
@@ -38,6 +38,6 @@ public class TestInsufficientFunds extends TestShuffleMachine{
         InsufficientFunds(caseNo++, 10, new int[]{}, new int[]{}, new int[]{3, 5});
         InsufficientFunds(caseNo++, 10, new int[]{5}, new int[]{10}, new int[]{});
         InsufficientFunds(caseNo++, 10, new int[]{}, new int[]{3}, new int[]{9});
-        InsufficientFunds(caseNo, 10, new int[]{1}, new int[]{}, new int[]{2});
+        InsufficientFunds(caseNo, 10, new int[]{1}, new int[]{}, new int[]{2});*/
     }
 }

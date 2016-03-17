@@ -49,7 +49,7 @@ public class InitialState {
 
     private final static class EvidencePatternAny extends Evidence {
         private EvidencePatternAny(VerificationKey accused) {
-            super(accused, Reason.NoFundsAtAll, true, null, null, null, null, null, null, null);
+            super(accused, Reason.NoFundsAtAll, null, null, null, null, null, null, null);
 
         }
 
@@ -291,10 +291,15 @@ public class InitialState {
                         } else {
                             bm.put(i.vk, new EvidencePatternOr(j.vk, reason, true, null));
                         }
+                        continue;
                     }
 
-                    if (reason == Reason.NoFundsAtAll || reason == Reason.InsufficientFunds
-                                || (equals(i) && (reason != Reason.DoubleSpend || viewpoint == i.viewpoint))) {
+                    if (reason == Reason.NoFundsAtAll || reason == Reason.InsufficientFunds) {
+                        bm.put(i.vk, Evidence.Expected(j.vk, reason, true));
+                        continue;
+                    }
+
+                    if (equals(i)) {
                         bm.put(i.vk, Evidence.Expected(j.vk, reason, true));
                     }
                 }

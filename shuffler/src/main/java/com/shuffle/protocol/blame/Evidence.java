@@ -25,7 +25,6 @@ public class Evidence {
 
     public final VerificationKey accused;
     public final Reason reason;
-    public final boolean credible; // Do we believe this evidence?
     public final Transaction t;
     public final Signature signature;
     public final Map<VerificationKey, SignedPacket> output;
@@ -37,7 +36,6 @@ public class Evidence {
     protected Evidence(
             VerificationKey accused,
             Reason reason,
-            boolean credible,
             Transaction t,
             Signature signature,
             Map<VerificationKey, SignedPacket> output,
@@ -88,14 +86,8 @@ public class Evidence {
             }
         }
 
-        // Testing whether false is ever part of the input.
-        if (!credible) {
-            throw new IllegalArgumentException();
-        }
-
         this.accused = accused;
         this.reason = reason;
-        this.credible = true;
         this.t = t;
         this.signature = signature;
         this.output = output;
@@ -108,7 +100,6 @@ public class Evidence {
     protected Evidence(VerificationKey accused, Reason reason, boolean credible) {
         this.accused = accused;
         this.reason = reason;
-        this.credible = credible;
         this.t = null;
         this.signature = null;
         this.output = null;
@@ -130,61 +121,70 @@ public class Evidence {
 
         Evidence b = (Evidence) o;
 
-        return reason == b.reason && credible == b.credible &&
+        return reason == b.reason &&
                 (t == null && b.t == null || t != null && b.t != null && t.equals(b.t));
     }
 
     @Override
     public int hashCode() {
-        int hash = credible ? 0 : 1;
-        hash = hash * 2 + (output == null ? 0 : output.hashCode());
-        hash = hash * 15 + (reason == null ? 0 : reason.hashCode());
-        hash = hash * 15 + (signature == null ? 0 : signature.hashCode());
+        int z = 17;
+        int hash = 0;
+
+        hash = hash * z + (reason == null ? 0 : reason.hashCode());
+        hash = hash * z + (accused == null ? 0 : accused.hashCode());
+        hash = hash * z + (t == null ? 0 : t.hashCode());
+        hash = hash * z + (signature == null ? 0 : signature.hashCode());
+        hash = hash * z + (output == null ? 0 : output.hashCode());
+        hash = hash * z + (sent == null ? 0 : sent.hashCode());
+        hash = hash * z + (shuffle == null ? 0 : shuffle.hashCode());
+        hash = hash * z + (broadcast == null ? 0 : broadcast.hashCode());
+        hash = hash * z + (keys == null ? 0 : keys.hashCode());
+
         return hash;
     }
 
     public boolean match(Evidence e) {
-        return e != null && reason == e.reason && credible == e.credible;
+        return e != null && reason == e.reason;
     }
 
     @Override
     public String toString() {
-        String str = reason.toString() + ":" + credible;
+        String str = reason.toString();
         if (t != null) {
             str += ":" + t.toString();
         }
         return str;
     }
 
-    static public Evidence NoFundsAtAll(VerificationKey accused, boolean credible) {
-        return new Evidence(accused, Reason.NoFundsAtAll, credible, null, null, null, null, null, null, null);
+    static public Evidence NoFundsAtAll(VerificationKey accused) {
+        return new Evidence(accused, Reason.NoFundsAtAll, null, null, null, null, null, null, null);
     }
 
-    static public Evidence InsufficientFunds(VerificationKey accused, boolean credible, Transaction t) {
-        return new Evidence(accused, Reason.InsufficientFunds, credible, t, null, null, null, null, null, null);
+    static public Evidence InsufficientFunds(VerificationKey accused, Transaction t) {
+        return new Evidence(accused, Reason.InsufficientFunds, t, null, null, null, null, null, null);
     }
 
-    static public Evidence DoubleSpend(VerificationKey accused, boolean credible, Transaction t) {
-        return new Evidence(accused, Reason.DoubleSpend, credible, t, null, null, null, null, null, null);
+    static public Evidence DoubleSpend(VerificationKey accused, Transaction t) {
+        return new Evidence(accused, Reason.DoubleSpend, t, null, null, null, null, null, null);
     }
 
-    static public Evidence InvalidSignature(VerificationKey accused, boolean credible, Signature signature) {
-        return new Evidence(accused, Reason.InvalidSignature, credible, null, signature, null, null, null, null, null);
+    static public Evidence InvalidSignature(VerificationKey accused, Signature signature) {
+        return new Evidence(accused, Reason.InvalidSignature, null, signature, null, null, null, null, null);
     }
 
     static public Evidence EquivocationFailureAnnouncement(VerificationKey accused, Map<VerificationKey, EncryptionKey> sent) {
-        return new Evidence(accused, Reason.EquivocationFailure, true, null, null, null, sent, null, null, null);
+        return new Evidence(accused, Reason.EquivocationFailure, null, null, null, sent, null, null, null);
     }
 
     static public Evidence EquivocationFailureBroadcast(VerificationKey accused, Map<VerificationKey, SignedPacket> output) {
-        return new Evidence(accused, Reason.EquivocationFailure, true, null, null, output, null, null, null, null);
+        return new Evidence(accused, Reason.EquivocationFailure, null, null, output, null, null, null, null);
     }
 
     static public Evidence ShuffleMisbehaviorDropAddress(VerificationKey accused,
                                                          Map<VerificationKey, DecryptionKey> keys,
                                                          Map<VerificationKey, SignedPacket> shuffleMessages,
                                                          Map<VerificationKey, SignedPacket> broadcastMessages) {
-        return new Evidence(accused, Reason.ShuffleFailure, true, null, null, null, null, shuffleMessages, broadcastMessages, keys);
+        return new Evidence(accused, Reason.ShuffleFailure, null, null, null, null, shuffleMessages, broadcastMessages, keys);
     }
 
     static public Evidence Expected(VerificationKey accused, Reason reason, boolean credible) {

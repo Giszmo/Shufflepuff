@@ -261,7 +261,7 @@ public class CoinShuffle {
                     VerificationKey key = bad.getKey();
                     Signature signature = bad.getValue();
 
-                    bm.put(vk, Evidence.InvalidSignature(key, true, signature));
+                    bm.put(vk, Evidence.InvalidSignature(key, signature));
                     blameMessage.attach(Blame.InvalidSignature(key, signature));
                 }
                 mailbox.broadcast(blameMessage, machine.phase);
@@ -436,10 +436,8 @@ public class CoinShuffle {
 
                 if (t == null) {
                     blameMessage = blameMessage.attach(Blame.NoFundsAtAll(offender));
-                    matrix.put(vk, Evidence.NoFundsAtAll(offender, true));
                 } else {
                     blameMessage = blameMessage.attach(Blame.InsufficientFunds(offender, t));
-                    matrix.put(vk, Evidence.InsufficientFunds(offender, true, t));
                 }
             }
 
@@ -485,6 +483,7 @@ public class CoinShuffle {
                 ValueException,
                 SignatureException {
             Map<VerificationKey, Queue<SignedPacket>> blameMessages = mailbox.receiveAllBlame();
+            Map<VerificationKey, Queue<Message>> bm = new HashMap<>();
 
             // Get all hashes received in phase 4 so that we can check that they were reported correctly.
             Map<VerificationKey, Message> hashes = new HashMap<>();
@@ -520,12 +519,10 @@ public class CoinShuffle {
                         Blame blame = message.readBlame();
                         message = message.rest();
 
-                        boolean credible;
                         switch (blame.reason) {
                             case NoFundsAtAll: {
-                                // Do we already know about this? The evidence is not credible if we don't.
-                                credible = matrix.blameExists(vk, blame.accused, Reason.NoFundsAtAll);
-                                matrix.put(from, Evidence.NoFundsAtAll(blame.accused, credible));
+                                // TODO Do we agree that this player has insufficient funds?
+                                matrix.put(from, Evidence.NoFundsAtAll(blame.accused));
                                 break;
                             }
                             case InsufficientFunds: {
@@ -536,8 +533,8 @@ public class CoinShuffle {
                                 }
 
                                 // Is the evidence included sufficient?
-                                credible = blame.t.equals(coin.getConflictingTransaction(blame.accused.address(), amount));
-                                matrix.put(from, Evidence.InsufficientFunds(blame.accused, credible, blame.t));
+                                // TODO check whether this is a conflicting transaction.
+                                matrix.put(from, Evidence.InsufficientFunds(blame.accused, blame.t));
                                 break;
                             }
                             case EquivocationFailure: {
@@ -595,9 +592,8 @@ public class CoinShuffle {
                                 break;
                             }
                             case DoubleSpend: {
-                                // Is the evidence included sufficient?
-                                credible = blame.t.equals(coin.getSpendingTransaction(blame.accused.address(), amount));
-                                matrix.put(from, Evidence.DoubleSpend(blame.accused, credible, blame.t));
+                                // TODO does this actually spend the funds?
+                                matrix.put(from, Evidence.DoubleSpend(blame.accused, blame.t));
                                 break;
                             }
                             case InvalidSignature: {
@@ -606,9 +602,8 @@ public class CoinShuffle {
                                     break;
                                 }
 
-                                // Is the evidence included sufficient?
-                                credible = machine.t != null && !blame.accused.verify(machine.t, blame.invalid);
-                                matrix.put(from, Evidence.InvalidSignature(blame.accused, credible, blame.invalid));
+                                // TODO do we agree that the signature is invalid?
+                                matrix.put(from, Evidence.InvalidSignature(blame.accused, blame.invalid));
 
                                 break;
                             }
