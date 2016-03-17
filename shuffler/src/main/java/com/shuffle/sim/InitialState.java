@@ -47,9 +47,9 @@ public class InitialState {
         }
     }
 
-    private final static class BlameEvidencePatternAny extends Evidence {
-        private BlameEvidencePatternAny(VerificationKey accused) {
-            super(accused, Reason.NoFundsAtAll, false, null, null, null, null, null, null, null);
+    private final static class EvidencePatternAny extends Evidence {
+        private EvidencePatternAny(VerificationKey accused) {
+            super(accused, Reason.NoFundsAtAll, true, null, null, null, null, null, null, null);
 
         }
 
@@ -61,6 +61,34 @@ public class InitialState {
         @Override
         public String toString() {
             return "Any";
+        }
+    }
+
+    private final static class EvidencePatternOr extends Evidence {
+        private final Evidence or;
+
+        protected EvidencePatternOr(VerificationKey accused, Reason reason, boolean credible, Evidence or) {
+            super(accused, reason, credible);
+            this.or = or;
+        }
+
+        @Override
+        public boolean match(Evidence e) {
+
+            if (super.match(e)) {
+                return true;
+            }
+
+            if (or == null) {
+                return e == null;
+            }
+
+            return or.match(e);
+        }
+
+        @Override
+        public String toString() {
+            return super.toString() + "|" + or;
         }
     }
 
@@ -242,7 +270,7 @@ public class InitialState {
                 for (PlayerInitialState j : players) {
                     // We don't care who malicious players blame because they aren't trustworthy anyway.
                     if (i.maliciousBehavior() != null) {
-                        bm.put(i.vk, new BlameEvidencePatternAny(j.vk));
+                        bm.put(i.vk, new EvidencePatternAny(j.vk));
                         continue;
                     }
 
@@ -253,8 +281,20 @@ public class InitialState {
 
                     Reason reason = j.maliciousBehavior();
 
-                    if (reason != null && (reason == Reason.NoFundsAtAll || reason == Reason.InsufficientFunds
-                                || (equals(i) && (reason != Reason.DoubleSpend || viewpoint == i.viewpoint)))) {
+                    if (reason == null) {
+                        continue;
+                    }
+
+                    if (reason == Reason.DoubleSpend) {
+                        if (viewpoint == j.viewpoint) {
+                            bm.put(i.vk, Evidence.Expected(j.vk, reason, true));
+                        } else {
+                            bm.put(i.vk, new EvidencePatternOr(j.vk, reason, true, null));
+                        }
+                    }
+
+                    if (reason == Reason.NoFundsAtAll || reason == Reason.InsufficientFunds
+                                || (equals(i) && (reason != Reason.DoubleSpend || viewpoint == i.viewpoint))) {
                         bm.put(i.vk, Evidence.Expected(j.vk, reason, true));
                     }
                 }

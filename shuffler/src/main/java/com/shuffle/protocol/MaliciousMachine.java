@@ -363,6 +363,10 @@ final public class MaliciousMachine extends CoinShuffle {
                     }
                     break;
                 }
+                case VerificationAndSubmission:{
+                    round = new DoubleSpender(state, numberedPlayers, change, mailbox, t);
+                    break;
+                }
             }
 
             if (round == null) {

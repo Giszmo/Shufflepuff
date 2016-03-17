@@ -88,9 +88,14 @@ public class Evidence {
             }
         }
 
+        // Testing whether false is ever part of the input.
+        if (!credible) {
+            throw new IllegalArgumentException();
+        }
+
         this.accused = accused;
         this.reason = reason;
-        this.credible = credible;
+        this.credible = true;
         this.t = t;
         this.signature = signature;
         this.output = output;
@@ -100,7 +105,7 @@ public class Evidence {
         this.broadcast = broadcast;
     }
 
-    private Evidence(VerificationKey accused, Reason reason, boolean credible) {
+    protected Evidence(VerificationKey accused, Reason reason, boolean credible) {
         this.accused = accused;
         this.reason = reason;
         this.credible = credible;

@@ -72,11 +72,13 @@ public class Machine {
     public String toString() {
         String session = " " + this.session.toString();
 
+        String str = "player " + sk.toString();
+
         if (phase == Phase.Completed) {
-            return "Successful run" + session;
+            return str + ": Successful run " + session;
         }
 
-        String str = "Unsuccessful run" + session;
+        str += ": Unsuccessful run " + session;
 
         if (e != null) {
             str += "; threw " + e.toString();
@@ -120,6 +122,30 @@ public class Machine {
                     (e == null && m.e == null ||
                             e != null && m.e != null && e.getClass().equals(m.e.getClass()))
                     && (matrix == null && m.e == null || matrix != null && matrix.match(m.matrix));
+        }
+
+        public String toString() {
+            String session = " " + this.session.toString();
+
+            if (phase == Phase.Completed) {
+                return "Successful run" + session;
+            }
+
+            String str = "Unsuccessful run" + session;
+
+            if (e != null) {
+                str += "; threw " + e.toString();
+            }
+
+            if (phase != null) {
+                str += " failed in phase " + phase.toString();
+            }
+
+            if (matrix != null) {
+                str += "; blame = " + matrix.toString();
+            }
+
+            return str;
         }
     }
 }

@@ -7,6 +7,9 @@ import com.shuffle.protocol.MessageFactory;
 import com.shuffle.protocol.SessionIdentifier;
 import com.shuffle.protocol.blame.Matrix;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -17,6 +20,7 @@ import java.util.Map;
  * Created by Daniel Krawisz on 3/15/16.
  */
 public abstract class TestCase {
+    private static Logger log = LogManager.getLogger(TestCase.class);
 
     public final static class Mismatch {
         public final SigningKey player;
@@ -50,6 +54,8 @@ public abstract class TestCase {
             Machine.Expected expect = new Machine.Expected(init.session, null, null, ex.getValue());
 
             if (result == null || !expect.match(result)) {
+                log.error("  expected " + expect);
+                log.error("  result   " + result);
                 mismatch.put(key, new Mismatch(key, expect, result));
             }
         }

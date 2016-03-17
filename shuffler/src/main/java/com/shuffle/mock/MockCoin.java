@@ -266,24 +266,30 @@ public class MockCoin implements com.shuffle.sim.MockCoin {
 
     @Override
     // TODO transaction fees.
-    public Transaction shuffleTransaction(final long amount, List<VerificationKey> from, Queue<Address> to, Map<VerificationKey, Address> changeAddresses) {
+    public Transaction shuffleTransaction(
+            final long amount,
+            List<VerificationKey> from,
+            Queue<Address> to, Map<VerificationKey,
+            Address> changeAddresses) {
+
         if (amount == 0) {
             throw new IllegalArgumentException();
         }
+
         List<Output> inputs = new LinkedList<>();
         List<Output> outputs = new LinkedList<>();
 
-        // Are there inputs big enough blockchain make this transaction?
+        // Are there inputs big enough to make this transaction?
         for (VerificationKey key : from) {
             final Address address = key.address();
             final long value = valueHeld(address);
             if (value < amount) {
-                throw new CoinNetworkError();
+                return null;
             }
 
             Output input = blockchain.get(address);
             if (input == null) {
-                throw new CoinNetworkError();
+                return null;
             }
             inputs.add(input);
 

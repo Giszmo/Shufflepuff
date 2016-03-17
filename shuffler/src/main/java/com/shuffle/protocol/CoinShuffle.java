@@ -217,27 +217,21 @@ public class CoinShuffle {
                 inputs.add(players.get(i));
             }
 
-            try {
-                machine.t = coin.shuffleTransaction(amount, inputs, newAddresses, changeAddresses);
-            } catch (CoinNetworkError e) {
-                // If there is an error, then see if a double spending transaction can be found.
-                machine.phase = Phase.Blame;
-                Matrix bm = new Matrix();
+            machine.t = coin.shuffleTransaction(amount, inputs, newAddresses, changeAddresses);
 
-                Message doubleSpend = messages.make();
-                for (VerificationKey key : players.values()) {
-                    Transaction o = coin.getConflictingTransaction(key.address(), amount);
-                    if (o != null) {
-                        doubleSpend.attach(Blame.DoubleSpend(key, o));
-                        bm.put(vk, Evidence.DoubleSpend(key, true, o));
-                    }
+            // Check for double spending.
+            Message doubleSpend = messages.make();
+            for (VerificationKey key : players.values()) {
+                Transaction o = coin.getConflictingTransaction(key.address(), amount);
+                if (o != null) {
+                    doubleSpend.attach(Blame.DoubleSpend(key, o));
                 }
-                if (doubleSpend.isEmpty()) {
-                    throw new CoinNetworkError();
-                }
+            }
+            if (!doubleSpend.isEmpty()) {
+                machine.phase = Phase.Blame;
 
                 mailbox.broadcast(doubleSpend, machine.phase);
-                machine.matrix = fillBlameMatrix(bm);
+                machine.matrix = fillBlameMatrix(new Matrix());
                 return;
             }
 
