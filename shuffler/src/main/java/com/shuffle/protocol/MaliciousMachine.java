@@ -15,6 +15,7 @@ import com.shuffle.sim.MockCoin;
 import java.net.ProtocolException;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
@@ -134,8 +135,17 @@ final public class MaliciousMachine extends CoinShuffle {
 
             Deque<Address> newAddresses;
             if (me == N) {
+                // Need to make sure that the other messages are actually different.
+                Message otherShuffled = shuffled;
+                List<Message> equivocation;
+                do {
+                    equivocation = new LinkedList<>();
+                    otherShuffled = shuffle(otherShuffled);
+                    equivocation.add(shuffled);
+                    equivocation.add(otherShuffled);
+                } while (areEqual(equivocation));
+
                 newAddresses = readNewAddresses(shuffled);
-                Message otherShuffled = shuffle(shuffled);
                 otherAddresses = readNewAddresses(otherShuffled);
 
                 for (VerificationKey to : players.values()) {
