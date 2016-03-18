@@ -21,7 +21,7 @@ public class WebsocketChannel implements Channel<URI, Bytestring>{
 
     private class Peers {
 
-        private final Map<URI, WebsocketPeer> peers = new HashMap<URI, WebsocketPeer>();
+        private final Map<URI, WebsocketPeer> peers = new HashMap<>();
 
         public synchronized WebsocketPeer get(URI identity) {
             WebsocketPeer peer = peers.get(identity);
@@ -36,7 +36,7 @@ public class WebsocketChannel implements Channel<URI, Bytestring>{
 
     class OpenSessions {
 
-        private Map<URI, WebsocketPeer.WebsocketSession> openSessions = new HashMap<URI, WebsocketPeer.WebsocketSession>();
+        private Map<URI, WebsocketPeer.WebsocketSession> openSessions = new HashMap<>();
 
         public synchronized WebsocketPeer.WebsocketSession putNewSession(URI identity, WebsocketPeer peer) throws Exception {
             WebsocketPeer.WebsocketSession openSession = openSessions.get(identity);
