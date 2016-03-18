@@ -7,6 +7,7 @@ import java.net.Socket;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 
 /**
@@ -28,6 +29,7 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring> {
     // A particular header format that is used for this particular channel.
     Header header;
 
+    // Only one object representing each peer is allowed at a time.
     private class Peers {
         private final Map<InetSocketAddress, TCPPeer> peers = new HashMap<InetSocketAddress, TCPPeer>();
 
@@ -40,13 +42,13 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring> {
         }
     }
 
-    Peers peers = new Peers();
+    final Peers peers = new Peers();
 
     // A special class used to house synchronized functions regarding the list of open sessions.
     class OpenSessions {
 
         // The sessions which are currently open.
-        private Map<InetSocketAddress, TCPPeer.TCPSession> openSessions = new HashMap<>();
+        private Map<InetSocketAddress, TCPPeer.TCPSession> openSessions = new ConcurrentHashMap<>();
 
         // We don't want to overwrite a session that already exists, so this is in a synchronized
         // function. This is for creatin new sessions.
@@ -90,17 +92,23 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring> {
             return openSessions.get(identity);
         }
 
-        public synchronized TCPPeer.TCPSession remove(InetSocketAddress identity) {
+        public TCPPeer.TCPSession remove(InetSocketAddress identity) {
             return openSessions.remove(identity);
+        }
+
+        public void closeAll() {
+            for (TCPPeer.TCPSession session : openSessions.values()) {
+                session.close();
+            }
         }
     }
 
     OpenSessions openSessions = null;
 
     // Class definition for representation of a particular tcppeer.
-    public class TCPPeer extends Peer<InetSocketAddress, com.shuffle.p2p.Bytestring>{
+    public class TCPPeer extends Peer<InetSocketAddress, Bytestring>{
 
-        List<Session<InetSocketAddress, com.shuffle.p2p.Bytestring>> history;
+        List<Session<InetSocketAddress, Bytestring>> history;
 
         TCPSession currentSession;
 
@@ -133,6 +141,13 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring> {
 
         @Override
         public synchronized Session<InetSocketAddress, Bytestring> openSession(Receiver<Bytestring> receiver) {
+            // Don't allow sessions to be opened when we're opening or closing the channel.
+            synchronized (lock) {}
+
+            if (openSessions == null) {
+                return null;
+            }
+
             if (currentSession != null) {
                 return null;
             }
@@ -149,7 +164,7 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring> {
         }
 
         // Encapsulates a particular tcp session.
-        public class TCPSession implements Session<InetSocketAddress, com.shuffle.p2p.Bytestring> {
+        public class TCPSession implements Session<InetSocketAddress, Bytestring> {
             Socket socket;
             InputStream in;
 
@@ -159,7 +174,13 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring> {
             }
 
             @Override
-            public boolean send(com.shuffle.p2p.Bytestring message) {
+            public synchronized boolean send(Bytestring message) {
+                // Don't allow sending messages while we're opening or closing the channel.
+                synchronized (lock) {}
+
+                if (socket.isClosed()) {
+                    return false;
+                }
 
                 try {
                     socket.getOutputStream().write(header.makeHeader(message.bytes.length).bytes);
@@ -186,7 +207,7 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring> {
             }
 
             @Override
-            public boolean closed() {
+            public synchronized boolean closed() {
                 return socket == null || socket.isClosed();
             }
 
@@ -213,15 +234,20 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring> {
             while (true) {
                 try {
                     byte[] head = new byte[header.headerLength()];
-                    in.read(head);
+                    int bytesRead = in.read(head);
+                    if (bytesRead < head.length) {
+                        break;
+                    }
 
                     receiver.receive(new Bytestring(new byte[header.payloadLength(head)]));
 
                 } catch (IOException e) {
-                    session.close();
-                    return;
+                    break;
                 }
             }
+
+            session.close();
+            return;
         }
     }
 
@@ -271,6 +297,8 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring> {
     private boolean running = false;
     final Executor executor;
 
+    private final Object lock = new Object();
+
     public TCPChannel(
             int port,
             Executor executor) {
@@ -287,37 +315,47 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring> {
         @Override
         // TODO should close all connections and stop listening.
         public void close() {
-            if (server != null) {
-                try {
-                    server.close();
-                } catch (IOException e) {
+            synchronized (lock) {
+                if (server != null) {
+                    try {
+                        server.close();
+                        openSessions.closeAll();
+                        openSessions = null;
+                    } catch (IOException e) {
 
+                    }
+                    server = null;
+                    running = false;
                 }
-                server = null;
-                running = false;
             }
         }
     }
 
     @Override
     public Connection<InetSocketAddress, Bytestring> open(Listener<InetSocketAddress, com.shuffle.p2p.Bytestring> listener) {
-        if (running) return null;
-
         if (listener == null) {
             throw new NullPointerException();
         }
 
-        if (server == null) {
-            try {
-                server = new ServerSocket(port);
-            } catch (IOException e) {
-                return null;
+        synchronized (lock) {
+            if (running) return null;
+
+            if (server == null) {
+                try {
+                    server = new ServerSocket(port);
+                } catch (IOException e) {
+                    return null;
+                }
             }
+
+            running = true;
+
+            openSessions = new OpenSessions();
+
+            executor.execute(new TCPListener());
+
+            return new TCPConnection();
         }
-
-        executor.execute(new TCPListener());
-
-        return new TCPConnection();
     }
 
     @Override
