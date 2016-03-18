@@ -36,9 +36,9 @@ public class WebsocketChannel implements Channel<URI, Bytestring>{
 
     class OpenSessions {
 
-        private Map<URI, WebsocketPeer.WebsocketSession> openSessions = new HashMap<>();
+        private Map<URI, WebsocketPeer.WebsocketSession> openSessions = new HashMap<URI, WebsocketPeer.WebsocketSession>();
 
-        public synchronized WebsocketPeer.WebsocketSession putNewSession(URI identity, WebsocketPeer peer) {
+        public synchronized WebsocketPeer.WebsocketSession putNewSession(URI identity, WebsocketPeer peer) throws Exception {
             WebsocketPeer.WebsocketSession openSession = openSessions.get(identity);
             if (openSession != null) {
                 if (!openSession.closed()) { //? there is no socket.isConnected() equivalent for WebsocketSession
@@ -49,13 +49,14 @@ public class WebsocketChannel implements Channel<URI, Bytestring>{
             }
 
             //WebsocketPeer.WebsocketSession session = peer.newSession();
-            WebsocketClientEndpoint clientEndPoint = new WebsocketClientEndpoint(new URI("wss://echo.websocket.org"));
-            WebsocketPeer.WebsocketSession session = new WebsocketPeer.WebsocketSession(clientEndPoint.newSession());
+
+            WebsocketClientEndpoint clientEndPoint = new WebsocketClientEndpoint(identity);
+            WebsocketPeer.WebsocketSession session = new WebsocketPeer(identity).new WebsocketSession(clientEndPoint.newSession());
 
             return openSessions.put(identity, session);
         }
 
-        public synchronized WebsocketPeer.WebsocketSession putOpenSessions(URI identity, Session client) {
+        public synchronized WebsocketPeer.WebsocketSession putOpenSessions(URI identity, javax.websocket.Session client) {
             WebsocketPeer.WebsocketSession openSession = openSessions.get(identity);
             if (openSession != null) {
                 if (!openSession.closed()) { //? there is no socket.isConnected() equivalent for WebsocketSession
@@ -102,38 +103,44 @@ public class WebsocketChannel implements Channel<URI, Bytestring>{
             this.currentSession = session;
         }
 
-        private WebsocketPeer setSession(Session session) throws IOException {
+        private WebsocketPeer setSession(javax.websocket.Session session) throws IOException {
             currentSession = new WebsocketSession(session);
             return this;
         }
 
         @Override
-        public synchronized Session<URI, Bytestring> openSession(Receiver<Bytestring> receiver) { // ignore receiver NOT
+        public synchronized Session<URI, Bytestring> openSession(Receiver<Bytestring> receiver) { // ignore receiver ?
             if (currentSession != null) {
                 return null;
             }
 
-            WebsocketSession session = openSessions.putNewSession(identity(), this);
+            WebsocketSession session;
 
-            if (session == null) {
-                return null;
+            try {
+                session = openSessions.putNewSession(identity(), this);
+                if (session == null) {
+                    return null;
+                }
+
+                return session;
+            } catch(Exception e) {
+                System.out.println(e);
             }
-
-            return session;
+            return null; //?
         }
 
 
         public class WebsocketSession implements Session<URI, Bytestring> {
-            Session session;
+            javax.websocket.Session session;
 
-            public WebsocketSession (Session session) throws IOException {
+            public WebsocketSession (javax.websocket.Session session) throws IOException {
                 this.session = session;
             }
 
             @Override
             public boolean send(Bytestring message) {
                 try {
-                    session.getBasicRemote().sendText(message); // can't sendText a Bytestring
+                    session.getBasicRemote().sendText(message.toString()); // can't sendText a Bytestring, there's no toString for Bytestring?? Android Studio shows it, however.
                 } catch (IOException e) {
                     return false;
                 }
@@ -144,7 +151,7 @@ public class WebsocketChannel implements Channel<URI, Bytestring>{
             public synchronized void close() {
                 try {
                     session.close();
-                } catch (IOException e) {
+                } catch(IOException e) {
 
                 }
                 session = null;
