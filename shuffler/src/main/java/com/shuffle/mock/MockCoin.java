@@ -9,7 +9,7 @@
 package com.shuffle.mock;
 
 import com.shuffle.bitcoin.Address;
-import com.shuffle.bitcoin.CoinNetworkError;
+import com.shuffle.bitcoin.CoinNetworkException;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.protocol.InvalidImplementationError;
@@ -142,7 +142,7 @@ public class MockCoin implements com.shuffle.sim.MockCoin {
         }
 
         @Override
-        public boolean send() throws CoinNetworkError {
+        public boolean send() throws CoinNetworkException {
             MockCoin.this.send(this);
             return true;
         }
@@ -185,7 +185,7 @@ public class MockCoin implements com.shuffle.sim.MockCoin {
     }
 
     @Override
-    public synchronized Transaction spend(Address from, Address to, long amount) {
+    public synchronized Transaction makeSpendingTransaction(Address from, Address to, long amount) {
         Output output = blockchain.get(from);
 
         if (output == null) {
@@ -204,7 +204,7 @@ public class MockCoin implements com.shuffle.sim.MockCoin {
         return new MockTransaction(in, out);
     }
 
-    public synchronized void send(Transaction t) {
+    public synchronized void send(Transaction t) throws CoinNetworkException {
         if (t == null) throw new NullPointerException();
 
         if (!(t instanceof MockTransaction)) {
@@ -224,14 +224,14 @@ public class MockCoin implements com.shuffle.sim.MockCoin {
         }
 
         if (available < 0) {
-            throw new CoinNetworkError();
+            throw new CoinNetworkException();
         }
 
         // Does the transaction spend from valid outputs?
         for (Output input : mt.inputs) {
             if (!blockchain.get(input.address).equals(input)) {
 
-                throw new CoinNetworkError();
+                throw new CoinNetworkException();
             }
         }
 
@@ -245,7 +245,7 @@ public class MockCoin implements com.shuffle.sim.MockCoin {
             if (mt.equals(nt)) {
                 return;
             } else {
-                throw new CoinNetworkError();
+                throw new CoinNetworkException();
             }
         }
 
@@ -292,9 +292,9 @@ public class MockCoin implements com.shuffle.sim.MockCoin {
         for (VerificationKey key : from) {
             final Address address = key.address();
             final long value = valueHeld(address);
-            if (value < amount) {
+            /*if (value < amount) {
                 return null;
-            }
+            }*/
 
             Output input = blockchain.get(address);
             if (input == null) {

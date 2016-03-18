@@ -28,10 +28,9 @@ public interface Coin {
             long amount,
             List<VerificationKey> from,
             Queue<Address> to,
-            Map<VerificationKey, Address> changeAddresses)
-            throws CoinNetworkError;
+            Map<VerificationKey, Address> changeAddresses) throws CoinNetworkException;
 
-    long valueHeld(Address addr) throws CoinNetworkError;
+    long valueHeld(Address addr) throws CoinNetworkException;
 
     // Returns either a transaction that sent from the given address that caused it to have .
     // insufficient funds or a transaction that sent to a given address that caused it to have

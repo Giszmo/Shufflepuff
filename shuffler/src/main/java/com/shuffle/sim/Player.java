@@ -8,6 +8,7 @@
 
 package com.shuffle.sim;
 
+import com.shuffle.bitcoin.CoinNetworkException;
 import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.mock.MockCrypto;
@@ -221,7 +222,7 @@ public class Player implements Runnable {
                     connect.connect(tcp, param.keys, new MockMarshaller(), 1, 3),
                     msg
             );
-        } catch (IOException | InterruptedException e) {
+        } catch (IOException | InterruptedException | CoinNetworkException e) {
             // TODO handle these problems appropriately.
             return null;
         } finally {

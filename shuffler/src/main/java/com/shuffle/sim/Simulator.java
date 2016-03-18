@@ -8,6 +8,7 @@
 
 package com.shuffle.sim;
 
+import com.shuffle.bitcoin.CoinNetworkException;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.monad.NaturalSummableFuture;
@@ -100,8 +101,12 @@ public final class Simulator {
             NetworkSim network = new NetworkSim(networks);
             networks.put(player.vk, network);
 
-            Adversary adversary = player.adversary(messages, network);
-            machines.put(player.sk, adversary);
+            try {
+                Adversary adversary = player.adversary(messages, network);
+                machines.put(player.sk, adversary);
+            } catch (CoinNetworkException e) {
+                // Should not really happen.
+            }
         }
 
         Map<SigningKey, Machine> results = runSimulation(machines);
@@ -124,6 +129,7 @@ public final class Simulator {
         try {
             return wait.get();
         } catch (InterruptedException | ExecutionException e) {
+            System.out.println("RETURNING NULL BAD BAD BAD BAD BAD.");
             return null;
         }
     }

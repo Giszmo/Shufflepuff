@@ -129,13 +129,14 @@ public class Machine {
                     (phase == null || phase == m.phase) &&
                     (e == null && m.e == null ||
                             e != null && m.e != null && e.getClass().equals(m.e.getClass()))
-                    && (matrix == null && m.e == null || matrix != null && matrix.match(m.matrix));
+                    && ((matrix == null && (m.matrix == null || m.matrix.isEmpty()))
+                        || (matrix != null && matrix.match(m.matrix)));
         }
 
         public String toString() {
             String session = " " + this.session.toString();
 
-            if (phase == Phase.Completed) {
+            if (phase == Phase.Completed || (e == null && (matrix == null || matrix.isEmpty()))) {
                 return "Successful run" + session;
             }
 

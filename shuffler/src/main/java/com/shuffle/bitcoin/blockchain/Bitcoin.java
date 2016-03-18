@@ -11,7 +11,7 @@ package com.shuffle.bitcoin.blockchain;
 
 import com.shuffle.bitcoin.Address;
 import com.shuffle.bitcoin.Coin;
-import com.shuffle.bitcoin.CoinNetworkError;
+import com.shuffle.bitcoin.CoinNetworkException;
 import com.shuffle.bitcoin.VerificationKey;
 
 import org.bitcoinj.core.AddressFormatException;
@@ -83,7 +83,7 @@ public abstract class Bitcoin implements Coin {
 		 */
 
 		@Override
-		public boolean send() throws CoinNetworkError {
+		public boolean send() throws CoinNetworkException {
 			if (!this.canSend) {
 				return false;
 			}
@@ -92,7 +92,7 @@ public abstract class Bitcoin implements Coin {
 			try {
 				peerGroup.broadcastTransaction(this.bitcoinj).future().get(); //checks to see if transaction was broadcast
 			} catch (Exception e) {
-				throw new CoinNetworkError();
+				throw new CoinNetworkException();
 			}
 			return true;
 		}
@@ -121,8 +121,7 @@ public abstract class Bitcoin implements Coin {
 	public Bitcoin.Transaction shuffleTransaction(long amount,
 												  List<VerificationKey> from,
 												  Queue<Address> to,
-												  Map<VerificationKey, Address> changeAddresses)
-			throws CoinNetworkError {
+												  Map<VerificationKey, Address> changeAddresses) throws CoinNetworkException {
 
 
 		// this section adds inputs to the transaction and adds outputs to the change addresses.
@@ -148,7 +147,7 @@ public abstract class Bitcoin implements Coin {
 				}
 
 			} catch(IOException e) {
-				throw new CoinNetworkError();
+				throw new CoinNetworkException();
 			}
 		}
 
@@ -158,7 +157,7 @@ public abstract class Bitcoin implements Coin {
 				List<Bitcoin.Transaction> transactions = getWalletTransactions(address);
 				if (transactions.size() > 0) return null;
 			} catch(IOException e) {
-				throw new CoinNetworkError();
+				throw new CoinNetworkException();
 			}
 			try {
 				tx.addOutput(org.bitcoinj.core.Coin.SATOSHI.multiply(amount), new org.bitcoinj.core.Address(netParams, address));
@@ -177,11 +176,11 @@ public abstract class Bitcoin implements Coin {
 	 */
 
 	@Override
-	public long valueHeld(Address addr) throws CoinNetworkError {
+	public long valueHeld(Address addr) throws CoinNetworkException {
 		try {
 			return getAddressBalance(addr.toString());
 		} catch(IOException e) {
-			throw new CoinNetworkError();
+			throw new CoinNetworkException();
 		}
 	}
 

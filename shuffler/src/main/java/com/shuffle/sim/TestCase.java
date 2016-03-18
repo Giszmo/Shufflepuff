@@ -15,6 +15,8 @@ import com.shuffle.protocol.MessageFactory;
 import com.shuffle.protocol.SessionIdentifier;
 import com.shuffle.protocol.blame.Matrix;
 
+import junit.framework.Assert;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -49,17 +51,19 @@ public abstract class TestCase {
         // Run the simulation.
         Map<SigningKey, Machine> results = Simulator.run(init, messages);
 
+        Assert.assertNotNull(results);
+
         // Get the expected values.
-        Map<SigningKey, Matrix> expected = init.expectedBlame();
+        Map<SigningKey, Machine.Expected> expected = init.expected();
 
         // The result to be returned.
         Map<SigningKey, Mismatch> mismatch = new HashMap<>();
 
         // Check that the map of error states returned matches that which was expected.
-        for (Map.Entry<SigningKey, Matrix> ex : expected.entrySet()) {
+        for (Map.Entry<SigningKey, Machine.Expected> ex : expected.entrySet()) {
             SigningKey key = ex.getKey();
             Machine result = results.get(key);
-            Machine.Expected expect = new Machine.Expected(init.session, null, null, ex.getValue());
+            Machine.Expected expect = ex.getValue();
 
             if (result == null || !expect.match(result)) {
                 log.error("  expected " + expect);

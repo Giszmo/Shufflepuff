@@ -29,6 +29,7 @@ public class TestDoubleSpend extends TestShuffleMachine {
         // Tests for players who spend funds while the protocol is going on.
         DoubleSpend(caseNo++, new int[]{0, 0}, new int[]{1});
         DoubleSpend(caseNo++, new int[]{0, 1, 0}, new int[]{1});
+        DoubleSpend(caseNo++, new int[]{0, 1, 0}, new int[]{2});
         DoubleSpend(caseNo++, new int[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1}, new int[]{6});
         DoubleSpend(caseNo++, new int[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1}, new int[]{3, 10});
         DoubleSpend(caseNo, new int[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1}, new int[]{1, 7});

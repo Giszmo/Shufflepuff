@@ -10,7 +10,7 @@ package com.shuffle.protocol;
 
 import com.shuffle.bitcoin.Address;
 import com.shuffle.bitcoin.Coin;
-import com.shuffle.bitcoin.CoinNetworkError;
+import com.shuffle.bitcoin.CoinNetworkException;
 import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.CryptographyError;
 import com.shuffle.bitcoin.DecryptionKey;
@@ -108,7 +108,9 @@ public class CoinShuffle {
                 InvalidImplementationError,
                 ValueException,
                 InterruptedException,
-                SignatureException, ProtocolException {
+                SignatureException,
+                ProtocolException,
+                CoinNetworkException {
 
             if (amount <= 0) {
                 throw new IllegalArgumentException();
@@ -227,26 +229,21 @@ public class CoinShuffle {
 
             machine.t = coin.shuffleTransaction(amount, inputs, newAddresses, changeAddresses);
 
-            // Check for double spending.
-            Message doubleSpend = messages.make();
-            for (VerificationKey key : players.values()) {
-                Transaction o = coin.getConflictingTransaction(key.address(), amount);
-                if (o != null) {
-                    doubleSpend.attach(Blame.DoubleSpend(key, o));
-                }
-            }
-            if (!doubleSpend.isEmpty()) {
-                machine.phase = Phase.Blame;
-
-                mailbox.broadcast(doubleSpend, machine.phase);
-                machine.matrix = fillBlameMatrix(new Matrix());
+            machine.matrix = checkDoubleSpending(machine.t);
+            if (machine.matrix != null) {
                 return;
             }
 
             mailbox.broadcast(messages.make().attach(sk.makeSignature(machine.t)), machine.phase);
 
             Map<VerificationKey, Message> signatureMessages = null;
-            signatureMessages = mailbox.receiveFromMultipleBlameless(playerSet(1, N), machine.phase);
+            try {
+                signatureMessages = mailbox.receiveFromMultiple(playerSet(1, N), machine.phase);
+            } catch (BlameException e) {
+                // Could receive notice of double spending here.
+                machine.matrix = fillBlameMatrix(new Matrix());
+                return;
+            }
 
             // Verify the signatures.
             assert signatureMessages != null;
@@ -278,7 +275,11 @@ public class CoinShuffle {
             }
 
             // Send the transaction into the net.
-            machine.t.send();
+            try {
+                machine.t.send();
+            } catch(CoinNetworkException e) {
+                machine.e = e;
+            }
 
             // The protocol has completed successfully.
             machine.phase = Phase.Completed;
@@ -418,8 +419,11 @@ public class CoinShuffle {
             return fillBlameMatrix(new Matrix());
         }
 
-        // Check for players with insufficient funds. This happens in phase 1 and phase 5.
-        private Matrix blameInsufficientFunds() throws InterruptedException, FormatException, ValueException, SignatureException {
+        // Check for players with insufficient funds.
+        private Matrix blameInsufficientFunds() throws
+                InterruptedException, FormatException,
+                ValueException, SignatureException, CoinNetworkException
+        {
             List<VerificationKey> offenders = new LinkedList<>();
 
             // Check that each participant has the required amounts.
@@ -481,6 +485,27 @@ public class CoinShuffle {
             mailbox.broadcast(messages.make().attach(Blame.ShuffleAndEquivocationFailure(dk, evidence)), machine.phase);
 
             return fillBlameMatrix(new Matrix());
+        }
+
+        protected Matrix checkDoubleSpending(Transaction t) throws
+                InterruptedException, SignatureException, ValueException, FormatException {
+            // Check for double spending.
+            Message doubleSpend = messages.make();
+            for (VerificationKey key : players.values()) {
+                Transaction o = coin.getConflictingTransaction(key.address(), amount);
+                if (o != null) {
+                    doubleSpend = doubleSpend.attach(Blame.DoubleSpend(key, o));
+                }
+            }
+
+            if (!doubleSpend.isEmpty()) {
+                machine.phase = Phase.Blame;
+
+                mailbox.broadcast(doubleSpend, machine.phase);
+                return fillBlameMatrix(new Matrix());
+            }
+
+            return null;
         }
 
         // When we know we'll receive a bunch of blame messages, we have to go through them all to figure
@@ -1010,7 +1035,8 @@ public class CoinShuffle {
                 | FormatException
                 | ValueException
                 | InvalidParticipantSetException
-                | SignatureException e) {
+                | SignatureException
+                | CoinNetworkException e) {
             state.e = e;
         }
 

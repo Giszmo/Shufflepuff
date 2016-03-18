@@ -9,13 +9,16 @@
 package com.shuffle.sim;
 
 import com.shuffle.bitcoin.Address;
+import com.shuffle.bitcoin.CoinNetworkException;
 import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.protocol.CoinShuffle;
+import com.shuffle.protocol.Machine;
 import com.shuffle.protocol.MaliciousMachine;
 import com.shuffle.protocol.MessageFactory;
 import com.shuffle.protocol.Network;
+import com.shuffle.protocol.Phase;
 import com.shuffle.protocol.SessionIdentifier;
 import com.shuffle.protocol.blame.Evidence;
 import com.shuffle.protocol.blame.Matrix;
@@ -38,14 +41,18 @@ import java.util.TreeSet;
  * Created by Simulator on 2/8/16.
  */
 public class InitialState {
-    // A blame matrix that matches any matrix given to it.
+    // An expected return state that matches any Machine.
     // Used for ensuring a test can't fail no matter what value
     // simulated adversaries return, since we only care about testing the response of the
     // honest players.
-    public static class MatrixPatternAny extends Matrix {
+    public static class ExpectedPatternAny extends Machine.Expected {
+
+        public ExpectedPatternAny() {
+            super(null, null, null, null);
+        }
 
         @Override
-        public boolean match(Matrix bm) {
+        public boolean match(Machine m) {
             return true;
         }
 
@@ -100,7 +107,7 @@ public class InitialState {
         }
     }
 
-    static public MatrixPatternAny anyMatrix = new MatrixPatternAny();
+    static public ExpectedPatternAny any = new ExpectedPatternAny();
 
     public final SessionIdentifier session;
     public final long amount;
@@ -158,7 +165,7 @@ public class InitialState {
             return InitialState.this.crypto;
         }
 
-        public MockCoin coin() {
+        public MockCoin coin() throws CoinNetworkException {
             MockCoin coin = networkPoints.get(viewpoint);
 
             if (coin != null) {
@@ -176,22 +183,23 @@ public class InitialState {
                         Address previousAddress = crypto.makeSigningKey().VerificationKey().address();
 
                         mockCoin.put(previousAddress, player.initialAmount);
-                        mockCoin.spend(previousAddress, address, player.initialAmount).send();
+                        mockCoin.makeSpendingTransaction(previousAddress, address, player.initialAmount).send();
 
                         // Plot twist! We spend it all!
                         if (player.spend > 0) {
-                            mockCoin.spend(address, crypto.makeSigningKey().VerificationKey().address(), player.spend).send();
+                            mockCoin.makeSpendingTransaction(address, crypto.makeSigningKey().VerificationKey().address(), player.spend).send();
                         }
                     }
                 }
             }
 
-            networkPoints.put(viewpoint, mockCoin.copy());
-            return mockCoin;
+            MockCoin copy = mockCoin.copy();
+            networkPoints.put(viewpoint, copy);
+            return copy;
         }
 
         // Turn the initial state into an Adversary object that can be run in the simulator.
-        public Adversary adversary(MessageFactory messages, Network network) {
+        public Adversary adversary(MessageFactory messages, Network network) throws CoinNetworkException {
             if (sk == null) {
                 return null;
             }
@@ -213,7 +221,7 @@ public class InitialState {
             } else if (doubleSpend > 0) {
                 // is he going to double spend? If so, make a new transaction for him.
                 shuffle = MaliciousMachine.doubleSpender(messages, crypto, coin,
-                        coin.spend(address, crypto.makeSigningKey().VerificationKey().address(), doubleSpend));
+                        coin.makeSpendingTransaction(address, crypto.makeSigningKey().VerificationKey().address(), doubleSpend));
             } else if (mutate) {
                 shuffle = new CoinShuffle(messages, crypto, coin.mutated());
             } else {
@@ -266,10 +274,11 @@ public class InitialState {
         }
 
         // How is the player expected to interpret what happened during the protocol?
-        public Matrix expectedBlame() {
+        public Machine.Expected expected() {
             // Malicious players aren't tested, so they can blame anyone.
-            if (maliciousBehavior() != null) {
-                return anyMatrix;
+            Reason mal = maliciousBehavior();
+            if (mal != null) {
+                return any;
             }
 
             Matrix bm = new Matrix();
@@ -294,7 +303,7 @@ public class InitialState {
                     }
 
                     if (reason == Reason.DoubleSpend) {
-                        if (viewpoint == j.viewpoint) {
+                        if (i.viewpoint == j.viewpoint) {
                             bm.put(i.vk, Evidence.Expected(j.vk, reason, true));
                         } else {
                             bm.put(i.vk, new EvidencePatternOr(j.vk, reason, true, null));
@@ -313,7 +322,7 @@ public class InitialState {
                 }
             }
 
-            return bm;
+            return new Machine.Expected(session, null, null, bm);
         }
     }
 
@@ -403,12 +412,12 @@ public class InitialState {
         return this;
     }
 
-    public Map<SigningKey, Matrix> expectedBlame() {
-        Map<SigningKey, Matrix> blame = new HashMap<>();
+    public Map<SigningKey, Machine.Expected> expected() {
+        Map<SigningKey, Machine.Expected> blame = new HashMap<>();
 
         for (PlayerInitialState player : players) {
             if (player.sk != null) {
-                blame.put(player.sk, player.expectedBlame());
+                blame.put(player.sk, player.expected());
             }
         }
 
@@ -505,10 +514,10 @@ public class InitialState {
         }
 
         InitialState init = new InitialState(session, amount, crypto);
-        for (int i = 1; i < views.length; i ++) {
+        for (int i = 0; i < views.length; i ++) {
             init.player().initialFunds(20).networkPoint(views[i]);
 
-            if (doubleSpenders.contains(i)) {
+            if (doubleSpenders.contains(i + 1)) {
                 init.doubleSpend(13);
             }
         }

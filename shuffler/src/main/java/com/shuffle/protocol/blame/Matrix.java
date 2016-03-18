@@ -103,6 +103,10 @@ public class Matrix {
 
     }
 
+    public boolean isEmpty() {
+        return blame.isEmpty();
+    }
+
     @Override
     public boolean equals(Object o) {
         return o != null && o instanceof Matrix && blame.equals(((Matrix)o).blame);

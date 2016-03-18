@@ -10,6 +10,7 @@ package com.shuffle.protocol;
 
 import com.shuffle.bitcoin.Address;
 import com.shuffle.bitcoin.Coin;
+import com.shuffle.bitcoin.CoinNetworkException;
 import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.DecryptionKey;
 import com.shuffle.bitcoin.EncryptionKey;
@@ -18,7 +19,6 @@ import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.protocol.blame.Blame;
 import com.shuffle.protocol.blame.BlameException;
 import com.shuffle.protocol.blame.Matrix;
-import com.shuffle.sim.MockCoin;
 
 import java.net.ProtocolException;
 import java.util.Deque;
@@ -314,6 +314,7 @@ final public class MaliciousMachine extends CoinShuffle {
         }
 
         @Override
+        // This is when we maliciously double spend the transaction. This could happen anywhere though.
         Matrix equivocationCheck(
                 Map<VerificationKey, EncryptionKey> encryptonKeys,
                 Queue<Address> newAddresses,
@@ -322,12 +323,21 @@ final public class MaliciousMachine extends CoinShuffle {
                 FormatException, ProtocolException,
                 SignatureException {
             if (!spent) {
-                t.send();
+                try {
+                    t.send();
+                    spent = true;
+                } catch (CoinNetworkException e) {
+
+                }
             }
 
-            spent = true;
-
             return super.equivocationCheck(encryptonKeys, newAddresses, errorCase);
+        }
+
+        @Override
+        // We made the double spend transaction so obviously we're not going to check honestly.
+        protected Matrix checkDoubleSpending(Transaction t) {
+            return null;
         }
     }
 
@@ -397,7 +407,8 @@ final public class MaliciousMachine extends CoinShuffle {
                 | FormatException
                 | ValueException
                 | InvalidParticipantSetException
-                | SignatureException e) {
+                | SignatureException
+                | CoinNetworkException e) {
             state.e = e;
         }
 
