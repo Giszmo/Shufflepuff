@@ -106,7 +106,7 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring> {
     OpenSessions openSessions = null;
 
     // Class definition for representation of a particular tcppeer.
-    public class TCPPeer extends Peer<InetSocketAddress, Bytestring>{
+    public class TCPPeer extends FundamentalPeer<InetSocketAddress, Bytestring>{
 
         List<Session<InetSocketAddress, Bytestring>> history;
 
