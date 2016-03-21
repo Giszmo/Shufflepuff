@@ -8,9 +8,11 @@
 
 package com.shuffle.bitcoin;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Queue;
+ import com.shuffle.bitcoin.blockchain.Bitcoin;
+
+ import java.util.List;
+ import java.util.Map;
+ import java.util.Queue;
 
 /**
  *
@@ -22,7 +24,7 @@ import java.util.Queue;
  *
  */
 public interface Coin {
-    Transaction shuffleTransaction(
+    Bitcoin.Transaction shuffleTransaction(
             long amount,
             List<VerificationKey> from,
             Queue<Address> to,
