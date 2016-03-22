@@ -1,5 +1,8 @@
-An implementation of the CoinShuffle protocol in java. 
+An implementation of the CoinShuffle protocol in java. This is a work in
+progress. If you wish to support this project, please contact me 
+(daniel.krawisz@thingobjectentity.net) for tasks that you might try completing.
 
+CoinShuffle description: 
 http://crypsys.mmci.uni-saarland.de/projects/CoinShuffle/coinshuffle.pdf
 
 -- Overall Organization of the Project
@@ -26,18 +29,23 @@ protocol with any implementation. It allows for malicious players. As of now,
 the success cases for the protocol run perfectly and so do many of the malicious
 cases. The integration tests are not yet comprehensive. 
 
-status: coming along very nicely
+status: A few remaining test cases. 
 
 Package mock includes mock implementations of all these interfaces for testing
 purposes.
 
 status: functional
 
+Package sim allows for the protocol to be run with any number of simulated
+players.
+
+status: very slick
+
 Package bitcoin will provide an implementation of Coin and Crypto which is
 specific to the Bitcoin network and which provides the cryptography as described
 in the paper. It relies on bitcoinj and Spongey Castle.
 
-status: please someone help!
+status: coming along.
 
 Package p2p includes classes for constructing various internet channels, by
 which instances of this program will communicate. 

@@ -1,7 +1,16 @@
+/**
+ *
+ * Copyright © 2016 Mycelium.
+ * Use of this source code is governed by an ISC
+ * license that can be found in the LICENSE file.
+ *
+ */
+
 package com.shuffle.mock;
 
 import com.shuffle.p2p.Channel;
 import com.shuffle.p2p.Connection;
+import com.shuffle.p2p.FundamentalPeer;
 import com.shuffle.p2p.Listener;
 import com.shuffle.p2p.Peer;
 import com.shuffle.p2p.Receiver;
@@ -45,7 +54,7 @@ public class MockChannel<X> implements Channel<Integer, X> {
         }
     }
 
-    public class MockPeer extends Peer<Integer, X> {
+    public class MockPeer extends FundamentalPeer<Integer, X> {
 
         MockPeer(Integer you) {
             super(you);
