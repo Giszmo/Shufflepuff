@@ -1,11 +1,3 @@
-/**
- *
- * Copyright © 2016 Mycelium.
- * Use of this source code is governed by an ISC
- * license that can be found in the LICENSE file.
- *
- */
-
 package com.shuffle.p2p;
 import java.io.IOException;
 import java.io.InputStream;
@@ -114,9 +106,9 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring> {
     OpenSessions openSessions = null;
 
     // Class definition for representation of a particular tcppeer.
-    public class TCPPeer extends FundamentalPeer<InetSocketAddress, Bytestring>{
+    public class TCPPeer extends Peer<InetSocketAddress, com.shuffle.p2p.Bytestring>{
 
-        List<Session<InetSocketAddress, Bytestring>> history;
+        List<Session<InetSocketAddress, com.shuffle.p2p.Bytestring>> history;
 
         TCPSession currentSession;
 
@@ -172,7 +164,7 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring> {
         }
 
         // Encapsulates a particular tcp session.
-        public class TCPSession implements Session<InetSocketAddress, Bytestring> {
+        public class TCPSession implements Session<InetSocketAddress, com.shuffle.p2p.Bytestring> {
             Socket socket;
             InputStream in;
 
@@ -182,7 +174,7 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring> {
             }
 
             @Override
-            public synchronized boolean send(Bytestring message) {
+            public synchronized boolean send(com.shuffle.p2p.Bytestring message) {
                 // Don't allow sending messages while we're opening or closing the channel.
                 synchronized (lock) {}
 
@@ -242,25 +234,28 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring> {
             while (true) {
                 try {
                     byte[] head = new byte[header.headerLength()];
-                    int bytesRead = in.read(head);
-                    if (bytesRead < head.length) {
-                        break;
-                    }
+                    in.read(head);
 
-                    receiver.receive(new Bytestring(new byte[header.payloadLength(head)]));
+                    byte[] msg = new byte[header.payloadLength(head)];
+                    in.read(head);
+
+                    receiver.receive(new Bytestring(msg));
 
                 } catch (IOException e) {
-                    break;
+                    session.close();
+                    return;
                 }
             }
-
-            session.close();
-            return;
         }
     }
 
     // This contains the function that listens for new tcp connections.
     private class TCPListener implements Runnable {
+        final Listener<InetSocketAddress, com.shuffle.p2p.Bytestring> listener;
+
+        private TCPListener(Listener<InetSocketAddress, Bytestring> listener) {
+            this.listener = listener;
+        }
 
         @Override
         public void run() {
@@ -298,7 +293,6 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring> {
         }
     }
 
-    Listener<InetSocketAddress, com.shuffle.p2p.Bytestring> listener;
     final int port;
 
     ServerSocket server;
@@ -360,7 +354,7 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring> {
 
             openSessions = new OpenSessions();
 
-            executor.execute(new TCPListener());
+            executor.execute(new TCPListener(listener));
 
             return new TCPConnection();
         }
