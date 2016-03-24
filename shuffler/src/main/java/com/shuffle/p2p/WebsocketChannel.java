@@ -10,6 +10,21 @@ package com.shuffle.p2p;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.List;
+
+import javax.websocket.DeploymentException;
+import javax.websocket.MessageHandler;
+
+import javax.websocket.ClientEndpoint;
+import javax.websocket.CloseReason;
+import javax.websocket.ContainerProvider;
+import javax.websocket.OnClose;
+import javax.websocket.OnOpen;
+import javax.websocket.Session;
+import javax.websocket.WebSocketContainer;
 
 /**
  * TODO
@@ -18,6 +33,34 @@ import java.net.URI;
  */
 
 public class WebsocketChannel implements Channel<URI, Bytestring>{
+
+    @ClientEndpoint
+    private class WebsocketClientEndpoint {
+
+        Session userSession = null;
+        URI uri;
+
+        public WebsocketClientEndpoint(URI endpointURI) {
+            this.uri = endpointURI;
+        }
+
+        public Session newSession() throws RuntimeException, DeploymentException, IOException {
+            WebSocketContainer container = ContainerProvider.getWebSocketContainer();
+            return container.connectToServer(this, this.uri);
+        }
+
+        @OnOpen
+        public void onOpen(Session userSession) {
+            System.out.println("opening websocket");
+            this.userSession = userSession;
+        }
+
+        @OnClose
+        public void onClose(Session userSession, CloseReason reason) {
+            System.out.println("closing websocket");
+            this.userSession = null;
+        }
+    }
 
     private class Peers {
 
@@ -32,11 +75,11 @@ public class WebsocketChannel implements Channel<URI, Bytestring>{
         }
     }
 
-    Peers peers = new Peers();
+    final Peers peers = new Peers();
 
     class OpenSessions {
 
-        private Map<URI, WebsocketPeer.WebsocketSession> openSessions = new HashMap<>();
+        private Map<URI, WebsocketPeer.WebsocketSession> openSessions = new HashMap<>(); //ConcurrentHashMap?
 
         public synchronized WebsocketPeer.WebsocketSession putNewSession(URI identity, WebsocketPeer peer) throws Exception {
             WebsocketPeer.WebsocketSession openSession = openSessions.get(identity);
@@ -48,49 +91,32 @@ public class WebsocketChannel implements Channel<URI, Bytestring>{
                 openSessions.remove(identity);
             }
 
-            //WebsocketPeer.WebsocketSession session = peer.newSession();
-
-            WebsocketClientEndpoint clientEndPoint = new WebsocketClientEndpoint(identity);
-            WebsocketPeer.WebsocketSession session = new WebsocketPeer(identity).new WebsocketSession(clientEndPoint.newSession());
+            WebsocketPeer.WebsocketSession session = peer.newSession();
 
             return openSessions.put(identity, session);
-        }
-
-        public synchronized WebsocketPeer.WebsocketSession putOpenSessions(URI identity, javax.websocket.Session client) {
-            WebsocketPeer.WebsocketSession openSession = openSessions.get(identity);
-            if (openSession != null) {
-                if (!openSession.closed()) { //? there is no socket.isConnected() equivalent for WebsocketSession
-                    return null;
-                }
-
-                openSessions.remove(identity);
-            }
-
-            WebsocketPeer peer;
-            try {
-                peer = peers.get(identity).setSession(client);
-            } catch (IOException e) {
-                return null;
-            }
-
-            return openSessions.put(identity, peer.currentSession);
         }
 
         public WebsocketPeer.WebsocketSession get(URI identity) {
             return openSessions.get(identity);
         }
 
-        public synchronized WebsocketPeer.WebsocketSession remove(URI identity) {
+        public WebsocketPeer.WebsocketSession remove(URI identity) {
             return openSessions.remove(identity);
+        }
+
+        public void closeAll() {
+            for (WebsocketPeer.WebsocketSession session : openSessions.values()) {
+                session.close();
+            }
         }
 
     }
 
     OpenSessions openSessions = null;
 
-    public class WebsocketPeer extends Peer<URI, Bytestring> {
+    public class WebsocketPeer extends FundamentalPeer<URI, Bytestring> {
 
-        List<Session<URI, Bytestring>> history;
+        List<com.shuffle.p2p.Session<URI, Bytestring>> history;
 
         WebsocketSession currentSession;
 
@@ -108,8 +134,25 @@ public class WebsocketChannel implements Channel<URI, Bytestring>{
             return this;
         }
 
+        WebsocketPeer.WebsocketSession newSession() throws DeploymentException{
+            URI identity = identity();
+            try {
+                WebsocketClientEndpoint clientEndPoint = new WebsocketClientEndpoint(identity);
+                WebsocketPeer.WebsocketSession session = new WebsocketPeer(identity).new WebsocketSession(clientEndPoint.newSession());
+                return session;
+            } catch(IOException e) {
+                return null;
+            }
+        }
+
         @Override
-        public synchronized Session<URI, Bytestring> openSession(Receiver<Bytestring> receiver) { // ignore receiver ?
+        public synchronized com.shuffle.p2p.Session<URI, Bytestring> openSession(final Receiver<Bytestring> receiver) { // had to make it final to call receive in MessageHandler
+            synchronized (lock) {}
+
+            if (openSessions == null) {
+                return null;
+            }
+
             if (currentSession != null) {
                 return null;
             }
@@ -122,15 +165,21 @@ public class WebsocketChannel implements Channel<URI, Bytestring>{
                     return null;
                 }
 
+                session.session.addMessageHandler(new MessageHandler.Whole<byte[]>() {
+                    public void onMessage(byte[] message) {
+                        receiver.receive(new Bytestring(message));
+                    }
+                });
+
                 return session;
             } catch(Exception e) {
-                System.out.println(e);
+                return null;
             }
-            return null; //?
+
         }
 
 
-        public class WebsocketSession implements Session<URI, Bytestring> {
+        public class WebsocketSession implements com.shuffle.p2p.Session<URI, Bytestring> {
             javax.websocket.Session session;
 
             public WebsocketSession (javax.websocket.Session session) throws IOException {
@@ -138,9 +187,17 @@ public class WebsocketChannel implements Channel<URI, Bytestring>{
             }
 
             @Override
-            public boolean send(Bytestring message) {
+            public synchronized boolean send(Bytestring message) {
+                synchronized (lock) {}
+
+                if (!session.isOpen()) {
+                    return false;
+                }
+
                 try {
-                    session.getBasicRemote().sendText(message.toString()); // can't sendText a Bytestring, there's no toString for Bytestring?? Android Studio shows it, however.
+                    // MUST sendBinary rather than sendText to receive byte[] messages!
+                    ByteBuffer buf = ByteBuffer.wrap(message.bytes);
+                    session.getBasicRemote().sendBinary(buf);
                 } catch (IOException e) {
                     return false;
                 }
@@ -160,7 +217,7 @@ public class WebsocketChannel implements Channel<URI, Bytestring>{
             }
 
             @Override
-            public boolean closed() {
+            public synchronized boolean closed() {
                 return session == null || !session.isOpen();
             }
 
@@ -173,7 +230,9 @@ public class WebsocketChannel implements Channel<URI, Bytestring>{
 
     }
 
-    private boolean running = false; // not necessary?
+    private boolean running = false;
+    private final Object lock = new Object();
+
 
     public WebsocketChannel() {
 
@@ -183,18 +242,27 @@ public class WebsocketChannel implements Channel<URI, Bytestring>{
 
         @Override
 
-        public void close() { //  not necessary, we don't have ServerSocket listeners?
-            running = false;
+        public void close() {
+            synchronized (lock) {
+                openSessions.closeAll();
+                openSessions = null;
+                running = false;
+            }
         }
     }
 
     @Override
     public Connection<URI, Bytestring> open(Listener<URI, Bytestring> listener) {
-        return null;
+        synchronized (lock) {
+            if (running) return null;
+            running = true;
+            openSessions = new OpenSessions();
+            return new WebsocketConnection();
+        }
     }
 
     @Override
     public Peer<URI, Bytestring> getPeer(URI you) {
-        return null;
+        return peers.get(you);
     }
 }
