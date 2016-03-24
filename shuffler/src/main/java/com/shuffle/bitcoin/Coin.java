@@ -24,7 +24,7 @@ package com.shuffle.bitcoin;
  *
  */
 public interface Coin {
-    Bitcoin.Transaction shuffleTransaction(
+    Transaction shuffleTransaction(
             long amount,
             List<VerificationKey> from,
             Queue<Address> to,

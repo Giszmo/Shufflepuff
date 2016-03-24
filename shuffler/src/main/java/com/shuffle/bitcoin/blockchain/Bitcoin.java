@@ -18,7 +18,8 @@ import com.shuffle.bitcoin.VerificationKey;
 import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.PeerGroup;
-import org.bitcoinj.params.MainNetParams;
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.net.discovery.DnsDiscovery;
 
@@ -29,10 +30,18 @@ import java.util.Queue;
 
 public abstract class Bitcoin implements Coin {
 
+	final NetworkParameters netParams;
+	final PeerGroup peerGroup;
+
+	public Bitcoin(NetworkParameters netParams, PeerGroup peerGroup) {
+		this.netParams = netParams;
+		this.peerGroup = peerGroup;
+	}
+
 	public class Transaction implements com.shuffle.bitcoin.Transaction {
 		final String hash;
 		private org.bitcoinj.core.Transaction bitcoinj;
-		boolean canSend;
+		boolean canSend = false;
 
 		public Transaction(String hash) {
 			this.hash = hash;
@@ -60,14 +69,12 @@ public abstract class Bitcoin implements Coin {
 				return false;
 			}
 
-			NetworkParameters netParams = MainNetParams.get();
-			PeerGroup peerGroup = new PeerGroup(netParams);
 			peerGroup.addPeerDiscovery(new DnsDiscovery(netParams));
 			peerGroup.start(); //calls a blocking start while peerGroup discovers peers
 			try {
 				peerGroup.broadcastTransaction(this.bitcoinj).future().get(); //checks to see if transaction was broadcast
 			} catch (Exception e) {
-				return false;
+				throw new CoinNetworkError();
 			}
 			return true;
 		}
@@ -84,38 +91,35 @@ public abstract class Bitcoin implements Coin {
 												  Map<VerificationKey, Address> changeAddresses)
 			throws CoinNetworkError {
 
-		NetworkParameters params = MainNetParams.get();
-		org.bitcoinj.core.Transaction tx = new org.bitcoinj.core.Transaction(params);
-		for (int  i = 0; i < from.size(); i++) {
+
+		org.bitcoinj.core.Transaction tx = new org.bitcoinj.core.Transaction(netParams);
+		for (VerificationKey key : from) {
 			try {
-				String address = from.get(i).address().toString();
+				String address = key.address().toString();
 				List<Bitcoin.Transaction> transactions = getWalletTransactions(address);
 				if (transactions.size() > 1) return null;
 				org.bitcoinj.core.Transaction tx2 = getTransaction(transactions.get(0).hash);
-				tx2.getOutputs();
-				for (int j = 0; j < tx2.getOutputs().size(); j++) {
-					String addressP2PKH = tx2.getOutput(j).getAddressFromP2PKHScript(MainNetParams.get()).toString();
+				for (TransactionOutput output : tx2.getOutputs()) {
+					String addressP2PKH = output.getAddressFromP2PKHScript(netParams).toString();
 					if (address.equals(addressP2PKH)) {
-						tx.addInput(tx2.getOutput(j));
-						if (changeAddresses.containsKey(from.get(i)) | changeAddresses.get(from.get(i)) == null) {
-
-						} else {
+						tx.addInput(output);
+						if (!changeAddresses.containsKey(key) | changeAddresses.get(key) != null) {
 							try {
-								tx.addOutput(tx2.getOutput(j).getValue().subtract(org.bitcoinj.core.Coin.SATOSHI.multiply(amount)), new org.bitcoinj.core.Address(params, changeAddresses.get(from.get(i)).toString()));
-							} catch (AddressFormatException e) {
+								tx.addOutput(output.getValue().subtract(org.bitcoinj.core.Coin.SATOSHI.multiply(amount)), new org.bitcoinj.core.Address(netParams, changeAddresses.get(key).toString()));
+							} catch(AddressFormatException e) {
 								e.printStackTrace();
 							}
 						}
-						break;
 					}
 				}
+
 			} catch(IOException e) {
 				throw new CoinNetworkError();
 			}
 		}
 
-		while (to.size() > 0) {
-			String address = to.peek().toString();
+		for (Address change : to) {
+			String address = change.toString();
 			try {
 				List<Bitcoin.Transaction> transactions = getWalletTransactions(address);
 				if (transactions.size() > 0) return null;
@@ -123,11 +127,10 @@ public abstract class Bitcoin implements Coin {
 				throw new CoinNetworkError();
 			}
 			try {
-				tx.addOutput(org.bitcoinj.core.Coin.SATOSHI.multiply(amount), new org.bitcoinj.core.Address(params, address));
+				tx.addOutput(org.bitcoinj.core.Coin.SATOSHI.multiply(amount), new org.bitcoinj.core.Address(netParams, address));
 			} catch(AddressFormatException e) {
 				e.printStackTrace();
 			}
-			to.poll();
 		}
 
 		return new Transaction(tx.getHashAsString(), tx, true);
