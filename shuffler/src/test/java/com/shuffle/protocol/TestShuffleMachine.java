@@ -9,6 +9,7 @@
 package com.shuffle.protocol;
 
 import com.shuffle.bitcoin.Crypto;
+import com.shuffle.mock.InsecureRandom;
 import com.shuffle.mock.MockCrypto;
 import com.shuffle.mock.MockMessageFactory;
 import com.shuffle.mock.MockSessionIdentifier;
@@ -17,6 +18,7 @@ import com.shuffle.sim.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
@@ -29,6 +31,8 @@ public class TestShuffleMachine {
 
     static int seed = 99;
 
+    public int caseNo = 0;
+
     public class MockTestCase extends TestCase {
 
         protected MockTestCase(String description) {
@@ -37,12 +41,17 @@ public class TestShuffleMachine {
 
         @Override
         protected Crypto crypto() {
-            return new MockCrypto(++seed);
+            return new MockCrypto(new InsecureRandom(++seed));
         }
     }
 
-    public static void check(String description, InitialState init) {
+    public void check(String description, InitialState init) {
         Assert.assertTrue("failure in test " + description, com.shuffle.sim.TestCase.test(init, new MockMessageFactory()).isEmpty());
+    }
+
+    @Before
+    public void resetCaseNumber () {
+        caseNo = 0;
     }
 
     /*@Test

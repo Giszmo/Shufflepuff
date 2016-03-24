@@ -21,8 +21,9 @@ import org.junit.Test;
 public class TestSuccessfulRun extends TestShuffleMachine {
 
     // Create a test case representing a successful run.
-    public void SuccessfulRun(int caseNo, int numPlayer) {
+    public void SuccessfulRun(int numPlayer) {
         String description = "case " + caseNo + "; successful run with " + numPlayer + " players.";
+        caseNo ++;
         check(description, new MockTestCase(description).successfulTestCase(numPlayer));
     }
 
@@ -31,14 +32,12 @@ public class TestSuccessfulRun extends TestShuffleMachine {
     public void testSuccess() {
 
         // Tests for successful runs.
-        int caseNo = 0;
         int minPlayers = 2;
         int maxPlayers = 12;
         for (int numPlayer = minPlayers; numPlayer <= maxPlayers; numPlayer++) {
             try {
                 log.info("Protocol successful run with " + numPlayer + " players.");
-                SuccessfulRun(caseNo, numPlayer);
-                caseNo++;
+                SuccessfulRun(numPlayer);
             } catch (CryptographyError e) {
                 Assert.fail("could not create test case " + caseNo);
             }

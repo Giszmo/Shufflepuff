@@ -15,35 +15,44 @@ import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.protocol.InvalidImplementationError;
 import com.shuffle.protocol.Message;
 
-import java.util.Random;
-
 /**
+ *
  *
  * Created by Daniel Krawisz on 12/5/15.
  */
 public class MockCrypto implements Crypto {
+    public interface Random {
+        int getRandom(int n) throws CryptographyError, InvalidImplementationError;
+    }
+
     private int signingKeyCounter;
     private int decryptionKeyCounter;
 
-    private final MockRandomSequence rand;
+//    private final MockRandomSequence rand;
 
-    private final Random notCryptographicallySecure;
+    private final Random rand;
 
-    public MockCrypto(int seed) {
+    public MockCrypto(Random rand) {
+        this.rand = rand;
+        signingKeyCounter = 1;
+        decryptionKeyCounter = 1;
+    }
+
+    /*public MockCrypto(int seed) {
         this.rand = null;
         signingKeyCounter = 1;
         decryptionKeyCounter = 1;
 
-        notCryptographicallySecure = new Random(seed);
-    }
+        //notCryptographicallySecure = new Random(seed);
+    }*/
 
-    public MockCrypto(MockRandomSequence rand) {
+    /*public MockCrypto(MockRandomSequence rand) {
         this.rand = rand;
         signingKeyCounter = 1;
         decryptionKeyCounter = 1;
 
-        notCryptographicallySecure = null;
-    }
+        //notCryptographicallySecure = null;
+    }*/
 
     MockCrypto setSigningKeyCounter(int count) {
         signingKeyCounter = count;
@@ -62,9 +71,6 @@ public class MockCrypto implements Crypto {
 
     @Override
     public synchronized int getRandom(int n) throws CryptographyError, InvalidImplementationError {
-        if (rand == null) {
-            return notCryptographicallySecure.nextInt(n + 1);
-        }
         return rand.getRandom(n);
     }
 

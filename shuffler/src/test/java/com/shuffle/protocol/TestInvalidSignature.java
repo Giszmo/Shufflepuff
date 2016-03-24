@@ -19,19 +19,18 @@ import org.junit.Test;
  */
 public class TestInvalidSignature extends TestShuffleMachine{
 
-    public void InvalidTransactionSignature(int caseNo, int numPlayers, int[] mutants) {
+    public void InvalidTransactionSignature(int numPlayers, int[] mutants) {
         String description = "case " + caseNo + "; invalid transaction signature test case.";
+        caseNo++;
         check(description, new MockTestCase(description).invalidSignatureTestCase(numPlayers, mutants));
     }
 
     @Test
     public void testInvalidSignature() {
-        int caseNo = 0;
-
         // Player generates a different transaction signature to everyone else.
-        InvalidTransactionSignature(caseNo++, 2, new int[]{2});
-        InvalidTransactionSignature(caseNo++, 5, new int[]{2});
-        InvalidTransactionSignature(caseNo++, 5, new int[]{2, 3});
-        InvalidTransactionSignature(caseNo, 10, new int[]{2, 5, 6, 7});
+        InvalidTransactionSignature(2, new int[]{2});
+        InvalidTransactionSignature(5, new int[]{2});
+        InvalidTransactionSignature(5, new int[]{2, 3});
+        InvalidTransactionSignature(10, new int[]{2, 5, 6, 7});
     }
 }

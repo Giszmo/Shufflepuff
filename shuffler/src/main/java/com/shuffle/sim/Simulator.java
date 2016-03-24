@@ -11,6 +11,7 @@ package com.shuffle.sim;
 import com.shuffle.bitcoin.CoinNetworkException;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.mock.MockMessageFactory;
 import com.shuffle.monad.NaturalSummableFuture;
 import com.shuffle.monad.SummableFuture;
 import com.shuffle.monad.SummableFutureZero;
@@ -87,31 +88,30 @@ public final class Simulator {
     private Simulator() {
     }
 
+    private static class SimulationInitializer implements InitialState.Initializer {
+        public final Map<VerificationKey, NetworkSim> networks = new HashMap<>();
+
+        @Override
+        public MessageFactory messages(VerificationKey key) {
+            return new MockMessageFactory();
+        }
+
+        @Override
+        public Network network(VerificationKey key) {
+            NetworkSim network = new NetworkSim(networks);
+            networks.put(key, network);
+            return network;
+        }
+    }
+
     public static Map<SigningKey, Machine> run(InitialState init, MessageFactory messages) {
 
-        final Map<SigningKey, Adversary> machines = new HashMap<>();
-        final Map<VerificationKey, NetworkSim> networks = new HashMap<>();
-
-        // Check that all players have a coin network set up, either the default or their own.
-        for (InitialState.PlayerInitialState player : init.getPlayers()) {
-            if (player.sk == null) {
-                continue;
-            }
-
-            NetworkSim network = new NetworkSim(networks);
-            networks.put(player.vk, network);
-
-            try {
-                Adversary adversary = player.adversary(messages, network);
-                machines.put(player.sk, adversary);
-            } catch (CoinNetworkException e) {
-                // Should not really happen.
-            }
-        }
+        final SimulationInitializer initializer = new SimulationInitializer();
+        final Map<SigningKey, Adversary> machines = init.getPlayers(initializer);
 
         Map<SigningKey, Machine> results = runSimulation(machines);
 
-        networks.clear(); // Avoid memory leak.
+        initializer.networks.clear(); // Avoid memory leak.
         return results;
     }
 
@@ -129,7 +129,7 @@ public final class Simulator {
         try {
             return wait.get();
         } catch (InterruptedException | ExecutionException e) {
-            System.out.println("RETURNING NULL BAD BAD BAD BAD BAD.");
+            log.error("Returning null. This indicates that some player returned an exception and was not able to complete the protocol.");
             return null;
         }
     }

@@ -516,7 +516,6 @@ public class CoinShuffle {
                 ValueException,
                 SignatureException {
             Map<VerificationKey, Queue<SignedPacket>> blameMessages = mailbox.receiveAllBlame();
-            Map<VerificationKey, Queue<Message>> bm = new HashMap<>();
 
             // Get all hashes received in phase 4 so that we can check that they were reported correctly.
             Map<VerificationKey, Message> hashes = new HashMap<>();
@@ -596,6 +595,8 @@ public class CoinShuffle {
                                 if (!from.equals(players.get(1))) {
                                     receivedKeys.put(from, encryptionKeys.get(from));
                                 }
+
+                                System.out.println("Player " + me + ":" + vk + " checks eq. failure  from " + from + "; " + equivocationCheckHash(players, receivedKeys, addresses) + " against " + hashes.get(from));
 
                                 // Check if this player correctly reported the hash previously sent to us.
                                 if (!hashes.get(from).equals(equivocationCheckHash(players, receivedKeys, addresses))) {
@@ -963,18 +964,36 @@ public class CoinShuffle {
             Map<VerificationKey, DecryptionKey> decryptionKeys,
             Map<VerificationKey, SignedPacket> shuffleMessages,
             Map<VerificationKey, SignedPacket> broadcastMessages) throws FormatException {
+        if (players == null || decryptionKeys == null ||
+                shuffleMessages == null || broadcastMessages == null)
+            throw new NullPointerException();
+
         SortedSet<Address> outputs = new TreeSet<>();
 
+        // Go through the steps of shuffling messages.
         for (int i = 1; i <= players.size(); i++) {
 
+            // The last step is from phase three, so we have to check for that.
             SignedPacket packet = null;
             if (i < players.size()) {
                 packet = shuffleMessages.get(players.get(i + 1));
             } else {
-                if (broadcastMessages == null) {
-                    return null;
+                // All broadcast messages should have the same content and we should
+                // have already checked for this. Therefore we just look for the first
+                // one that is available. (The message for player 1 should always be available.)
+                for (int j = 1; j <= players.size(); j++) {
+                    packet = broadcastMessages.get(players.get(j));
+
+                    if (packet != null) {
+                        break;
+                    }
                 }
-                packet = broadcastMessages.get(players.get(1));
+            }
+
+            if (packet == null) {
+                // TODO Blame a player for lying.
+
+                return null;
             }
 
             Message message = packet.payload.message;
@@ -986,18 +1005,22 @@ public class CoinShuffle {
                     return Evidence.ShuffleMisbehaviorDropAddress(
                             players.get(i), decryptionKeys, shuffleMessages, broadcastMessages);
                 }
+
                 Address address = message.readAddress();
                 message = message.rest();
                 for (int k = i + 1; k <= players.size(); k++) {
                     address = decryptionKeys.get(players.get(k)).decrypt(address);
                 }
+
+                // There shouldn't be duplicates.
+                if (addresses.contains(address)) {
+                    return Evidence.ShuffleMisbehaviorDropAddress(
+                            players.get(i), decryptionKeys, shuffleMessages, broadcastMessages);
+                }
                 addresses.add(address);
             }
 
-            if (addresses.size() != i) {
-                // TODO blame someone.
-            }
-
+            // Does this contain all the previous addresses?
             if (!addresses.containsAll(outputs)) {
                 return Evidence.ShuffleMisbehaviorDropAddress(
                         players.get(i), decryptionKeys, shuffleMessages, broadcastMessages);
@@ -1005,8 +1028,10 @@ public class CoinShuffle {
 
             addresses.removeAll(outputs);
 
+            // There should be one new address.
             if (addresses.size() != 1) {
-                // TODO blame someone.
+                return Evidence.ShuffleMisbehaviorDropAddress(
+                        players.get(i), decryptionKeys, shuffleMessages, broadcastMessages);
             }
 
             outputs.add(addresses.first());

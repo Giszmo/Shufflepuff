@@ -18,34 +18,32 @@ import org.junit.Test;
 public class TestInsufficientFunds extends TestShuffleMachine{
 
     public void InsufficientFunds(
-            int caseNo,
             int numPlayers,
             int[] deadbeats,
             int[] poor,
             int[] spenders) {
         String description = "case " + caseNo + "; Insufficient funds test case.";
+        caseNo++;
         check(description, new MockTestCase(description).insufficientFundsTestCase(numPlayers, deadbeats, poor, spenders));
     }
 
     @Test
     // Tests for players who come in without enough cash.
     public void testInsufficientFunds() {
-        int caseNo = 0;
-
         // Tests for players who initially have insufficient funds.
-        InsufficientFunds(caseNo++, 2, new int[]{1}, new int[]{}, new int[]{});
-        /*InsufficientFunds(caseNo++, 2, new int[]{}, new int[]{1}, new int[]{});
-        InsufficientFunds(caseNo++, 2, new int[]{}, new int[]{}, new int[]{1});
-        InsufficientFunds(caseNo++, 2, new int[]{1, 2}, new int[]{}, new int[]{});
-        InsufficientFunds(caseNo++, 3, new int[]{1}, new int[]{}, new int[]{});
-        InsufficientFunds(caseNo++, 5, new int[]{3}, new int[]{}, new int[]{});
-        InsufficientFunds(caseNo++, 5, new int[]{}, new int[]{4}, new int[]{});
-        InsufficientFunds(caseNo++, 5, new int[]{}, new int[]{}, new int[]{5});
-        InsufficientFunds(caseNo++, 10, new int[]{5, 10}, new int[]{}, new int[]{});
-        InsufficientFunds(caseNo++, 10, new int[]{}, new int[]{1, 2}, new int[]{});
-        InsufficientFunds(caseNo++, 10, new int[]{}, new int[]{}, new int[]{3, 5});
-        InsufficientFunds(caseNo++, 10, new int[]{5}, new int[]{10}, new int[]{});
-        InsufficientFunds(caseNo++, 10, new int[]{}, new int[]{3}, new int[]{9});
-        InsufficientFunds(caseNo, 10, new int[]{1}, new int[]{}, new int[]{2});*/
+        InsufficientFunds(2, new int[]{1}, new int[]{}, new int[]{});
+        InsufficientFunds(2, new int[]{}, new int[]{1}, new int[]{});
+        InsufficientFunds(2, new int[]{}, new int[]{}, new int[]{1});
+        InsufficientFunds(2, new int[]{1, 2}, new int[]{}, new int[]{});
+        InsufficientFunds(3, new int[]{1}, new int[]{}, new int[]{});
+        InsufficientFunds(5, new int[]{3}, new int[]{}, new int[]{});
+        InsufficientFunds(5, new int[]{}, new int[]{4}, new int[]{});
+        InsufficientFunds(5, new int[]{}, new int[]{}, new int[]{5});
+        InsufficientFunds(10, new int[]{5, 10}, new int[]{}, new int[]{});
+        InsufficientFunds(10, new int[]{}, new int[]{1, 2}, new int[]{});
+        InsufficientFunds(10, new int[]{}, new int[]{}, new int[]{3, 5});
+        InsufficientFunds(10, new int[]{5}, new int[]{10}, new int[]{});
+        InsufficientFunds(10, new int[]{}, new int[]{3}, new int[]{9});
+        InsufficientFunds(10, new int[]{1}, new int[]{}, new int[]{2});
     }
 }

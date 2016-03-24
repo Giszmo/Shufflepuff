@@ -11,6 +11,7 @@ package com.shuffle.sim;
 import com.shuffle.bitcoin.CoinNetworkException;
 import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.mock.InsecureRandom;
 import com.shuffle.mock.MockCrypto;
 import com.shuffle.mock.MockMarshaller;
 import com.shuffle.mock.MockMessageFactory;
@@ -49,15 +50,15 @@ public class Player implements Runnable {
         public final int port;
         public final int threads;
         public final InitialState.PlayerInitialState init;
-        public final Map<InetSocketAddress, VerificationKey> keys;
+        public final Map<InetSocketAddress, VerificationKey> identities;
 
         public Parameters(int port, int threads, InitialState.PlayerInitialState init,
-                          Map<InetSocketAddress, VerificationKey> keys) {
+                          Map<InetSocketAddress, VerificationKey> identities) {
 
             this.port = port;
             this.threads = threads;
             this.init = init;
-            this.keys = keys;
+            this.identities = identities;
         }
     }
 
@@ -138,20 +139,21 @@ public class Player implements Runnable {
 
     public static Parameters readParameters(String[] args) {
         Map<String, Integer> options = readOptions(args);
-        Map<InetSocketAddress, VerificationKey> keys = new HashMap<>();
-        Crypto crypto = new MockCrypto(7777);
+        Map<InetSocketAddress, VerificationKey> identities = new HashMap<>();
+        Crypto crypto = new MockCrypto(new InsecureRandom(7777));
 
-        List<InitialState.PlayerInitialState> inits = InitialState.successful(
+        InitialState init = InitialState.successful(
                 new MockSessionIdentifier("tcp test"),
                 options.get("-amount"),
                 crypto,
-                options.get("-players")).getPlayers();
+                options.get("-players"));
+        List<VerificationKey> keys = init.getKeys();
 
         // Create keys object.
         int port = options.get("-minport");
         try {
-            for (InitialState.PlayerInitialState p : inits) {
-                    keys.put(new InetSocketAddress(InetAddress.getLocalHost(), port), p.vk);
+            for (VerificationKey vk : keys) {
+                    identities.put(new InetSocketAddress(InetAddress.getLocalHost(), port), vk);
                 port ++;
             }
         } catch (UnknownHostException e) {
@@ -159,12 +161,12 @@ public class Player implements Runnable {
         }
 
         int i = options.get("-identity") - 1;
-        InitialState.PlayerInitialState pinit = inits.get(i);
+        InitialState.PlayerInitialState pinit = init.getPlayer(i);
 
         return new Parameters(
                 options.get("-minport") + i,
                 options.get("-threads"),
-                pinit, keys);
+                pinit, identities);
     }
 
     public static void main(String[] args) {
@@ -177,7 +179,6 @@ public class Player implements Runnable {
             player.report();
         } catch (IllegalArgumentException e) {
             System.out.println("Invalid arguments.");
-            return;
         }
 
     }
@@ -219,7 +220,7 @@ public class Player implements Runnable {
                     param.init.sk,
                     param.init.keys,
                     null,
-                    connect.connect(tcp, param.keys, new MockMarshaller(), 1, 3),
+                    connect.connect(tcp, param.identities, new MockMarshaller(), 1, 3),
                     msg
             );
         } catch (IOException | InterruptedException | CoinNetworkException e) {

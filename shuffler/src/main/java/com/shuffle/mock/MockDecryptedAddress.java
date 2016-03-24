@@ -30,6 +30,41 @@ public class MockDecryptedAddress implements Address {
 
     @Override
     public int compareTo(Address address) {
-        return decrypted.compareTo(address);
+        if (address instanceof MockAddress || address instanceof MockEncryptedAddress) {
+            return 1;
+        }
+
+        if (!(address instanceof MockDecryptedAddress)) {
+            return 0;
+        }
+
+        return decrypted.compareTo(((MockDecryptedAddress) address).decrypted);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null) {
+            return false;
+        }
+
+        if (!(o instanceof MockDecryptedAddress)) {
+            return false;
+        }
+
+        MockDecryptedAddress dec = (MockDecryptedAddress)o;
+
+
+        return decrypted.equals(dec.decrypted) && key.equals(dec.key);
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 11 * decrypted.hashCode();
+
+        if (hash < 0) {
+            hash = -hash;
+        }
+
+        return hash + 19 * key.hashCode();
     }
 }

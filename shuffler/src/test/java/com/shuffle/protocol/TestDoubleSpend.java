@@ -17,22 +17,21 @@ import org.junit.Test;
  */
 public class TestDoubleSpend extends TestShuffleMachine {
 
-    public void DoubleSpend(int caseNo, int[] views, int[] doubleSpenders) {
+    public void DoubleSpend(int[] views, int[] doubleSpenders) {
         String description = "case " + caseNo + "; Double spend test case.";
+        caseNo++;
         check(description, new MockTestCase(description).doubleSpendTestCase(views, doubleSpenders));
     }
 
     @Test
     public void testDoubleSpending() {
-        int caseNo = 0;
-
         // Tests for players who spend funds while the protocol is going on.
-        DoubleSpend(caseNo++, new int[]{0, 0}, new int[]{1});
-        DoubleSpend(caseNo++, new int[]{0, 1, 0}, new int[]{1});
-        DoubleSpend(caseNo++, new int[]{0, 1, 0}, new int[]{2});
-        DoubleSpend(caseNo++, new int[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1}, new int[]{6});
-        DoubleSpend(caseNo++, new int[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1}, new int[]{3, 10});
-        DoubleSpend(caseNo, new int[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1}, new int[]{1, 7});
+        DoubleSpend(new int[]{0, 0}, new int[]{1});
+        DoubleSpend(new int[]{0, 1, 0}, new int[]{1});
+        DoubleSpend(new int[]{0, 1, 0}, new int[]{2});
+        DoubleSpend(new int[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1}, new int[]{6});
+        DoubleSpend(new int[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1}, new int[]{3, 10});
+        DoubleSpend(new int[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1}, new int[]{1, 7});
 
     }
 }

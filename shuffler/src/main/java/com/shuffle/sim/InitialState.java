@@ -18,7 +18,6 @@ import com.shuffle.protocol.Machine;
 import com.shuffle.protocol.MaliciousMachine;
 import com.shuffle.protocol.MessageFactory;
 import com.shuffle.protocol.Network;
-import com.shuffle.protocol.Phase;
 import com.shuffle.protocol.SessionIdentifier;
 import com.shuffle.protocol.blame.Evidence;
 import com.shuffle.protocol.blame.Matrix;
@@ -45,7 +44,7 @@ public class InitialState {
     // Used for ensuring a test can't fail no matter what value
     // simulated adversaries return, since we only care about testing the response of the
     // honest players.
-    public static class ExpectedPatternAny extends Machine.Expected {
+    public final static class ExpectedPatternAny extends Machine.Expected {
 
         public ExpectedPatternAny() {
             super(null, null, null, null);
@@ -115,14 +114,8 @@ public class InitialState {
     private final LinkedList<PlayerInitialState> players = new LinkedList<>();
     private MockCoin mockCoin = null;
 
-    public List<PlayerInitialState> getPlayers() {
-        List<PlayerInitialState> p = new LinkedList<>();
-        p.addAll(players);
-        return p;
-    }
-
     // The initial state of an individual player. (includes malicious players)
-    public class PlayerInitialState {
+    public final class PlayerInitialState {
         final SigningKey sk;
         final VerificationKey vk;
         SortedSet<VerificationKey> keys = new TreeSet<>();
@@ -166,6 +159,10 @@ public class InitialState {
         }
 
         public MockCoin coin() throws CoinNetworkException {
+            if (networkPoints == null) {
+                networkPoints = new HashMap<>();
+            }
+
             MockCoin coin = networkPoints.get(viewpoint);
 
             if (coin != null) {
@@ -213,7 +210,7 @@ public class InitialState {
             } else if (equivocateOutputVector != null && equivocateOutputVector.length > 0) {
                 shuffle = MaliciousMachine.broadcastEquivocator(messages, crypto, coin, fromSet(keys, equivocateOutputVector));
             } else if (replace && drop != 0) {
-                shuffle = MaliciousMachine.addressDropperReplacer(messages, crypto, coin, drop);
+                shuffle = MaliciousMachine.addressReplacer(messages, crypto, coin, drop);
             } else if (duplicate != 0 && drop != 0) {
                 shuffle = MaliciousMachine.addressDropperDuplicator(messages, crypto, coin, drop, duplicate);
             } else if (drop != 0) {
@@ -326,7 +323,46 @@ public class InitialState {
         }
     }
 
-    public Map<Integer, MockCoin> networkPoints = new HashMap<>();
+    public interface Initializer {
+        MessageFactory messages(VerificationKey key);
+        Network network(VerificationKey key);
+    }
+
+    public Map<SigningKey, Adversary> getPlayers(Initializer initializer) {
+        Map<SigningKey, Adversary> p = new HashMap<>();
+
+        for (PlayerInitialState player : players) {
+            if (player.sk == null) {
+                continue;
+            }
+
+            try {
+                p.put(player.sk, player.adversary(initializer.messages(player.vk), initializer.network(player.vk)));
+            } catch (CoinNetworkException e) {
+                return null; // Should not really happen.
+            }
+        }
+
+        networkPoints = null;
+
+        return p;
+    }
+
+    public List<VerificationKey> getKeys() {
+        List<VerificationKey> keys = new LinkedList<>();
+
+        for (PlayerInitialState player : players) {
+            keys.add(player.vk);
+        }
+
+        return keys;
+    }
+
+    public PlayerInitialState getPlayer(int n) {
+        return players.get(n);
+    }
+
+    public Map<Integer, MockCoin> networkPoints = null;
 
     public InitialState(SessionIdentifier session, long amount, Crypto crypto) {
 

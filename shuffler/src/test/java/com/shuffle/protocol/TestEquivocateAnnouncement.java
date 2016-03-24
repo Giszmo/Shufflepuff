@@ -22,30 +22,28 @@ public class TestEquivocateAnnouncement extends TestShuffleMachine{
 
     // Run a test case for equivocation during phase 1.
     public void EquivocateAnnouncement(
-            int caseNo,
             int numPlayers,
             InitialState.Equivocation[] equivocators
     ) {
         String description = "case " + caseNo + "; announcement equivocation test case.";
+        caseNo++;
         check(description, new MockTestCase(description).equivocateAnnouncementTestCase(numPlayers, equivocators));
     }
 
     @Test
     public void testEquivocationAnnounce() {
-        int caseNo = 0;
-
         // A player sends different encryption keys to different players.
-        EquivocateAnnouncement(caseNo++, 3,
+        EquivocateAnnouncement(3,
                 new InitialState.Equivocation[]{
                         new InitialState.Equivocation(2, new int[]{3})});
-        EquivocateAnnouncement(caseNo++, 5,
+        EquivocateAnnouncement(5,
                 new InitialState.Equivocation[]{
                         new InitialState.Equivocation(2, new int[]{4, 5})});
-        EquivocateAnnouncement(caseNo++, 10,
+        EquivocateAnnouncement(10,
                 new InitialState.Equivocation[]{
                         new InitialState.Equivocation(2, new int[]{4, 10}),
                         new InitialState.Equivocation(5, new int[]{7, 8})});
-        EquivocateAnnouncement(caseNo, 10,
+        EquivocateAnnouncement(10,
                 new InitialState.Equivocation[]{
                         new InitialState.Equivocation(2, new int[]{3}),
                         new InitialState.Equivocation(4, new int[]{5, 6}),

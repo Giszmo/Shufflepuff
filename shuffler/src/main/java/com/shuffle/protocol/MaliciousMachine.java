@@ -497,7 +497,7 @@ final public class MaliciousMachine extends CoinShuffle {
         return new MaliciousMachine(messages, crypto, coin, Phase.Shuffling, null, drop, duplicate, false, null);
     }
 
-    public static CoinShuffle addressDropperReplacer(MessageFactory messages, Crypto crypto, Coin coin, int drop) {
+    public static CoinShuffle addressReplacer(MessageFactory messages, Crypto crypto, Coin coin, int drop) {
         return new MaliciousMachine(messages, crypto, coin, Phase.Shuffling, null, drop, 0, true, null);
     }
 

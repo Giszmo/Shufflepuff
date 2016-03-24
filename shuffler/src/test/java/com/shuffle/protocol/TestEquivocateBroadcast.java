@@ -20,8 +20,9 @@ import org.junit.Test;
 public class TestEquivocateBroadcast extends TestShuffleMachine {
 
     // Run a test case for equivocation during phase 3.
-    public void EquivocateOutput(int caseNo, int numPlayers, int[] equivocation) {
+    public void EquivocateOutput(int numPlayers, int[] equivocation) {
         String description = "case " + caseNo + "; broadcast equivocation test case.";
+        caseNo++;
         check(description, new MockTestCase(description).equivocateBroadcastTestCase(numPlayers, equivocation));
     }
 
@@ -31,10 +32,10 @@ public class TestEquivocateBroadcast extends TestShuffleMachine {
         int caseNo = 0;
 
         // A player sends different output vectors to different players.
-        EquivocateOutput(caseNo++, 3, new int[]{1});
-        EquivocateOutput(caseNo++, 3, new int[]{2});
-        EquivocateOutput(caseNo++, 4, new int[]{1});
-        EquivocateOutput(caseNo++, 4, new int[]{1, 2});
-        EquivocateOutput(caseNo, 10, new int[]{3, 5, 7});
+        EquivocateOutput(3, new int[]{1});
+        EquivocateOutput(3, new int[]{2});
+        EquivocateOutput(4, new int[]{1});
+        EquivocateOutput(4, new int[]{1, 2});
+        EquivocateOutput(10, new int[]{3, 5, 7});
     }
 }
