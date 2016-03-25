@@ -14,6 +14,7 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.websocket.DeploymentException;
 import javax.websocket.MessageHandler;
@@ -27,12 +28,20 @@ import javax.websocket.Session;
 import javax.websocket.WebSocketContainer;
 
 /**
- * TODO
+ *
  *
  * Created by Daniel Krawisz on 1/31/16.
  */
 
+/**
+ * A manager for websocket connections.
+ */
+
 public class WebsocketChannel implements Channel<URI, Bytestring>{
+
+    /**
+     *  Necessary class to use the javax.websocket library.
+     */
 
     @ClientEndpoint
     private class WebsocketClientEndpoint {
@@ -62,6 +71,7 @@ public class WebsocketChannel implements Channel<URI, Bytestring>{
         }
     }
 
+    // Only one object representing each peer is allowed at a time.
     private class Peers {
 
         private final Map<URI, WebsocketPeer> peers = new HashMap<>();
@@ -77,14 +87,18 @@ public class WebsocketChannel implements Channel<URI, Bytestring>{
 
     final Peers peers = new Peers();
 
+    // A special class used to house synchronized functions regarding the list of open sessions.
     class OpenSessions {
 
-        private Map<URI, WebsocketPeer.WebsocketSession> openSessions = new HashMap<>(); //ConcurrentHashMap?
+        // The sessions which are currently open.
+        private Map<URI, WebsocketPeer.WebsocketSession> openSessions = new ConcurrentHashMap<>();
 
+        // We don't want to overwrite a session that already exists, so this is in a synchronized
+        // function. This is for creating new sessions.
         public synchronized WebsocketPeer.WebsocketSession putNewSession(URI identity, WebsocketPeer peer) throws Exception {
             WebsocketPeer.WebsocketSession openSession = openSessions.get(identity);
             if (openSession != null) {
-                if (!openSession.closed()) { //? there is no socket.isConnected() equivalent for WebsocketSession
+                if (!openSession.closed()) {
                     return null;
                 }
 
@@ -114,19 +128,16 @@ public class WebsocketChannel implements Channel<URI, Bytestring>{
 
     OpenSessions openSessions = null;
 
+    // Class definition for representation of a particular websocket peer.
     public class WebsocketPeer extends FundamentalPeer<URI, Bytestring> {
 
         List<com.shuffle.p2p.Session<URI, Bytestring>> history;
 
         WebsocketSession currentSession;
 
+        // Constructor for initiating a connection.
         public WebsocketPeer(URI identity) {
             super(identity);
-        }
-
-        public WebsocketPeer(URI identity, WebsocketSession session) {
-            super(identity);
-            this.currentSession = session;
         }
 
         private WebsocketPeer setSession(javax.websocket.Session session) throws IOException {
@@ -146,7 +157,8 @@ public class WebsocketChannel implements Channel<URI, Bytestring>{
         }
 
         @Override
-        public synchronized com.shuffle.p2p.Session<URI, Bytestring> openSession(final Receiver<Bytestring> receiver) { // had to make it final to call receive in MessageHandler
+        public synchronized com.shuffle.p2p.Session<URI, Bytestring> openSession(final Receiver<Bytestring> receiver) {
+            // Don't allow sessions to be opened when we're opening or closing the channel.
             synchronized (lock) {}
 
             if (openSessions == null) {
@@ -178,7 +190,7 @@ public class WebsocketChannel implements Channel<URI, Bytestring>{
 
         }
 
-
+        // Encapsulates a particular websocket session.
         public class WebsocketSession implements com.shuffle.p2p.Session<URI, Bytestring> {
             javax.websocket.Session session;
 
@@ -188,6 +200,7 @@ public class WebsocketChannel implements Channel<URI, Bytestring>{
 
             @Override
             public synchronized boolean send(Bytestring message) {
+                // Don't allow sending messages while we're opening or closing the channel.
                 synchronized (lock) {}
 
                 if (!session.isOpen()) {
@@ -195,7 +208,7 @@ public class WebsocketChannel implements Channel<URI, Bytestring>{
                 }
 
                 try {
-                    // MUST sendBinary rather than sendText to receive byte[] messages!
+                    // MUST sendBinary rather than sendText to receive byte[] messages
                     ByteBuffer buf = ByteBuffer.wrap(message.bytes);
                     session.getBasicRemote().sendBinary(buf);
                 } catch (IOException e) {
