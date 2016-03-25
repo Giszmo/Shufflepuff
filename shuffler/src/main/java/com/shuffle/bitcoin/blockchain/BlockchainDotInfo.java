@@ -25,15 +25,24 @@ package com.shuffle.bitcoin.blockchain;
 
 /**
  *
- *
- *
- *
- *
  * Created by Eugene Siegel on 3/4/16.
+ *
  */
+
 public final class BlockchainDotInfo extends Bitcoin {
 
     String USER_AGENT = "Chrome/5.0";
+
+    /**
+     * The constructor takes in a NetworkParameters variable that determines whether we are connecting to the Production Net
+     * or the Test Net.  It also takes in an int which determines the minimum number of peers to connect to before
+     * broadcasting a transaction.
+     *
+     */
+
+    public BlockchainDotInfo(NetworkParameters netParams, int minPeers) {
+        super(netParams, minPeers);
+    }
 
     /**
      *
@@ -65,7 +74,7 @@ public final class BlockchainDotInfo extends Bitcoin {
         JSONObject root = new JSONObject(tokener);
         List<Transaction> txhashes = new LinkedList<>();
         for (int i = 0; i < root.getJSONArray("txs").length(); i++) {
-            txhashes.add(new Transaction(root.getJSONArray("txs").getJSONObject(i).get("hash").toString()));
+            txhashes.add(new Transaction(root.getJSONArray("txs").getJSONObject(i).get("hash").toString(), false));
         }
         if (txhashes.size() == 50) {
             return null;

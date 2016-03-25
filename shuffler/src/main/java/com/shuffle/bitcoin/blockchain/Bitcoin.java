@@ -13,6 +13,7 @@ import com.shuffle.bitcoin.Address;
 import com.shuffle.bitcoin.Coin;
 import com.shuffle.bitcoin.CoinNetworkError;
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.p2p.Peer;
 
 
 import org.bitcoinj.core.AddressFormatException;
@@ -32,19 +33,33 @@ public abstract class Bitcoin implements Coin {
 
 	final NetworkParameters netParams;
 	final PeerGroup peerGroup;
+	final int minPeers;
 
-	public Bitcoin(NetworkParameters netParams, PeerGroup peerGroup) {
+	/**
+	 *
+	 * The constructor takes in a NetworkParameters variable that determines whether we are connecting to the Production Net
+	 * or the Test Net.  It also takes in an int which determines the minimum number of peers to connect to before
+	 * broadcasting a transaction.
+	 *
+	 */
+
+	public Bitcoin(NetworkParameters netParams, int minPeers) {
 		this.netParams = netParams;
-		this.peerGroup = peerGroup;
+		this.minPeers = minPeers;
+		peerGroup = new PeerGroup(netParams);
+		peerGroup.setMinBroadcastConnections(minPeers);
+		peerGroup.addPeerDiscovery(new DnsDiscovery(netParams));
+		peerGroup.startAsync();
 	}
 
 	public class Transaction implements com.shuffle.bitcoin.Transaction {
 		final String hash;
 		private org.bitcoinj.core.Transaction bitcoinj;
-		boolean canSend = false;
+		final boolean canSend;
 
-		public Transaction(String hash) {
+		public Transaction(String hash, boolean canSend) {
 			this.hash = hash;
+			this.canSend = canSend;
 		}
 
 		public Transaction(String hash, org.bitcoinj.core.Transaction bitcoinj, boolean canSend) {
@@ -62,14 +77,20 @@ public abstract class Bitcoin implements Coin {
 			return bitcoinj;
 		}
 
+		/**
+		 *
+		 * The send() method broadcasts a transaction into the Bitcoin network.  The canSend boolean variable
+		 * tells us if the transaction was created by us, or taken from the blockchain.  If we created the
+		 * transaction, then we are able to broadcast it.  Otherwise, we cannot.
+		 *
+		 */
+
 		@Override
 		public boolean send() throws CoinNetworkError {
-			// TODO should only work if it's a new transaction we made, not one loaded from the block chain.
 			if (!this.canSend) {
 				return false;
 			}
 
-			peerGroup.addPeerDiscovery(new DnsDiscovery(netParams));
 			peerGroup.start(); //calls a blocking start while peerGroup discovers peers
 			try {
 				peerGroup.broadcastTransaction(this.bitcoinj).future().get(); //checks to see if transaction was broadcast
@@ -83,7 +104,22 @@ public abstract class Bitcoin implements Coin {
 	// TODO
 	// Take transaction fees into account
 
-	// TODO
+	/**
+	 *
+	 * The shuffleTransaction method returns a Bitcoin.Transaction object that contains a bitcoinj Transaction member
+	 * which sends "amount" satoshis from the addresses listed in the "from" variable to addresses listed in the "to" variable, in their
+	 * respective orders.  The bitcoinj Transaction member also sends change from the addresses listed in the "from" variable
+	 * to addresses listed in the "changeAddresses" variable, in their respective order.
+	 *
+	 * To calculate the amount in change to send to the "changeAddresses", we first lookup the transaction associated with an address.
+	 * We only allow one transaction per address that wants to shuffle their coins.  We then find the transaction output associated
+	 * with our address, and see how much value was sent to our address.  We then subtract the "amount" from this value and this is
+	 * the amount to send to the changeAddress.
+	 *
+	 * Note: We allow no past transactions to addresses in the "to" variable.
+	 *
+	 */
+
 	@Override
 	public Bitcoin.Transaction shuffleTransaction(long amount,
 												  List<VerificationKey> from,
@@ -92,6 +128,7 @@ public abstract class Bitcoin implements Coin {
 			throws CoinNetworkError {
 
 
+		// this section adds inputs to the transaction and adds outputs to the change addresses.
 		org.bitcoinj.core.Transaction tx = new org.bitcoinj.core.Transaction(netParams);
 		for (VerificationKey key : from) {
 			try {
@@ -118,8 +155,8 @@ public abstract class Bitcoin implements Coin {
 			}
 		}
 
-		for (Address change : to) {
-			String address = change.toString();
+		for (Address sendto : to) {
+			String address = sendto.toString();
 			try {
 				List<Bitcoin.Transaction> transactions = getWalletTransactions(address);
 				if (transactions.size() > 0) return null;
@@ -136,7 +173,12 @@ public abstract class Bitcoin implements Coin {
 		return new Transaction(tx.getHashAsString(), tx, true);
 	}
 
-	// TODO
+	/**
+	 *
+	 * The valueHeld method takes in an Address variable and returns the balance held using satoshis as the unit.
+	 *
+	 */
+
 	@Override
 	public long valueHeld(Address addr) throws CoinNetworkError {
 		try {
