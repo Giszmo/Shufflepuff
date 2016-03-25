@@ -13,13 +13,10 @@ import com.shuffle.bitcoin.Address;
 import com.shuffle.bitcoin.Coin;
 import com.shuffle.bitcoin.CoinNetworkError;
 import com.shuffle.bitcoin.VerificationKey;
-import com.shuffle.p2p.Peer;
-
 
 import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.PeerGroup;
-import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.net.discovery.DnsDiscovery;
