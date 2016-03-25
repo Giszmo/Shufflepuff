@@ -106,7 +106,7 @@ public class TCPChannel implements Channel<InetSocketAddress, Bytestring> {
     OpenSessions openSessions = null;
 
     // Class definition for representation of a particular tcppeer.
-    public class TCPPeer extends Peer<InetSocketAddress, com.shuffle.p2p.Bytestring>{
+    public class TCPPeer extends FundamentalPeer<InetSocketAddress, com.shuffle.p2p.Bytestring>{
 
         List<Session<InetSocketAddress, com.shuffle.p2p.Bytestring>> history;
 
