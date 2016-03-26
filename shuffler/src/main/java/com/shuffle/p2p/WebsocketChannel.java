@@ -131,8 +131,6 @@ public class WebsocketChannel implements Channel<URI, Bytestring>{
     // Class definition for representation of a particular websocket peer.
     public class WebsocketPeer extends FundamentalPeer<URI, Bytestring> {
 
-        List<com.shuffle.p2p.Session<URI, Bytestring>> history;
-
         WebsocketSession currentSession;
 
         // Constructor for initiating a connection.
@@ -177,6 +175,7 @@ public class WebsocketChannel implements Channel<URI, Bytestring>{
                     return null;
                 }
 
+                // if the session receives a message, it is passed to the receiver.
                 session.session.addMessageHandler(new MessageHandler.Whole<byte[]>() {
                     public void onMessage(byte[] message) {
                         receiver.receive(new Bytestring(message));
@@ -245,7 +244,6 @@ public class WebsocketChannel implements Channel<URI, Bytestring>{
 
     private boolean running = false;
     private final Object lock = new Object();
-
 
     public WebsocketChannel() {
 
