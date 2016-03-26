@@ -15,5 +15,5 @@ package com.shuffle.bitcoin;
  */
 public interface Transaction {
     // Send the transaction into the network.
-    void send() throws CoinNetworkError;
+    boolean send() throws CoinNetworkError;
 }
