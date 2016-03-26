@@ -7,22 +7,8 @@
  */
 
 package com.shuffle.protocol;
-
-import com.shuffle.bitcoin.Crypto;
-import com.shuffle.mock.AlwaysZero;
-import com.shuffle.mock.InsecureRandom;
-import com.shuffle.mock.MockCrypto;
-import com.shuffle.mock.MockMessageFactory;
-import com.shuffle.mock.MockSessionIdentifier;
-import com.shuffle.sim.InitialState;
-import com.shuffle.sim.TestCase;
-
-import org.junit.After;
-import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.LinkedList;
-import java.util.List;
 
 /**
  * During the shuffle phase, a player can do various things wrong. Elaborate checks are required
@@ -31,76 +17,15 @@ import java.util.List;
  * Created by Daniel Krawisz on 3/17/16.
  */
 public class TestShuffleMischief extends TestShuffleMachine {
-    int trials = 10;
 
-    public class MockTestCase extends TestCase {
-
-        protected MockTestCase(String description) {
-            super(17, new MockMessageFactory(), new MockSessionIdentifier(description));
-        }
-
-        @Override
-        protected Crypto crypto() {
-            return new MockCrypto(new AlwaysZero());
-        }
-    }
-
-    public class Report {
-        final int trials;
-        final int fail;
-        final int success;
-
-        public Report(int trials, int fail, int success) {
-            this.trials = trials;
-            this.fail = fail;
-            this.success = success;
-        }
-    }
-
-    List<Report> reports = new LinkedList<>();
-
-    @Override
-    public  void check(String description, InitialState init) {
-        int fail = 0;
-        int success = 0;
-
-        for (int i = 0; i < trials; i ++ ) {
-            if (i % 10 == 0) {
-                System.out.println("Trial " + i + " in progress. ");
-            }
-
-            if (com.shuffle.sim.TestCase.test(init, new MockMessageFactory()).isEmpty() ) {
-                success ++;
-            } else {
-                fail ++;
-            }
-        }
-
-        System.out.println("of " + trials + " trials, " + success + " successes and " + fail + " failures. ");
-
-        reports.add(new Report(trials, fail, success));
+    public TestShuffleMischief() {
+        super(99, 10);
     }
 
     // Run a test case for a player who drops an address in phase 2.
     public void DropAddress(int numPlayers, int[][] drop, int[][] replaceNew, int[][] replaceDuplicate) {
         String description = "case " + caseNo + "; shuffle phase mischief test case.";
-        caseNo++;
-        check(description, new MockTestCase(description).dropAddressTestCase(numPlayers, drop, replaceNew, replaceDuplicate));
-    }
-
-    @After
-    public void printReport() {
-
-        int i = 1;
-        boolean success = true;
-        for (Report report : reports) {
-            System.out.println("Result for test " + i);
-            if (report.fail > 0) success = false;
-            System.out.println("   Trials: " + report.trials + "; success: " + report.success + "; fail: " + report.fail);
-            i ++;
-        }
-
-        Assert.assertTrue(success);
+        check(description, new NoShuffleTestCase(description).dropAddressTestCase(numPlayers, drop, replaceNew, replaceDuplicate));
     }
 
     @Test

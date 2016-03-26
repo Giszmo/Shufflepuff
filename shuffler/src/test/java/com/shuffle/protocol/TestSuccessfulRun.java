@@ -23,7 +23,6 @@ public class TestSuccessfulRun extends TestShuffleMachine {
     // Create a test case representing a successful run.
     public void SuccessfulRun(int numPlayer) {
         String description = "case " + caseNo + "; successful run with " + numPlayer + " players.";
-        caseNo ++;
         check(description, new MockTestCase(description).successfulTestCase(numPlayer));
     }
 

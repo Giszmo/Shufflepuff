@@ -9,6 +9,7 @@
 package com.shuffle.protocol;
 
 import com.shuffle.bitcoin.Crypto;
+import com.shuffle.mock.AlwaysZero;
 import com.shuffle.mock.InsecureRandom;
 import com.shuffle.mock.MockCrypto;
 import com.shuffle.mock.MockMessageFactory;
@@ -17,9 +18,12 @@ import com.shuffle.sim.*;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Test;
+
+import java.util.LinkedList;
+import java.util.List;
 
 /**
  * Integration tests for the protocol.
@@ -28,10 +32,38 @@ import org.junit.Test;
  */
 public class TestShuffleMachine {
     protected static Logger log = LogManager.getLogger(TestShuffleMachine.class);
+    static int defaultSeed = 99;
+    static int defaultTrials = 100;
 
-    static int seed = 99;
+    int seed = 99;
 
     public int caseNo = 0;
+
+    int trials = 1;
+
+    public TestShuffleMachine() {
+        seed = defaultSeed;
+        trials = defaultTrials;
+    }
+
+    public TestShuffleMachine(int seed, int trials) {
+        this.seed = defaultSeed;
+        this.trials = defaultTrials;
+    }
+
+    public class Report {
+        final int trials;
+        final int fail;
+        final int success;
+
+        public Report(int trials, int fail, int success) {
+            this.trials = trials;
+            this.fail = fail;
+            this.success = success;
+        }
+    }
+
+    List<Report> reports = new LinkedList<>();
 
     public class MockTestCase extends TestCase {
 
@@ -45,13 +77,59 @@ public class TestShuffleMachine {
         }
     }
 
-    public void check(String description, InitialState init) {
-        Assert.assertTrue("failure in test " + description, com.shuffle.sim.TestCase.test(init, new MockMessageFactory()).isEmpty());
+    public class NoShuffleTestCase extends TestCase {
+
+        protected NoShuffleTestCase(String description) {
+            super(17, new MockMessageFactory(), new MockSessionIdentifier(description));
+        }
+
+        @Override
+        protected Crypto crypto() {
+            ++seed;
+            return new MockCrypto(new AlwaysZero());
+        }
+    }
+
+    public  void check(String description, InitialState init) {
+        int fail = 0;
+        int success = 0;
+        caseNo++;
+
+        for (int i = 0; i < trials; i ++ ) {
+            if (i % 10 == 0) {
+                System.out.println("Trial " + i + " in progress. ");
+            }
+
+            if (com.shuffle.sim.TestCase.test(init, new MockMessageFactory()).isEmpty() ) {
+                success ++;
+            } else {
+                fail ++;
+            }
+        }
+
+        System.out.println("of " + trials + " trials, " + success + " successes and " + fail + " failures. ");
+
+        reports.add(new Report(trials, fail, success));
     }
 
     @Before
     public void resetCaseNumber () {
         caseNo = 0;
+    }
+
+    @After
+    public void printReport() {
+
+        int i = 1;
+        boolean success = true;
+        for (Report report : reports) {
+            System.out.println("Result for test " + i);
+            if (report.fail > 0) success = false;
+            System.out.println("   Trials: " + report.trials + "; success: " + report.success + "; fail: " + report.fail);
+            i ++;
+        }
+
+        Assert.assertTrue(success);
     }
 
     /*@Test

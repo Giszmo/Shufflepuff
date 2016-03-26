@@ -119,6 +119,7 @@ public class CoinShuffle {
             // Phase 1: Announcement
             // In the announcement phase, participants distribute temporary encryption keys.
             machine.phase = Phase.Announcement;
+            log.info("Player " + me + " begins Coin Shuffle protocol " + session + " with " + N + " players.");
 
             // Check for sufficient funds.
             // There was a problem with the wording of the original paper which would have meant
@@ -409,6 +410,8 @@ public class CoinShuffle {
                 return null;
             }
 
+            log.warn("Player " + me + " equivocation check fails.");
+
             // If the hashes are not equal, enter the blame phase.
             // Collect all packets from phase 1 and 3.
             machine.phase = Phase.Blame;
@@ -476,6 +479,7 @@ public class CoinShuffle {
 
         protected Matrix blameBroadcastShuffleMessages() throws InterruptedException, SignatureException, ValueException, FormatException {
             machine.phase = Phase.Blame;
+            log.warn("Player " + me + " enters blame phase and sends broadcast messages.");
 
             // Collect all packets from phase 2 and 3.
             Queue<SignedPacket> evidence = mailbox.getPacketsByPhase(Phase.Shuffling);

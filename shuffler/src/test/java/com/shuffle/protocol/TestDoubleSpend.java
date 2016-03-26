@@ -16,10 +16,12 @@ import org.junit.Test;
  * Created by Daniel Krawisz on 3/17/16.
  */
 public class TestDoubleSpend extends TestShuffleMachine {
+    public TestDoubleSpend() {
+        super(99, 10);
+    }
 
     public void DoubleSpend(int[] views, int[] doubleSpenders) {
         String description = "case " + caseNo + "; Double spend test case.";
-        caseNo++;
         check(description, new MockTestCase(description).doubleSpendTestCase(views, doubleSpenders));
     }
 

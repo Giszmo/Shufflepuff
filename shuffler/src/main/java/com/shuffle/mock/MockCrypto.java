@@ -28,35 +28,12 @@ public class MockCrypto implements Crypto {
     private int signingKeyCounter;
     private int decryptionKeyCounter;
 
-//    private final MockRandomSequence rand;
-
     private final Random rand;
 
     public MockCrypto(Random rand) {
         this.rand = rand;
         signingKeyCounter = 1;
         decryptionKeyCounter = 1;
-    }
-
-    /*public MockCrypto(int seed) {
-        this.rand = null;
-        signingKeyCounter = 1;
-        decryptionKeyCounter = 1;
-
-        //notCryptographicallySecure = new Random(seed);
-    }*/
-
-    /*public MockCrypto(MockRandomSequence rand) {
-        this.rand = rand;
-        signingKeyCounter = 1;
-        decryptionKeyCounter = 1;
-
-        //notCryptographicallySecure = null;
-    }*/
-
-    MockCrypto setSigningKeyCounter(int count) {
-        signingKeyCounter = count;
-        return this;
     }
 
     @Override
