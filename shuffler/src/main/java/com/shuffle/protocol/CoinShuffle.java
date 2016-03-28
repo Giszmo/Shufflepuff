@@ -260,18 +260,16 @@ public class CoinShuffle {
 
             if (invalid.size() > 0) {
                 machine.phase = Phase.Blame;
-                Matrix bm = new Matrix();
                 Message blameMessage = messages.make();
 
                 for(Map.Entry<VerificationKey, Signature> bad : invalid.entrySet()) {
                     VerificationKey key = bad.getKey();
                     Signature signature = bad.getValue();
 
-                    bm.put(vk, Evidence.InvalidSignature(key, signature));
-                    blameMessage.attach(Blame.InvalidSignature(key, signature));
+                    blameMessage = blameMessage.attach(Blame.InvalidSignature(key, signature));
                 }
                 mailbox.broadcast(blameMessage, machine.phase);
-                machine.matrix = fillBlameMatrix(bm);
+                machine.matrix = fillBlameMatrix(new Matrix());
                 return;
             }
 
@@ -550,6 +548,11 @@ public class CoinShuffle {
                 Queue<SignedPacket> responses = entry.getValue();
                 for (SignedPacket packet : responses) {
                     Message message = packet.payload.message;
+
+                    if (message.isEmpty()) {
+                        log.error("Empty blame message received from " + from);
+                        matrix.put(vk, Evidence.Placeholder(from, Reason.EmptyBlameMessage, true));
+                    }
 
                     while (!message.isEmpty()) {
                         Blame blame = message.readBlame();

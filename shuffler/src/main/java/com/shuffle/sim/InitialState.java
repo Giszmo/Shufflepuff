@@ -308,7 +308,7 @@ public class InitialState {
                         continue;
                     }
 
-                    if (reason == Reason.NoFundsAtAll || reason == Reason.InsufficientFunds) {
+                    if (reason == Reason.NoFundsAtAll || reason == Reason.InsufficientFunds || reason == Reason.InvalidSignature) {
                         bm.put(i.vk, Evidence.Expected(j.vk, reason, true));
                         continue;
                     }
