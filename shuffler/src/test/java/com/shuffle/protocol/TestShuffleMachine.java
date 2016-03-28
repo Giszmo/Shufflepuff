@@ -33,7 +33,7 @@ import java.util.List;
 public class TestShuffleMachine {
     protected static Logger log = LogManager.getLogger(TestShuffleMachine.class);
     static int defaultSeed = 99;
-    static int defaultTrials = 1;
+    static int defaultTrials = 10;
 
     int seed = 99;
 

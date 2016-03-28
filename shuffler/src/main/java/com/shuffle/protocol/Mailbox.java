@@ -11,11 +11,14 @@ package com.shuffle.protocol;
 import com.shuffle.bitcoin.CryptographyError;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.protocol.blame.Blame;
 import com.shuffle.protocol.blame.BlameException;
+import com.shuffle.protocol.blame.Reason;
 
 import java.net.ProtocolException;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
@@ -35,8 +38,7 @@ public class Mailbox {
 
     final private Queue<SignedPacket> delivered = new LinkedList<>(); // A queue of messages that has been delivered that we aren't ready to look at yet.
     final private Queue<SignedPacket> history = new LinkedList<>(); // All messages received (does not include those in delivered).
-    final private Queue<SignedPacket> sent = new LinkedList<>();
-    private boolean blame = false;
+    private Set<Reason> blame = new HashSet<Reason>();
 
     public Mailbox(SessionIdentifier session, SigningKey sk, Collection<VerificationKey> players, Network network) {
         this.sk = sk;
@@ -45,9 +47,11 @@ public class Mailbox {
         this.players = players;
     }
 
-    public boolean blame() {
-        return blame;
+    // Whether a blame message with the given reason has been received.
+    public boolean blame(Reason reason) {
+        return blame.contains(reason);
     }
+    public boolean blame() {return blame.size() > 0; }
 
     public void broadcast(Message message, Phase phase) throws TimeoutError, CryptographyError, InvalidImplementationError {
         for (VerificationKey to : players) {
@@ -69,11 +73,14 @@ public class Mailbox {
         if (packet.recipient.equals(sk.VerificationKey())) {
             history.add(signed);
             if (packet.phase == Phase.Blame) {
-                blame = true;
+                try {
+                    blame.add(packet.message.readBlame().reason);
+                } catch (FormatException e) {
+                    e.printStackTrace();
+                }
             }
         } else {
             network.sendTo(packet.recipient, signed);
-            sent.add(signed);
         }
     }
 
@@ -134,7 +141,12 @@ public class Mailbox {
 
         history.add(found);
         if (found.payload.phase == Phase.Blame) {
-            blame = true;
+
+            try {
+                blame.add(found.payload.message.readBlame().reason);
+            } catch (FormatException e) {
+                e.printStackTrace();
+            }
         }
         return found;
     }

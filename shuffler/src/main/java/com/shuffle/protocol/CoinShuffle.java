@@ -238,16 +238,27 @@ public class CoinShuffle {
             mailbox.broadcast(messages.make().attach(sk.makeSignature(machine.t)), machine.phase);
 
             Map<VerificationKey, Message> signatureMessages = null;
+            boolean invalidClaim = false;
             try {
                 signatureMessages = mailbox.receiveFromMultiple(playerSet(1, N), machine.phase);
             } catch (BlameException e) {
-                // Could receive notice of double spending here.
-                machine.matrix = fillBlameMatrix(new Matrix());
-                return;
+                switch (e.packet.message.readBlame().reason) {
+                    case InvalidSignature:{
+                        signatureMessages = mailbox.receiveFromMultipleBlameless(playerSet(1, N), machine.phase);
+                        invalidClaim = true;
+                        break;
+                    }
+                    case DoubleSpend:
+                    default: {
+                        machine.phase = Phase.Blame;
+                        // Could receive notice of double spending here.
+                        machine.matrix = fillBlameMatrix(new Matrix());
+                        return;
+                    }
+                }
             }
 
             // Verify the signatures.
-            assert signatureMessages != null;
             Map<VerificationKey, Signature> invalid = new HashMap<>();
             for (Map.Entry<VerificationKey, Message> sig : signatureMessages.entrySet()) {
                 VerificationKey key = sig.getKey();
@@ -258,7 +269,7 @@ public class CoinShuffle {
                 }
             }
 
-            if (invalid.size() > 0) {
+            if (invalid.size() > 0 || invalidClaim) {
                 machine.phase = Phase.Blame;
                 Message blameMessage = messages.make();
 
@@ -382,9 +393,11 @@ public class CoinShuffle {
         // Players run an equivocation check when they must confirm that they all have
         // the same information.
         Matrix equivocationCheck(
-                Map<VerificationKey, EncryptionKey> encryptonKeys,
-                Queue<Address> newAddresses, boolean errorCase)
-                throws InterruptedException, ValueException,
+                Map<VerificationKey,
+                EncryptionKey> encryptonKeys,
+                Queue<Address> newAddresses,
+                boolean errorCase // There is an equivocation check that occurs
+        ) throws InterruptedException, ValueException,
                 FormatException, ProtocolException,
                 SignatureException {
 
@@ -401,7 +414,9 @@ public class CoinShuffle {
                 // of an error case. If this is a normal part of the protocol, a blame message
                 // having been received indicates that another player has a problem with the
                 // output vector received from the last player in phase 3.
-                if (mailbox.blame() || errorCase) {
+                if (errorCase ||
+                        mailbox.blame(Reason.ShuffleFailure) ||
+                        mailbox.blame(Reason.MissingOutput)) {
                     return blameBroadcastShuffleMessages();
                 }
 
@@ -602,8 +617,6 @@ public class CoinShuffle {
                                 if (!from.equals(players.get(1))) {
                                     receivedKeys.put(from, encryptionKeys.get(from));
                                 }
-
-                                System.out.println("Player " + me + ":" + vk + " checks eq. failure  from " + from + "; " + equivocationCheckHash(players, receivedKeys, addresses) + " against " + hashes.get(from));
 
                                 // Check if this player correctly reported the hash previously sent to us.
                                 if (!hashes.get(from).equals(equivocationCheckHash(players, receivedKeys, addresses))) {
