@@ -142,8 +142,9 @@ public class MockCoin implements com.shuffle.sim.MockCoin {
         }
 
         @Override
-        public void send() throws CoinNetworkError {
+        public boolean send() throws CoinNetworkError {
             MockCoin.this.send(this);
+            return true;
         }
 
         public MockTransaction copy() {
