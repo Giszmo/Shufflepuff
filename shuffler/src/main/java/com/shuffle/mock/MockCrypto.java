@@ -52,7 +52,8 @@ public class MockCrypto implements Crypto {
     }
 
     @Override
-    public synchronized Message hash(Message m) throws CryptographyError, InvalidImplementationError {
+    public synchronized Message hash(Message m)
+            throws CryptographyError, InvalidImplementationError {
         if (!(m instanceof MockMessage)) {
             throw new InvalidImplementationError();
         }

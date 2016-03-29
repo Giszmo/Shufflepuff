@@ -17,7 +17,7 @@ import java.io.Serializable;
  */
 public class MockSessionIdentifier implements SessionIdentifier, Serializable {
     static final String version = "CoinShuffle mock implementation for testing.";
-    final public String id;
+    public final String id;
 
     public MockSessionIdentifier(String id) {
         this.id = id;

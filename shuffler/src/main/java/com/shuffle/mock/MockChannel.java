@@ -43,7 +43,7 @@ public class MockChannel<X> implements Channel<Integer, X> {
                 return;
             }
 
-            for(MockPeer peer : peers.values()) {
+            for (MockPeer peer : peers.values()) {
                 peer.close();
             }
 
@@ -76,7 +76,8 @@ public class MockChannel<X> implements Channel<Integer, X> {
         @Override
         // Open a session with a mock remote peer. Include a function which is to be
         // called when a X is received.
-        public synchronized Session<Integer, X> openSession(Receiver<X> receiver) throws InterruptedException {
+        public synchronized Session<Integer, X> openSession(Receiver<X> receiver)
+                throws InterruptedException {
             // if there is already an open session, fail.
             if (currentSession != null) {
                 return null;
@@ -117,12 +118,12 @@ public class MockChannel<X> implements Channel<Integer, X> {
             }
 
             @Override
-            public boolean send(X X) {
+            public boolean send(X x) {
                 if (receiver == null) {
                     return false;
                 }
 
-                receiver.receive(X);
+                receiver.receive(x);
                 return true;
             }
 

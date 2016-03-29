@@ -19,5 +19,6 @@ import java.io.IOException;
  */
 public interface Marshaller<Format> {
     public Format marshall(SignedPacket packet);
+
     public SignedPacket unmarshall(Format string) throws FormatException;
 }

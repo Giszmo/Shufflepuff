@@ -81,8 +81,8 @@ public class InitialState {
     private final static class EvidencePatternOr extends Evidence {
         private final Evidence or;
 
-        protected EvidencePatternOr(VerificationKey accused, Reason reason, boolean credible, Evidence or) {
-            super(accused, reason, credible);
+        protected EvidencePatternOr(VerificationKey accused, Reason reason, Evidence or) {
+            super(accused, reason);
             this.or = or;
         }
 
@@ -301,20 +301,20 @@ public class InitialState {
 
                     if (reason == Reason.DoubleSpend) {
                         if (i.viewpoint == j.viewpoint) {
-                            bm.put(i.vk, Evidence.Expected(j.vk, reason, true));
+                            bm.put(i.vk, Evidence.Expected(j.vk, reason));
                         } else {
-                            bm.put(i.vk, new EvidencePatternOr(j.vk, reason, true, null));
+                            bm.put(i.vk, new EvidencePatternOr(j.vk, reason, null));
                         }
                         continue;
                     }
 
                     if (reason == Reason.NoFundsAtAll || reason == Reason.InsufficientFunds || reason == Reason.InvalidSignature) {
-                        bm.put(i.vk, Evidence.Expected(j.vk, reason, true));
+                        bm.put(i.vk, Evidence.Expected(j.vk, reason));
                         continue;
                     }
 
                     if (equals(i)) {
-                        bm.put(i.vk, Evidence.Expected(j.vk, reason, true));
+                        bm.put(i.vk, Evidence.Expected(j.vk, reason));
                     }
                 }
             }

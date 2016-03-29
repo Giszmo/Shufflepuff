@@ -574,7 +574,7 @@ public class CoinShuffle {
 
                     if (message.isEmpty()) {
                         log.error("Empty blame message received from " + from);
-                        matrix.put(vk, Evidence.Placeholder(from, Reason.EmptyBlameMessage, true));
+                        matrix.put(vk, Evidence.Placeholder(from, Reason.EmptyBlameMessage));
                     }
 
                     while (!message.isEmpty()) {
@@ -590,7 +590,7 @@ public class CoinShuffle {
                             case InsufficientFunds: {
                                 if (blame.t == null) {
                                     // A transaction must be included to claim insufficient funds.
-                                    matrix.put(vk, Evidence.Placeholder(from, Reason.Liar, true));
+                                    matrix.put(vk, Evidence.Placeholder(from, Reason.Liar));
                                     break;
                                 }
 
@@ -628,7 +628,7 @@ public class CoinShuffle {
 
                                 // Check if this player correctly reported the hash previously sent to us.
                                 if (!hashes.get(from).equals(equivocationCheckHash(players, receivedKeys, addresses))) {
-                                    matrix.put(vk, Evidence.Placeholder(from, Reason.Liar, true));
+                                    matrix.put(vk, Evidence.Placeholder(from, Reason.Liar));
                                 }
 
                                 break;
@@ -660,7 +660,7 @@ public class CoinShuffle {
                             }
                             case InvalidSignature: {
                                 if (blame.invalid == null || blame.accused == null) {
-                                    matrix.put(vk, Evidence.Placeholder(from, Reason.Liar, true));
+                                    matrix.put(vk, Evidence.Placeholder(from, Reason.Liar));
                                     break;
                                 }
 
@@ -715,7 +715,7 @@ public class CoinShuffle {
                         if (next == null) {
                             // blame player to. He should have sent us this.
 
-                            matrix.put(vk, Evidence.Placeholder(to, Reason.Liar, true));
+                            matrix.put(vk, Evidence.Placeholder(to, Reason.Liar));
                             continue;
                         }
 
@@ -741,7 +741,7 @@ public class CoinShuffle {
                 leftover.removeAll(outputVectors.keySet());
                 if (leftover.size() > 0) {
                     for (VerificationKey key : leftover) {
-                        matrix.put(vk, Evidence.Placeholder(key, Reason.Liar, true));
+                        matrix.put(vk, Evidence.Placeholder(key, Reason.Liar));
                     }
                 }
 
@@ -943,7 +943,7 @@ public class CoinShuffle {
 
         if(packets == null) {
             log.error("Player " + vk.toString() + " null blames " + from.toString() + ", case J");
-            matrix.put(vk, Evidence.Placeholder(from, Reason.Liar, true));
+            matrix.put(vk, Evidence.Placeholder(from, Reason.Liar));
             return;
         }
 
@@ -956,7 +956,7 @@ public class CoinShuffle {
                         // We should only ever receive one such message from each player.
                         if (outputVectors.containsKey(from) && !outputVectors.get(from).equals(received)) {
                             log.error("Player " + vk.toString() + " null blames " + from.toString() + ", case A; " + outputVectors.get(from).toString() + " != " + received.payload.toString());
-                            matrix.put(vk, Evidence.Placeholder(from, Reason.Liar, true));
+                            matrix.put(vk, Evidence.Placeholder(from, Reason.Liar));
                         }
                     }
                     outputVectors.put(from, received);
@@ -981,7 +981,7 @@ public class CoinShuffle {
                 default:
                     // TODO this case should never happen. It's not malicious but it's not allowed either.
                     log.error("Player " + vk.toString() + " null blames " + from.toString() + ", case C");
-                    matrix.put(vk, Evidence.Placeholder(from, Reason.Liar, true));
+                    matrix.put(vk, Evidence.Placeholder(from, Reason.Liar));
                     break;
             }
         }

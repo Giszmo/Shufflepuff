@@ -36,7 +36,9 @@ public class TransactionMutator implements Coin {
             Queue<Address> to,
             Map<VerificationKey, Address> changeAddresses
     ) {
-        MockCoin.MockTransaction tr = (MockCoin.MockTransaction) coin.shuffleTransaction(amount, from, to, changeAddresses);
+        MockCoin.MockTransaction tr = (MockCoin.MockTransaction) coin.shuffleTransaction(
+                        amount, from, to, changeAddresses);
+
         return coin.new MockTransaction(tr.inputs, tr.outputs, tr.z + 1);
     }
 

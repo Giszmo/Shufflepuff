@@ -8,9 +8,9 @@ import com.shuffle.protocol.InvalidImplementationError;
  */
 public class RandomSequence implements MockCrypto.Random {
     private int counter = 0;
-    final public int sequence[];
+    public final int[] sequence;
 
-    public RandomSequence(int sequence[]) {
+    public RandomSequence(int[] sequence) {
         this.sequence = sequence;
     }
 

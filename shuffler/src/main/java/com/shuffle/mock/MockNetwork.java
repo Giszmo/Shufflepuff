@@ -66,7 +66,7 @@ public class MockNetwork implements Network {
             return to.hashCode() + packet.hashCode();
         }
 
-        @Override public String toString(){
+        @Override public String toString() {
             return packet.toString() + " -> " + to.toString();
         }
     }

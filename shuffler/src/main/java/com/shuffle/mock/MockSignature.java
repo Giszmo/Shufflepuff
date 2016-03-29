@@ -46,9 +46,9 @@ public class MockSignature implements Signature, Serializable {
 
         MockSignature sig = (MockSignature)o;
 
-        return (t == sig.t || t != null && t.equals(sig.t)) &&
-                (packet == sig.packet || packet != null && packet.equals(sig.packet)) &&
-                (key == sig.key || key != null && key.equals(sig.key));
+        return (t == sig.t || t != null && t.equals(sig.t))
+                && (packet == sig.packet || packet != null && packet.equals(sig.packet))
+                && (key == sig.key || key != null && key.equals(sig.key));
     }
 
     @Override

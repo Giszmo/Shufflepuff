@@ -19,7 +19,7 @@ import java.io.Serializable;
  * Created by Daniel Krawisz on 12/8/15.
  */
 public class MockEncryptionKey implements EncryptionKey, Serializable {
-    final public int index;
+    public final int index;
 
     public MockEncryptionKey(int index) {
         this.index = index;
@@ -50,7 +50,8 @@ public class MockEncryptionKey implements EncryptionKey, Serializable {
 
     @Override
     public boolean equals(Object o) {
-        return o != null && o instanceof MockEncryptionKey && index == ((MockEncryptionKey) o).index;
+        return o != null
+                && o instanceof MockEncryptionKey && index == ((MockEncryptionKey) o).index;
     }
 
 }

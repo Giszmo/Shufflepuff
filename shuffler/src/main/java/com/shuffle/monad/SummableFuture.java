@@ -14,10 +14,15 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
+ * A thing that is both summable and a future.
+ *
  * Created by Daniel Krawisz on 3/2/16.
  */
 public interface SummableFuture<X> extends Summable.SummableElement<X>, Future<X> {
     SummableFuture<X> plus(SummableFuture<X> x);
+
     Summable.SummableElement<X> getSummable() throws InterruptedException, ExecutionException;
-    Summable.SummableElement<X> getSummable(long l, TimeUnit t) throws InterruptedException, ExecutionException, TimeoutException;
+
+    Summable.SummableElement<X> getSummable(long l, TimeUnit t)
+            throws InterruptedException, ExecutionException, TimeoutException;
 }

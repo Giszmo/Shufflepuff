@@ -16,7 +16,7 @@ import java.io.Serializable;
  * Created by Daniel Krawisz on 12/19/15.
  */
 public class MockAddress implements Address, Serializable {
-    final public int index;
+    public final int index;
 
     public MockAddress(int index) {
         this.index = index;
@@ -41,7 +41,7 @@ public class MockAddress implements Address, Serializable {
     }
 
     @Override
-    public String toString(){
+    public String toString() {
         return "ad[" + index + "]";
     }
 

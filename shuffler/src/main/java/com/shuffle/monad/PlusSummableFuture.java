@@ -60,7 +60,10 @@ public class PlusSummableFuture<X> extends SummableFutureAbstract<X> {
         return fore.isDone() && aft.isDone();
     }
 
-    private Summable.SummableElement<X> getSummable(Summable.SummableElement<X> foreResult, Summable.SummableElement<X> aftResult) {
+    private Summable.SummableElement<X> getSummable(
+            Summable.SummableElement<X> foreResult,
+            Summable.SummableElement<X> aftResult
+    ) {
         if (foreResult == null) {
             return aftResult; // Could still be null, but let the next guy deal with it.
         }
@@ -73,12 +76,16 @@ public class PlusSummableFuture<X> extends SummableFutureAbstract<X> {
     }
 
     @Override
-    public Summable.SummableElement<X> getSummable() throws InterruptedException, ExecutionException {
+    public Summable.SummableElement<X> getSummable()
+            throws InterruptedException, ExecutionException {
+
         return getSummable(fore.getSummable(), aft.getSummable());
     }
 
     @Override
-    public Summable.SummableElement<X> getSummable(long l, TimeUnit t) throws InterruptedException, ExecutionException, TimeoutException {
+    public Summable.SummableElement<X> getSummable(long l, TimeUnit t)
+            throws InterruptedException, ExecutionException, TimeoutException {
+
         // TODO: this is not correct; need to determine the correct values for time units.
         Summable.SummableElement<X> foreResult = fore.getSummable(l, t);
         Summable.SummableElement<X> aftResult = aft.getSummable(l, t);
@@ -104,7 +111,9 @@ public class PlusSummableFuture<X> extends SummableFutureAbstract<X> {
     }
 
     @Override
-    public X get(long l, TimeUnit timeUnit) throws InterruptedException, ExecutionException, TimeoutException {
+    public X get(long l, TimeUnit timeUnit)
+            throws InterruptedException, ExecutionException, TimeoutException {
+
         Summable.SummableElement<X> summable = getSummable(l, timeUnit);
         if (summable == null) {
             return null;

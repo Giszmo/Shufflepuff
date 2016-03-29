@@ -8,15 +8,11 @@
 
 package com.shuffle.protocol.blame;
 
-import com.shuffle.bitcoin.EncryptionKey;
-import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.VerificationKey;
-import com.shuffle.protocol.Packet;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -49,8 +45,9 @@ public class Matrix {
 
         Evidence blame = blames.get(accused);
 
-        if(blame != null) {
-            log.error("Overwriting blame matrix entry " + accused + " => " + blame + " with " + evidence);
+        if (blame != null) {
+            log.error("Overwriting blame matrix entry "
+                    + accused + " => " + blame + " with " + evidence);
             throw new IllegalArgumentException();
         }
 
