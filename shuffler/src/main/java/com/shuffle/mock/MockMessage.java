@@ -185,12 +185,12 @@ public class MockMessage implements Message, Serializable {
             Atom a = (Atom)o;
 
             return this == a || a.sig == sig &&
-                    ((a.ek == null && ek == null) || (a.ek != null && ek != null && ek.equals(a.ek))) &&
-                    ((a.addr == null && addr == null) || (a.addr != null && addr != null && addr.equals(a.addr)))
-                     && ((a.t == null && t == null) || (a.t != null && t != null && t.equals(a.t))) &&
-                    ((a.packet == null && packet == null) || (a.packet != null && packet != null && packet.equals(a.packet)))
-                     && ((a.blame == null && blame == null) || (a.blame != null && blame != null && blame.equals(a.blame)))
-                     && ((a.hash == null && hash == null) || (a.hash != null && hash != null && hash.equals(a.hash)))
+                    ((a.ek == null && ek == null) || (ek != null && ek.equals(a.ek))) &&
+                    ((a.addr == null && addr == null) || (addr != null && addr.equals(a.addr)))
+                     && ((a.t == null && t == null) || (t != null && t.equals(a.t))) &&
+                    ((a.packet == null && packet == null) || (packet != null && packet.equals(a.packet)))
+                     && ((a.blame == null && blame == null) || (blame != null && blame.equals(a.blame)))
+                     && ((a.hash == null && hash == null) || (hash != null && hash.equals(a.hash)))
                      && ((a.next == null && next == null) || (next != null && next.equals(a.next)));
         }
 

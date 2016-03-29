@@ -8,6 +8,8 @@
 
 package com.shuffle.p2p;
 
+import com.shuffle.chan.SendChan;
+
 import java.io.IOException;
 
 /**
@@ -15,12 +17,7 @@ import java.io.IOException;
  *
  * Created by Daniel Krawisz on 1/25/16.
  */
-public interface Session<Identity, Message> {
-    // Send a message.
-    boolean send(Message message) ;
-    
-    // Close the session.
-    void close();
+public interface Session<Identity, Message> extends SendChan<Message> {
 
     // Whether the session has been closed.
     boolean closed();

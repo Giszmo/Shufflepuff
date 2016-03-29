@@ -251,6 +251,7 @@ public class CoinShuffle {
             } catch (BlameException e) {
                 switch (e.packet.message.readBlame().reason) {
                     case InvalidSignature:{
+                        // Continue receiving messages and ignore any further blame messages.
                         signatureMessages = mailbox.receiveFromMultipleBlameless(playerSet(1, N), machine.phase);
                         invalidClaim = true;
                         break;

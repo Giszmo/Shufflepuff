@@ -16,8 +16,8 @@ package com.shuffle.bitcoin;
 
 /**
  *
- * This interface provides service to the Bitcoin (or other) network. This includes queries to the block
- * chain as well as to the p2p network. If these services cannot be provided while the protocol
+ * This interface provides service to the Bitcoin (or other) network. This includes queries to the
+ * blockchain as well as to the p2p network. If these services cannot be provided while the protocol
  * is running, then the protocol must not be run.
  *
  * Created by Daniel Krawisz on 12/5/15.

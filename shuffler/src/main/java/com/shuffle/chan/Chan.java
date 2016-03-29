@@ -12,7 +12,9 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 /**
- * This class is intended to work similar to the chan type in golang.
+ * A chan class made to work similar to the chan type in golang.
+ *
+ * X should be an immutable object.
  *
  * Created by Daniel Krawisz on 3/3/16.
  */

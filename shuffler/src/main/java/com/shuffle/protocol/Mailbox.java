@@ -230,29 +230,41 @@ public class Mailbox {
             ProtocolException, BlameException, SignatureException {
 
         // Collect the messages in here.
-        Map<VerificationKey, Message> broadcasts = new HashMap<>();
+        Map<VerificationKey, SignedPacket> broadcasts = new HashMap<>();
 
         // Don't receive a message from myself.
         from.remove(sk.VerificationKey());
 
         while (from.size() > 0) {
-            Packet packet = receiveNextPacket(expectedPhase).payload;
-            if (expectedPhase != Phase.Blame && packet.phase == Phase.Blame) {
+            SignedPacket packet = receiveNextPacket(expectedPhase);
+            if (expectedPhase != Phase.Blame && packet.payload.phase == Phase.Blame) {
                 if (!ignoreBlame) {
-                    throw new BlameException(packet.signer, packet);
+                    // Put the messages already collected back so that they can be received later.
+                    for (SignedPacket p : broadcasts.values()) {
+                        delivered.add(p);
+                    }
+
+                    throw new BlameException(packet.payload.signer, packet.payload);
                 }
                 continue;
             }
-            VerificationKey sender = packet.signer;
+            VerificationKey sender = packet.payload.signer;
 
             if(broadcasts.containsKey(sender)) {
                 throw new ProtocolException();
             }
-            broadcasts.put(sender, packet.message);
+            broadcasts.put(sender, packet);
             from.remove(sender);
         }
 
-        return broadcasts;
+        // Strip the messages of signatures and routing information.
+        Map<VerificationKey, Message> messages = new HashMap<>();
+
+        for (Map.Entry<VerificationKey, SignedPacket> packet : broadcasts.entrySet()) {
+            messages.put(packet.getKey(), packet.getValue().payload.message);
+        }
+
+        return messages;
     }
 
     public Map<VerificationKey, Message> receiveFromMultipleBlameless(

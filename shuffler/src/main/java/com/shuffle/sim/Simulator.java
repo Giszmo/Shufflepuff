@@ -70,7 +70,7 @@ public final class Simulator {
         @Override
         public SignedPacket receive() throws TimeoutError, InterruptedException {
             for (int i = 0; i < 2; i++) {
-                SignedPacket next = inbox.receive(1, TimeUnit.SECONDS);
+                SignedPacket next = inbox.receive(300, TimeUnit.MILLISECONDS);
 
                 if (next != null) {
                     return next;

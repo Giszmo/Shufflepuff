@@ -9,6 +9,7 @@
 package com.shuffle.protocol;
 
 import com.shuffle.bitcoin.Crypto;
+import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.mock.AlwaysZero;
 import com.shuffle.mock.InsecureRandom;
 import com.shuffle.mock.MockCrypto;
@@ -24,6 +25,7 @@ import org.junit.Before;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Integration tests for the protocol.
@@ -33,7 +35,7 @@ import java.util.List;
 public class TestShuffleMachine {
     protected static Logger log = LogManager.getLogger(TestShuffleMachine.class);
     static int defaultSeed = 99;
-    static int defaultTrials = 10;
+    static int defaultTrials = 100;
 
     int seed = 99;
 
@@ -100,7 +102,8 @@ public class TestShuffleMachine {
                 System.out.println("Trial " + i + " in progress. ");
             }
 
-            if (com.shuffle.sim.TestCase.test(init, new MockMessageFactory()).isEmpty() ) {
+            Map<SigningKey, TestCase.Mismatch> mismatch = com.shuffle.sim.TestCase.test(init, new MockMessageFactory());
+            if (mismatch == null || mismatch.isEmpty() ) {
                 success ++;
             } else {
                 fail ++;
