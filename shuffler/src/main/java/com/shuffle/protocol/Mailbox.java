@@ -187,7 +187,31 @@ public class Mailbox {
             throw new BlameException(packet.signer, packet);
         }
 
-        // If we receive a message, but it is not from the expected source, it might be a blame message.
+        // Check signature.
+        if (!from.equals(packet.signer)) {
+            throw new ValueException(ValueException.Values.phase, packet.phase.toString(), expectedPhase.toString());
+        }
+
+        return packet.message;
+    }
+
+    // Wait to receive a message from a given player.
+    public Message receiveFromBlameless(VerificationKey from, Phase expectedPhase)
+            throws TimeoutError,
+            CryptographyError,
+            FormatException,
+            ValueException,
+            InvalidImplementationError,
+            InterruptedException,
+            SignatureException {
+
+        Packet packet = null;
+        do {
+            packet = receiveNextPacket(expectedPhase).payload;
+
+        } while (expectedPhase != Phase.Blame && packet.phase == Phase.Blame);
+
+        // Check signature.
         if (!from.equals(packet.signer)) {
             throw new ValueException(ValueException.Values.phase, packet.phase.toString(), expectedPhase.toString());
         }

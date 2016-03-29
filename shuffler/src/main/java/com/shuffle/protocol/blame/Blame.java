@@ -54,14 +54,16 @@ public class Blame implements Serializable {
                 }
                 break;
             }
-            case EquivocationFailure: {
-                if (packets == null) {
+            case NoFundsAtAll:
+            case MissingOutput:
+            case ShuffleFailure:{
+                if (accused == null) {
                     throw new IllegalArgumentException();
                 }
                 break;
             }
-            case NoFundsAtAll: {
-                if (accused == null) {
+            case EquivocationFailure: {
+                if (packets == null) {
                     throw new IllegalArgumentException();
                 }
                 break;
@@ -76,10 +78,6 @@ public class Blame implements Serializable {
                 if (invalid == null || accused == null) {
                     throw new IllegalArgumentException();
                 }
-                break;
-            }
-            case MissingOutput:
-            case ShuffleFailure: {
                 break;
             }
         }
@@ -139,11 +137,6 @@ public class Blame implements Serializable {
         return new Blame(Reason.DoubleSpend, accused, t, null, null, null);
     }
 
-    // Sent in phase 2 or three if an output is missing.
-    public static Blame MissingOutput(VerificationKey accused) {
-        return new Blame(Reason.MissingOutput, accused, null, null, null, null);
-    }
-
     // Sent when a player makes an invalid signature to the transaction.
     public static Blame InvalidSignature(VerificationKey accused, Signature invalid) {
         return new Blame(Reason.InvalidSignature, accused, null, null, null, invalid);
@@ -155,8 +148,13 @@ public class Blame implements Serializable {
     }
 
     // Sent when something goes wrong in phase 2.
-    public static Blame ShuffleFailure() {
-        return new Blame(Reason.ShuffleFailure, null, null, null, null, null);
+    public static Blame ShuffleFailure(VerificationKey accused) {
+        return new Blame(Reason.ShuffleFailure, accused, null, null, null, null);
+    }
+
+    // Sent in phase three if an output is missing.
+    public static Blame MissingOutput(VerificationKey accused) {
+        return new Blame(Reason.MissingOutput, accused, null, null, null, null);
     }
 
     // Sent when there is a failure in phase two and in the subsequent equivocation check.

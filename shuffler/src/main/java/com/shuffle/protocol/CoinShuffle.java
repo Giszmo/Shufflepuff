@@ -184,12 +184,19 @@ public class CoinShuffle {
                 machine.phase = Phase.BroadcastOutput;
 
                 newAddresses = readAndBroadcastNewAddresses(shuffled);
-            } catch (BlameException e) { // Any blame message we receive in this phase should be
-                                        // dealt with immediately because this error case does
-                                       // not use the new addresses.
+            } catch (BlameException e) {
                 switch (e.packet.message.readBlame().reason) {
-                    case ShuffleFailure:
                     case MissingOutput: {
+                        // This was sent by a player in phase 3, which means that the new addresses
+                        // were sent out by the last player, which means that we need to receive
+                        // the new addresses before proceeding.
+                        if (newAddresses == null) {
+                            newAddresses = readNewAddresses(mailbox.receiveFromBlameless(players.get(N), machine.phase));
+                        }
+                        // Continue on to next case.
+                    }
+                    case ShuffleFailure: {
+                        // This was sent
                         machine.matrix = blameShuffleMisbehavior();
                         return;
                     }
@@ -376,14 +383,14 @@ public class CoinShuffle {
                 try {
                     decrypted = decrypted.attach(key.decrypt(address));
                 } catch (CryptographyError e) {
-                    mailbox.broadcast(messages.make().attach(Blame.ShuffleFailure()), machine.phase);
+                    mailbox.broadcast(messages.make().attach(Blame.ShuffleFailure(players.get(N))), machine.phase);
                     return null;
                 }
             }
 
             if (addrs.size() != count || count != expected) {
                 machine.phase = Phase.Blame;
-                mailbox.broadcast(messages.make().attach(Blame.MissingOutput(players.get(N))), machine.phase);
+                mailbox.broadcast(messages.make().attach(Blame.ShuffleFailure(players.get(N))), machine.phase);
                 return null;
             }
 

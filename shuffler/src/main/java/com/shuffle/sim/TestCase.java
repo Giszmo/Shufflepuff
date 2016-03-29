@@ -13,12 +13,10 @@ import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.protocol.Machine;
 import com.shuffle.protocol.MessageFactory;
 import com.shuffle.protocol.SessionIdentifier;
-import com.shuffle.protocol.blame.Matrix;
-
-import junit.framework.Assert;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.junit.Assert;
 
 import java.util.HashMap;
 import java.util.Map;
