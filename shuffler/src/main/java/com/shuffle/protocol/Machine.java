@@ -1,3 +1,11 @@
+/**
+ *
+ * Copyright © 2016 Mycelium.
+ * Use of this source code is governed by an ISC
+ * license that can be found in the LICENSE file.
+ *
+ */
+
 package com.shuffle.protocol;
 
 import com.shuffle.bitcoin.SigningKey;
@@ -8,6 +16,8 @@ import com.shuffle.protocol.blame.Matrix;
 import java.util.SortedSet;
 
 /**
+ * A representation of the internal state of the Coin Shuffle machine.
+ *
  * Created by Daniel Krawisz on 2/8/16.
  */
 public class Machine {
@@ -46,7 +56,6 @@ public class Machine {
         return e;
     }
 
-    // The ShuffleMachine cannot be instantiated directly.
     public Machine(
             SessionIdentifier session,
             long amount,
@@ -68,39 +77,16 @@ public class Machine {
         this.phase = Phase.Uninitiated;
     }
 
-    Machine(
-            SessionIdentifier session,
-            Phase phase,
-            Exception e,
-            Matrix matrix
-    ) {
-        this.session = session;
-        this.phase = phase;
-        this.e = e;
-        this.matrix = matrix;
-
-        sk = null;
-        players = null;
-        amount = 0;
-    }
-
-    // Whether two return states are equivalent.
-    public boolean match(Machine m) {
-        return session == m.session &&
-                (phase == null || phase == m.phase) &&
-                (e == null && m.e == null ||
-                        e != null && m.e != null && e.getClass().equals(m.e.getClass()))
-                && (matrix == null && m.e == null || matrix != null && matrix.match(m.matrix));
-    }
-
     public String toString() {
         String session = " " + this.session.toString();
 
+        String str = "player " + sk.toString();
+
         if (phase == Phase.Completed) {
-            return "Successful run" + session;
+            return str + ": Successful run " + session;
         }
 
-        String str = "Unsuccessful run" + session;
+        str += ": Unsuccessful run " + session;
 
         if (e != null) {
             str += "; threw " + e.toString();
@@ -115,5 +101,60 @@ public class Machine {
         }
 
         return str;
+    }
+
+    // A representation of an expected result for a CoinShuffle round.
+    public static class Expected {
+
+        final public Phase phase;
+        final public SessionIdentifier session;
+        final public Exception e;
+        final public Matrix matrix;
+
+        public Expected(
+                SessionIdentifier session,
+                Phase phase,
+                Exception e,
+                Matrix matrix
+        ) {
+            this.session = session;
+            this.phase = phase;
+            this.e = e;
+            this.matrix = matrix;
+        }
+
+        // Whether two return states are equivalent.
+        public boolean match(Machine m) {
+            return session == m.session &&
+                    (phase == null || phase == m.phase) &&
+                    (e == null && m.e == null ||
+                            e != null && m.e != null && e.getClass().equals(m.e.getClass()))
+                    && ((matrix == null && (m.matrix == null || m.matrix.isEmpty()))
+                        || (matrix != null && matrix.match(m.matrix)));
+        }
+
+        public String toString() {
+            String session = " " + this.session.toString();
+
+            if (phase == Phase.Completed || (e == null && (matrix == null || matrix.isEmpty()))) {
+                return "Successful run" + session;
+            }
+
+            String str = "Unsuccessful run" + session;
+
+            if (e != null) {
+                str += "; threw " + e.toString();
+            }
+
+            if (phase != null) {
+                str += " failed in phase " + phase.toString();
+            }
+
+            if (matrix != null) {
+                str += "; blame = " + matrix.toString();
+            }
+
+            return str;
+        }
     }
 }

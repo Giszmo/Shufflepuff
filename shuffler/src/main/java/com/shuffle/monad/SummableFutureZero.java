@@ -1,3 +1,11 @@
+/**
+ *
+ * Copyright © 2016 Mycelium.
+ * Use of this source code is governed by an ISC
+ * license that can be found in the LICENSE file.
+ *
+ */
+
 package com.shuffle.monad;
 
 import java.util.concurrent.ExecutionException;
@@ -26,17 +34,19 @@ public class SummableFutureZero<X> extends Summable.Zero<X> implements SummableF
     }
 
     @Override
-    public X get() throws InterruptedException, ExecutionException {
-        return z.value();
-    }
-
-    @Override
     public X value() {
         return z.value();
     }
 
     @Override
-    public X get(long l, TimeUnit timeUnit) throws InterruptedException, ExecutionException, TimeoutException {
+    public X get() throws InterruptedException, ExecutionException {
+        return z.value();
+    }
+
+    @Override
+    public X get(long l, TimeUnit timeUnit)
+            throws InterruptedException, ExecutionException, TimeoutException {
+
         return z.value();
     }
 
@@ -46,12 +56,16 @@ public class SummableFutureZero<X> extends Summable.Zero<X> implements SummableF
     }
 
     @Override
-    public Summable.SummableElement<X> getSummable() throws InterruptedException, ExecutionException {
+    public Summable.SummableElement<X> getSummable()
+            throws InterruptedException, ExecutionException {
+
         return this;
     }
 
     @Override
-    public Summable.SummableElement<X> getSummable(long l, TimeUnit t) throws InterruptedException, ExecutionException {
+    public Summable.SummableElement<X> getSummable(long l, TimeUnit t)
+            throws InterruptedException, ExecutionException {
+
         return this;
     }
 }

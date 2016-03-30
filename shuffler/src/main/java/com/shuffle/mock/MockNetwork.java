@@ -1,3 +1,11 @@
+/**
+ *
+ * Copyright © 2016 Mycelium.
+ * Use of this source code is governed by an ISC
+ * license that can be found in the LICENSE file.
+ *
+ */
+
 package com.shuffle.mock;
 
 import com.shuffle.bitcoin.VerificationKey;
@@ -58,7 +66,7 @@ public class MockNetwork implements Network {
             return to.hashCode() + packet.hashCode();
         }
 
-        @Override public String toString(){
+        @Override public String toString() {
             return packet.toString() + " -> " + to.toString();
         }
     }

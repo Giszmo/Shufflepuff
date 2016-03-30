@@ -1,3 +1,11 @@
+/**
+ *
+ * Copyright © 2016 Mycelium.
+ * Use of this source code is governed by an ISC
+ * license that can be found in the LICENSE file.
+ *
+ */
+
 package com.shuffle.mock;
 
 import com.shuffle.protocol.SessionIdentifier;
@@ -9,7 +17,7 @@ import java.io.Serializable;
  */
 public class MockSessionIdentifier implements SessionIdentifier, Serializable {
     static final String version = "CoinShuffle mock implementation for testing.";
-    final public String id;
+    public final String id;
 
     public MockSessionIdentifier(String id) {
         this.id = id;

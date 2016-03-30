@@ -1,3 +1,11 @@
+/**
+ *
+ * Copyright © 2016 Mycelium.
+ * Use of this source code is governed by an ISC
+ * license that can be found in the LICENSE file.
+ *
+ */
+
 package com.shuffle.mock;
 
 import com.shuffle.bitcoin.Crypto;
@@ -7,39 +15,25 @@ import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.protocol.InvalidImplementationError;
 import com.shuffle.protocol.Message;
 
-import java.util.Random;
-
 /**
+ *
  *
  * Created by Daniel Krawisz on 12/5/15.
  */
 public class MockCrypto implements Crypto {
+    public interface Random {
+        int getRandom(int n) throws CryptographyError, InvalidImplementationError;
+    }
+
     private int signingKeyCounter;
     private int decryptionKeyCounter;
 
-    private final MockRandomSequence rand;
+    private final Random rand;
 
-    private final Random notCryptographicallySecure;
-
-    public MockCrypto(int seed) {
-        this.rand = null;
-        signingKeyCounter = 1;
-        decryptionKeyCounter = 1;
-
-        notCryptographicallySecure = new Random(seed);
-    }
-
-    public MockCrypto(MockRandomSequence rand) {
+    public MockCrypto(Random rand) {
         this.rand = rand;
         signingKeyCounter = 1;
         decryptionKeyCounter = 1;
-
-        notCryptographicallySecure = null;
-    }
-
-    MockCrypto setSigningKeyCounter(int count) {
-        signingKeyCounter = count;
-        return this;
     }
 
     @Override
@@ -54,14 +48,12 @@ public class MockCrypto implements Crypto {
 
     @Override
     public synchronized int getRandom(int n) throws CryptographyError, InvalidImplementationError {
-        if (rand == null) {
-            return notCryptographicallySecure.nextInt(n + 1);
-        }
         return rand.getRandom(n);
     }
 
     @Override
-    public synchronized Message hash(Message m) throws CryptographyError, InvalidImplementationError {
+    public synchronized Message hash(Message m)
+            throws CryptographyError, InvalidImplementationError {
         if (!(m instanceof MockMessage)) {
             throw new InvalidImplementationError();
         }

@@ -1,5 +1,9 @@
 /**
  *
+ * Copyright © 2016 Mycelium.
+ * Use of this source code is governed by an ISC
+ * license that can be found in the LICENSE file.
+ *
  * Package blame provides classes for blaming malicious or careless players who do not
  * follow the protocol correctly.
  *

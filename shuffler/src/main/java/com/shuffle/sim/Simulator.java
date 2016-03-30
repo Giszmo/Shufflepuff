@@ -1,8 +1,17 @@
+/**
+ *
+ * Copyright © 2016 Mycelium.
+ * Use of this source code is governed by an ISC
+ * license that can be found in the LICENSE file.
+ *
+ */
+
 package com.shuffle.sim;
 
-import com.shuffle.bitcoin.Crypto;
+import com.shuffle.bitcoin.CoinNetworkException;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.mock.MockMessageFactory;
 import com.shuffle.monad.NaturalSummableFuture;
 import com.shuffle.monad.SummableFuture;
 import com.shuffle.monad.SummableFutureZero;
@@ -11,7 +20,6 @@ import com.shuffle.protocol.InvalidImplementationError;
 import com.shuffle.protocol.Machine;
 import com.shuffle.protocol.MessageFactory;
 import com.shuffle.protocol.Network;
-import com.shuffle.protocol.Phase;
 import com.shuffle.protocol.SignedPacket;
 import com.shuffle.protocol.TimeoutError;
 
@@ -36,7 +44,7 @@ public final class Simulator {
      *
      * Created by Daniel Krawisz on 2/8/16.
      */
-    private class NetworkSim implements Network {
+    private static class NetworkSim implements Network {
         final Chan<SignedPacket> inbox = new Chan<>();
         final Map<VerificationKey, NetworkSim> networks;
 
@@ -62,7 +70,7 @@ public final class Simulator {
         @Override
         public SignedPacket receive() throws TimeoutError, InterruptedException {
             for (int i = 0; i < 2; i++) {
-                SignedPacket next = inbox.receive(1, TimeUnit.SECONDS);
+                SignedPacket next = inbox.receive(300, TimeUnit.MILLISECONDS);
 
                 if (next != null) {
                     return next;
@@ -77,33 +85,33 @@ public final class Simulator {
         }
     }
 
-    final MessageFactory messages;
-
-    public Simulator(MessageFactory messages)  {
-        this.messages = messages;
+    private Simulator() {
     }
 
-    public Map<SigningKey, Machine> run(InitialState init, Crypto crypto) {
+    private static class SimulationInitializer implements InitialState.Initializer {
+        public final Map<VerificationKey, NetworkSim> networks = new HashMap<>();
 
-        final Map<SigningKey, Adversary> machines = new HashMap<>();
-        final Map<VerificationKey, NetworkSim> networks = new HashMap<>();
-
-        // Check that all players have a coin network set up, either the default or their own.
-        for (InitialState.PlayerInitialState player : init.getPlayers()) {
-            if (player.sk == null) {
-                continue;
-            }
-
-            NetworkSim network = new NetworkSim(networks);
-            networks.put(player.vk, network);
-
-            Adversary adversary = player.adversary(crypto, messages, network);
-            machines.put(player.sk, adversary);
+        @Override
+        public MessageFactory messages(VerificationKey key) {
+            return new MockMessageFactory();
         }
+
+        @Override
+        public Network network(VerificationKey key) {
+            NetworkSim network = new NetworkSim(networks);
+            networks.put(key, network);
+            return network;
+        }
+    }
+
+    public static Map<SigningKey, Machine> run(InitialState init, MessageFactory messages) {
+
+        final SimulationInitializer initializer = new SimulationInitializer();
+        final Map<SigningKey, Adversary> machines = init.getPlayers(initializer);
 
         Map<SigningKey, Machine> results = runSimulation(machines);
 
-        networks.clear(); // Avoid memory leak.
+        initializer.networks.clear(); // Avoid memory leak.
         return results;
     }
 
@@ -121,6 +129,7 @@ public final class Simulator {
         try {
             return wait.get();
         } catch (InterruptedException | ExecutionException e) {
+            log.error("Returning null. This indicates that some player returned an exception and was not able to complete the protocol.");
             return null;
         }
     }

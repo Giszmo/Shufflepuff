@@ -1,38 +1,71 @@
+/**
+ *
+ * Copyright © 2016 Mycelium.
+ * Use of this source code is governed by an ISC
+ * license that can be found in the LICENSE file.
+ *
+ */
+
 package com.shuffle.bitcoin.blockchain;
 
-import java.io.IOException;
-import java.net.URL;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.util.LinkedList;
-import java.util.List;
+ import java.io.IOException;
+ import java.net.URL;
+ import java.io.BufferedReader;
+ import java.io.InputStreamReader;
+ import java.net.HttpURLConnection;
+ import java.util.LinkedList;
+ import java.util.List;
 
-import javax.xml.bind.annotation.adapters.HexBinaryAdapter;
-import org.bitcoinj.core.*;
-import org.bitcoinj.store.*;
-import org.json.JSONTokener;
-import org.json.JSONObject;
+ import javax.xml.bind.annotation.adapters.HexBinaryAdapter;
+ import org.bitcoinj.core.*;
+ import org.bitcoinj.params.MainNetParams;
+ import org.json.JSONTokener;
+ import org.json.JSONObject;
 
 
 /**
  *
- *
- *
- *
- *
  * Created by Eugene Siegel on 3/4/16.
+ *
  */
+
 public final class BlockchainDotInfo extends Bitcoin {
 
     String USER_AGENT = "Chrome/5.0";
+
+    /**
+     * The constructor takes in a NetworkParameters variable that determines whether we are connecting to the Production Net
+     * or the Test Net.  It also takes in an int which determines the minimum number of peers to connect to before
+     * broadcasting a transaction.
+     *
+     */
+
+    public BlockchainDotInfo(NetworkParameters netParams, int minPeers) {
+        super(netParams, minPeers);
+    }
+
+    /**
+     *
+     * Given a wallet address, this function looks up the address' balance using Blockchain.info's API.
+     * The amount returned is of type long and represents the number of satoshis.
+     */
+    public long getAddressBalance(String address) throws IOException {
+        String url = "https://blockchain.info/rawaddr/" + address;
+        URL obj = new URL(url);
+        JSONTokener tokener = new JSONTokener(obj.openStream());
+        JSONObject root = new JSONObject(tokener);
+        long satoshis = Long.valueOf(root.get("final_balance").toString());
+        System.out.println(satoshis);
+        return satoshis;
+    }
+
 
     /**
      *
      * Given a wallet address, this function looks up all transactions associated with the wallet using Blockchain.info's API.
      * These "n" transaction hashes are then returned in a String array.
      *
-	 */
+     */
     public List<Transaction> getWalletTransactions(String address) throws IOException {
 
         String url = "https://blockchain.info/rawaddr/" + address;
@@ -41,7 +74,10 @@ public final class BlockchainDotInfo extends Bitcoin {
         JSONObject root = new JSONObject(tokener);
         List<Transaction> txhashes = new LinkedList<>();
         for (int i = 0; i < root.getJSONArray("txs").length(); i++) {
-            txhashes.add(new Transaction(root.getJSONArray("txs").getJSONObject(i).get("hash").toString()));
+            txhashes.add(new Transaction(root.getJSONArray("txs").getJSONObject(i).get("hash").toString(), false));
+        }
+        if (txhashes.size() == 50) {
+            return null;
         }
         return txhashes;
 
@@ -53,7 +89,7 @@ public final class BlockchainDotInfo extends Bitcoin {
      * it returns a bitcoinj Transaction object using this transaction hash.
      *
      */
-    public org.bitcoinj.core.Transaction getTransaction(String transactionHash) throws BlockStoreException, IOException {
+    public org.bitcoinj.core.Transaction getTransaction(String transactionHash) throws IOException {
 
         String url = "https://blockchain.info/tr/rawtx/" + transactionHash + "?format=hex";
         URL obj = new URL(url);
@@ -68,7 +104,7 @@ public final class BlockchainDotInfo extends Bitcoin {
         }
         HexBinaryAdapter adapter = new HexBinaryAdapter();
         byte[] bytearray = adapter.unmarshal(response.toString());
-        NetworkParameters params = NetworkParameters.prodNet();     // prodNet is deprecated
+        NetworkParameters params = MainNetParams.get();
         Context contxt = Context.getOrCreate(params);               // bitcoinj needs this for some reason
         return new org.bitcoinj.core.Transaction(params, bytearray);
 

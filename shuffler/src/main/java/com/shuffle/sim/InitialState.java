@@ -1,11 +1,18 @@
+/**
+ *
+ * Copyright © 2016 Mycelium.
+ * Use of this source code is governed by an ISC
+ * license that can be found in the LICENSE file.
+ *
+ */
+
 package com.shuffle.sim;
 
 import com.shuffle.bitcoin.Address;
+import com.shuffle.bitcoin.CoinNetworkException;
 import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.SigningKey;
-import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
-import com.shuffle.mock.TransactionMutator;
 import com.shuffle.protocol.CoinShuffle;
 import com.shuffle.protocol.Machine;
 import com.shuffle.protocol.MaliciousMachine;
@@ -16,7 +23,9 @@ import com.shuffle.protocol.blame.Evidence;
 import com.shuffle.protocol.blame.Matrix;
 import com.shuffle.protocol.blame.Reason;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -31,14 +40,18 @@ import java.util.TreeSet;
  * Created by Simulator on 2/8/16.
  */
 public class InitialState {
-    // A blame matrix that matches any matrix given to it.
+    // An expected return state that matches any Machine.
     // Used for ensuring a test can't fail no matter what value
     // simulated adversaries return, since we only care about testing the response of the
     // honest players.
-    public static class MatrixPatternAny extends Matrix {
+    public final static class ExpectedPatternAny extends Machine.Expected {
+
+        public ExpectedPatternAny() {
+            super(null, null, null, null);
+        }
 
         @Override
-        public boolean match(Matrix bm) {
+        public boolean match(Machine m) {
             return true;
         }
 
@@ -48,9 +61,9 @@ public class InitialState {
         }
     }
 
-    private final static class BlameEvidencePatternAny extends Evidence {
-        private BlameEvidencePatternAny(VerificationKey accused) {
-            super(accused, Reason.NoFundsAtAll, false, null, null, null, null, null);
+    private final static class EvidencePatternAny extends Evidence {
+        private EvidencePatternAny(VerificationKey accused) {
+            super(accused, Reason.NoFundsAtAll, null, null, null, null, null, null, null);
 
         }
 
@@ -65,21 +78,44 @@ public class InitialState {
         }
     }
 
-    static public MatrixPatternAny anyMatrix = new MatrixPatternAny();
+    private final static class EvidencePatternOr extends Evidence {
+        private final Evidence or;
+
+        protected EvidencePatternOr(VerificationKey accused, Reason reason, Evidence or) {
+            super(accused, reason);
+            this.or = or;
+        }
+
+        @Override
+        public boolean match(Evidence e) {
+
+            if (super.match(e)) {
+                return true;
+            }
+
+            if (or == null) {
+                return e == null;
+            }
+
+            return or.match(e);
+        }
+
+        @Override
+        public String toString() {
+            return super.toString() + "|" + or;
+        }
+    }
+
+    static public ExpectedPatternAny any = new ExpectedPatternAny();
 
     public final SessionIdentifier session;
     public final long amount;
+    public final Crypto crypto;
     private final LinkedList<PlayerInitialState> players = new LinkedList<>();
     private MockCoin mockCoin = null;
 
-    public List<PlayerInitialState> getPlayers() {
-        List<PlayerInitialState> p = new LinkedList<>();
-        p.addAll(players);
-        return p;
-    }
-
     // The initial state of an individual player. (includes malicious players)
-    public class PlayerInitialState {
+    public final class PlayerInitialState {
         final SigningKey sk;
         final VerificationKey vk;
         SortedSet<VerificationKey> keys = new TreeSet<>();
@@ -118,7 +154,15 @@ public class InitialState {
             return InitialState.this.amount;
         }
 
-        public MockCoin coin(Crypto crypto) {
+        public Crypto crypto() {
+            return InitialState.this.crypto;
+        }
+
+        public MockCoin coin() throws CoinNetworkException {
+            if (networkPoints == null) {
+                networkPoints = new HashMap<>();
+            }
+
             MockCoin coin = networkPoints.get(viewpoint);
 
             if (coin != null) {
@@ -136,28 +180,29 @@ public class InitialState {
                         Address previousAddress = crypto.makeSigningKey().VerificationKey().address();
 
                         mockCoin.put(previousAddress, player.initialAmount);
-                        mockCoin.spend(previousAddress, address, player.initialAmount).send();
+                        mockCoin.makeSpendingTransaction(previousAddress, address, player.initialAmount).send();
 
                         // Plot twist! We spend it all!
                         if (player.spend > 0) {
-                            mockCoin.spend(address, crypto.makeSigningKey().VerificationKey().address(), player.spend).send();
+                            mockCoin.makeSpendingTransaction(address, crypto.makeSigningKey().VerificationKey().address(), player.spend).send();
                         }
                     }
                 }
             }
 
-            networkPoints.put(viewpoint, mockCoin.copy());
-            return mockCoin;
+            MockCoin copy = mockCoin.copy();
+            networkPoints.put(viewpoint, copy);
+            return copy;
         }
 
         // Turn the initial state into an Adversary object that can be run in the simulator.
-        public Adversary adversary(Crypto crypto, MessageFactory messages, Network network) {
+        public Adversary adversary(MessageFactory messages, Network network) throws CoinNetworkException {
             if (sk == null) {
                 return null;
             }
 
             Address address = sk.VerificationKey().address();
-            MockCoin coin = coin(crypto);
+            MockCoin coin = coin();
             CoinShuffle shuffle;
 
             if (equivocateAnnouncement != null && equivocateAnnouncement.length > 0) {
@@ -165,7 +210,7 @@ public class InitialState {
             } else if (equivocateOutputVector != null && equivocateOutputVector.length > 0) {
                 shuffle = MaliciousMachine.broadcastEquivocator(messages, crypto, coin, fromSet(keys, equivocateOutputVector));
             } else if (replace && drop != 0) {
-                shuffle = MaliciousMachine.addressDropperReplacer(messages, crypto, coin, drop);
+                shuffle = MaliciousMachine.addressReplacer(messages, crypto, coin, drop);
             } else if (duplicate != 0 && drop != 0) {
                 shuffle = MaliciousMachine.addressDropperDuplicator(messages, crypto, coin, drop, duplicate);
             } else if (drop != 0) {
@@ -173,7 +218,7 @@ public class InitialState {
             } else if (doubleSpend > 0) {
                 // is he going to double spend? If so, make a new transaction for him.
                 shuffle = MaliciousMachine.doubleSpender(messages, crypto, coin,
-                        coin.spend(address, crypto.makeSigningKey().VerificationKey().address(), doubleSpend));
+                        coin.makeSpendingTransaction(address, crypto.makeSigningKey().VerificationKey().address(), doubleSpend));
             } else if (mutate) {
                 shuffle = new CoinShuffle(messages, crypto, coin.mutated());
             } else {
@@ -202,7 +247,7 @@ public class InitialState {
             // Is the player going to drop an address during the shuffle phase?
             if (drop != 0) {
                 if (replace) {
-                    return Reason.ShuffleAndEquivocationFailure;
+                    return Reason.ShuffleFailure;
                 }
                 return Reason.ShuffleFailure;
             }
@@ -226,10 +271,11 @@ public class InitialState {
         }
 
         // How is the player expected to interpret what happened during the protocol?
-        public Matrix expectedBlame() {
+        public Machine.Expected expected() {
             // Malicious players aren't tested, so they can blame anyone.
-            if (maliciousBehavior() != null) {
-                return anyMatrix;
+            Reason mal = maliciousBehavior();
+            if (mal != null) {
+                return any;
             }
 
             Matrix bm = new Matrix();
@@ -238,7 +284,7 @@ public class InitialState {
                 for (PlayerInitialState j : players) {
                     // We don't care who malicious players blame because they aren't trustworthy anyway.
                     if (i.maliciousBehavior() != null) {
-                        bm.put(i.vk, new BlameEvidencePatternAny(j.vk));
+                        bm.put(i.vk, new EvidencePatternAny(j.vk));
                         continue;
                     }
 
@@ -249,28 +295,84 @@ public class InitialState {
 
                     Reason reason = j.maliciousBehavior();
 
-                    if (reason != null) {
-                        if (reason == Reason.NoFundsAtAll || reason == Reason.InsufficientFunds
-                                || (equals(i) && (reason != Reason.DoubleSpend || viewpoint == i.viewpoint))) {
-                            bm.put(i.vk, Evidence.Expected(j.vk, reason, true));
+                    if (reason == null) {
+                        continue;
+                    }
+
+                    if (reason == Reason.DoubleSpend) {
+                        if (i.viewpoint == j.viewpoint) {
+                            bm.put(i.vk, Evidence.Expected(j.vk, reason));
+                        } else {
+                            bm.put(i.vk, new EvidencePatternOr(j.vk, reason, null));
                         }
+                        continue;
+                    }
+
+                    if (reason == Reason.NoFundsAtAll || reason == Reason.InsufficientFunds || reason == Reason.InvalidSignature) {
+                        bm.put(i.vk, Evidence.Expected(j.vk, reason));
+                        continue;
+                    }
+
+                    if (equals(i)) {
+                        bm.put(i.vk, Evidence.Expected(j.vk, reason));
                     }
                 }
             }
 
-            return bm;
+            return new Machine.Expected(session, null, null, bm);
         }
     }
 
-    public Map<Integer, MockCoin> networkPoints = new HashMap<>();
+    public interface Initializer {
+        MessageFactory messages(VerificationKey key);
+        Network network(VerificationKey key);
+    }
 
-    public InitialState(SessionIdentifier session, long amount) {
+    public Map<SigningKey, Adversary> getPlayers(Initializer initializer) {
+        Map<SigningKey, Adversary> p = new HashMap<>();
+
+        for (PlayerInitialState player : players) {
+            if (player.sk == null) {
+                continue;
+            }
+
+            try {
+                p.put(player.sk, player.adversary(initializer.messages(player.vk), initializer.network(player.vk)));
+            } catch (CoinNetworkException e) {
+                return null; // Should not really happen.
+            }
+        }
+
+        networkPoints = null;
+
+        return p;
+    }
+
+    public List<VerificationKey> getKeys() {
+        List<VerificationKey> keys = new LinkedList<>();
+
+        for (PlayerInitialState player : players) {
+            keys.add(player.vk);
+        }
+
+        return keys;
+    }
+
+    public PlayerInitialState getPlayer(int n) {
+        return players.get(n);
+    }
+
+    public Map<Integer, MockCoin> networkPoints = null;
+
+    public InitialState(SessionIdentifier session, long amount, Crypto crypto) {
 
         this.session = session;
         this.amount = amount;
+        this.crypto = crypto;
     }
 
-    public InitialState player(SigningKey key) {
+    public InitialState player() {
+        SigningKey key = crypto.makeSigningKey();
 
         PlayerInitialState next = new PlayerInitialState(key);
         PlayerInitialState last = players.peekLast();
@@ -346,12 +448,12 @@ public class InitialState {
         return this;
     }
 
-    public Map<SigningKey, Matrix> expectedBlame() {
-        Map<SigningKey, Matrix> blame = new HashMap<>();
+    public Map<SigningKey, Machine.Expected> expected() {
+        Map<SigningKey, Machine.Expected> blame = new HashMap<>();
 
         for (PlayerInitialState player : players) {
             if (player.sk != null) {
-                blame.put(player.sk, player.expectedBlame());
+                blame.put(player.sk, player.expected());
             }
         }
 
@@ -378,34 +480,37 @@ public class InitialState {
         return others;
     }
 
+    // An initial state containing no malicious players.
     public static InitialState successful(
-            SessionIdentifier session,
-            int numPlayers,
-            long amount,
-            Crypto crypto
+            final SessionIdentifier session,
+            final long amount,
+            final Crypto crypto,
+            final int numPlayers
     ) {
-        InitialState init = new InitialState(session, amount);
+        InitialState init = new InitialState(session, amount, crypto);
 
         for (int i = 1; i <= numPlayers; i++) {
-            init.player(crypto.makeSigningKey()).initialFunds(20);
+            init.player().initialFunds(20);
         }
 
         return init;
     }
 
+    // Initial state for cases in which players cannot afford to engage in the round, for
+    // one reason or another.
     public static InitialState insufficientFunds(
-            SessionIdentifier session,
-            int numPlayers,
-            int[] deadbeats, // Players who put no money in their address.
-            int[] poor, // Players who didn't put enough in their address.
-            int[] spenders, // Players who don't have enough because they spent it.
-            long amount,
-            Crypto crypto
+            final SessionIdentifier session,
+            final long amount,
+            final Crypto crypto,
+            final int numPlayers,
+            final int[] deadbeats, // Players who put no money in their address.
+            final int[] poor, // Players who didn't put enough in their address.
+            final int[] spenders // Players who don't have enough because they spent it.
     ) {
-        InitialState init = new InitialState(session, amount);
+        InitialState init = new InitialState(session, amount, crypto);
 
         pit : for (int i = 1; i <= numPlayers; i++) {
-            init.player(crypto.makeSigningKey()).initialFunds(20);
+            init.player().initialFunds(20);
             for (int deadbeat : deadbeats) {
                 if (deadbeat == i) {
                     init.initialFunds(0);
@@ -422,6 +527,195 @@ public class InitialState {
                 if (spender == i) {
                     init.spend(16);
                 }
+            }
+        }
+
+        return init;
+    }
+
+    // Initial state for players who spend their funds while the protocol is running.
+    public static InitialState doubleSpend(
+            final SessionIdentifier session,
+            final long amount,
+            final Crypto crypto,
+            final int[] views, // Each player may have a different view of the network; ie,
+                              // some players may be able to observe that the double spend has
+                             // occurred but others may not.
+            final int[] spenders  // The set of players who attempt to double spend.
+    ) {
+        final Set<Integer> doubleSpenders = new HashSet<>();
+
+        for (int d : spenders) {
+            doubleSpenders.add(d);
+        }
+
+        InitialState init = new InitialState(session, amount, crypto);
+        for (int i = 0; i < views.length; i ++) {
+            init.player().initialFunds(20).networkPoint(views[i]);
+
+            if (doubleSpenders.contains(i + 1)) {
+                init.doubleSpend(13);
+            }
+        }
+        return init;
+    }
+
+    // A class used to define certain kinds of initial states.
+    public static class Equivocation {
+        final int equivocator;
+        final int[] equivocation;
+
+        public Equivocation(int equivocator, int[] equivocation) {
+            // Testing the case where the first player is the equivocator is too hard for now.
+            // It would require basically writing a whole new version of protocolDefinition()
+            // to be a test function. It is unlikely that testing case will find a bug in the code.
+            if (equivocator == 1) {
+                throw new IllegalArgumentException();
+            }
+
+            for (int eq : equivocation) {
+                if (eq <= equivocator) {
+                    throw new IllegalArgumentException();
+                }
+            }
+
+            this.equivocator = equivocator;
+            this.equivocation = equivocation;
+        }
+
+        @Override
+        public String toString() {
+            return "equivocation[" + equivocator + ", " + Arrays.toString(equivocation) + "]";
+        }
+    }
+
+    // Initial state for malicious players who equivocate during the announcement phase.
+    public static InitialState equivocateAnnouncement(
+            final SessionIdentifier session,
+            final long amount,
+            final Crypto crypto,
+            final int numPlayers,
+            final Equivocation[] equivocators
+    ) {
+        InitialState init = new InitialState(session, amount, crypto);
+
+        int eq = 0;
+        for (int i = 1; i <= numPlayers; i ++) {
+            init.player().initialFunds(20);
+
+            while(eq < equivocators.length && equivocators[eq].equivocator < i) {
+                eq++;
+            }
+
+            if (eq < equivocators.length && equivocators[eq].equivocator == i) {
+                init.equivocateAnnouncement(equivocators[eq].equivocation);
+            }
+        }
+
+        return init;
+    }
+
+    // Initial state for a player who equivocates during the broadcast phase.
+    public static InitialState equivocateBroadcast(
+            final SessionIdentifier session,
+            final long amount,
+            final Crypto crypto,
+            final int numPlayers,
+            final int[] equivocation
+    ) {
+
+        InitialState init = new InitialState(session, amount, crypto);
+
+        // Only the last player can equivocate.
+        for (int i = 1; i < numPlayers; i ++) {
+            init.player().initialFunds(20);
+        }
+
+        // Add the malicious equivocator.
+        init.player().initialFunds(20).equivocateOutputVector(equivocation);
+
+        return init;
+    }
+
+    // Initial state for players who shuffle their addresses incorrectly.
+    public static InitialState dropAddress(
+            final SessionIdentifier session,
+            final long amount,
+            final Crypto crypto,
+            final int numPlayers,
+            final int[][] drop,
+            final int[][] replaceNew,
+            final int[][] replaceDuplicate
+    ) {
+
+        final Map<Integer, Integer> dropMap = new HashMap<>();
+        final Map<Integer, Integer> replaceNewMap = new HashMap<>();
+        final Map<Integer, Integer[]> replaceDuplicateMap = new HashMap<>();
+
+
+        if (drop != null) {
+            for (int[] d : drop) {
+                if (d.length == 2 && d[1] < d[0]) {
+                    dropMap.put(d[0], d[1]);
+                }
+            }
+        }
+
+        if (replaceDuplicate != null) {
+            for (int[] d : replaceDuplicate) {
+                if (d.length == 2 && d[1] < d[0]) {
+                    replaceDuplicateMap.put(d[0], new Integer[]{d[1], d[2]});
+                }
+            }
+        }
+
+        if (replaceNew != null) {
+            for (int[] d : replaceNew) {
+                if (d.length == 2 && d[1] < d[0]) {
+                    replaceNewMap.put(d[0], d[1]);
+                }
+            }
+        }
+
+
+        InitialState init = new InitialState(session, amount, crypto);
+
+        for (int i = 1; i <= numPlayers; i ++) {
+
+            init.player().initialFunds(20);
+
+            if (dropMap.containsKey(i)) {
+                init.drop(dropMap.get(i));
+            } else if (replaceDuplicateMap.containsKey(i)) {
+                Integer[] dup = replaceDuplicateMap.get(i);
+                init.replace(dup[0], dup[1]);
+            } else if (replaceNewMap.containsKey(i)) {
+                init.replace(replaceNewMap.get(i));
+            }
+        }
+
+        return init;
+    }
+
+    public static InitialState invalidSignature(
+            final SessionIdentifier session,
+            final long amount,
+            final Crypto crypto,
+            final int numPlayers,
+            final int[] mutants) {
+        final Set<Integer> mutantsSet = new HashSet<>();
+
+        for (int mutant : mutants) {
+            mutantsSet.add(mutant);
+        }
+
+        InitialState init = new InitialState(session, amount, crypto);
+
+        for (int i = 1; i <= numPlayers; i ++) {
+            init.player().initialFunds(20);
+
+            if(mutantsSet.contains(i)) {
+                init.mutateTransaction();
             }
         }
 

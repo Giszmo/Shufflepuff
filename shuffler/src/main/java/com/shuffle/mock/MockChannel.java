@@ -1,7 +1,16 @@
+/**
+ *
+ * Copyright © 2016 Mycelium.
+ * Use of this source code is governed by an ISC
+ * license that can be found in the LICENSE file.
+ *
+ */
+
 package com.shuffle.mock;
 
 import com.shuffle.p2p.Channel;
 import com.shuffle.p2p.Connection;
+import com.shuffle.p2p.FundamentalPeer;
 import com.shuffle.p2p.Listener;
 import com.shuffle.p2p.Peer;
 import com.shuffle.p2p.Receiver;
@@ -34,7 +43,7 @@ public class MockChannel<X> implements Channel<Integer, X> {
                 return;
             }
 
-            for(MockPeer peer : peers.values()) {
+            for (MockPeer peer : peers.values()) {
                 peer.close();
             }
 
@@ -45,7 +54,7 @@ public class MockChannel<X> implements Channel<Integer, X> {
         }
     }
 
-    public class MockPeer extends Peer<Integer, X> {
+    public class MockPeer extends FundamentalPeer<Integer, X> {
 
         MockPeer(Integer you) {
             super(you);
@@ -67,7 +76,8 @@ public class MockChannel<X> implements Channel<Integer, X> {
         @Override
         // Open a session with a mock remote peer. Include a function which is to be
         // called when a X is received.
-        public synchronized Session<Integer, X> openSession(Receiver<X> receiver) throws InterruptedException {
+        public synchronized Session<Integer, X> openSession(Receiver<X> receiver)
+                throws InterruptedException {
             // if there is already an open session, fail.
             if (currentSession != null) {
                 return null;
@@ -108,12 +118,12 @@ public class MockChannel<X> implements Channel<Integer, X> {
             }
 
             @Override
-            public boolean send(X X) {
+            public boolean send(X x) {
                 if (receiver == null) {
                     return false;
                 }
 
-                receiver.receive(X);
+                receiver.receive(x);
                 return true;
             }
 

@@ -1,16 +1,20 @@
+/**
+ *
+ * Copyright © 2016 Mycelium.
+ * Use of this source code is governed by an ISC
+ * license that can be found in the LICENSE file.
+ *
+ */
+
 package com.shuffle.protocol.blame;
 
 import com.shuffle.bitcoin.DecryptionKey;
 import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
-import com.shuffle.protocol.Packet;
 import com.shuffle.protocol.SignedPacket;
 
 import java.io.Serializable;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
 import java.util.Queue;
 
 /**
@@ -20,12 +24,12 @@ import java.util.Queue;
  * Created by Daniel Krawisz on 1/22/16.
  */
 public class Blame implements Serializable {
-    final public Reason reason;
-    final public VerificationKey accused; // Can be null if we don't know who to accuse yet.
-    final public Transaction t;
-    final public Queue<SignedPacket> packets;
-    final public DecryptionKey privateKey;
-    final public Signature invalid;
+    public final Reason reason;
+    public final VerificationKey accused; // Can be null if we don't know who to accuse yet.
+    public final Transaction t;
+    public final Queue<SignedPacket> packets;
+    public final DecryptionKey privateKey;
+    public final Signature invalid;
 
     Blame(Reason reason,
           VerificationKey accused,
@@ -46,20 +50,22 @@ public class Blame implements Serializable {
                 }
                 break;
             }
+            case NoFundsAtAll:
+            case MissingOutput:
+            case ShuffleFailure: {
+                if (accused == null) {
+                    throw new IllegalArgumentException();
+                }
+                break;
+            }
             case EquivocationFailure: {
                 if (packets == null) {
                     throw new IllegalArgumentException();
                 }
                 break;
             }
-            case NoFundsAtAll: {
-                if (accused == null) {
-                    throw new IllegalArgumentException();
-                }
-                break;
-            }
             case ShuffleAndEquivocationFailure: {
-                if (privateKey == null || packets == null) {
+                if (packets == null) {
                     throw new IllegalArgumentException();
                 }
                 break;
@@ -70,10 +76,8 @@ public class Blame implements Serializable {
                 }
                 break;
             }
-            case MissingOutput:
-            case ShuffleFailure: {
-                break;
-            }
+            default:
+                throw new IllegalArgumentException();
         }
 
         this.reason = reason;
@@ -102,18 +106,19 @@ public class Blame implements Serializable {
             return false;
         }
         
-        if(!(o instanceof Blame)) {
+        if (!(o instanceof Blame)) {
             return false;
         }
         
         Blame blame = (Blame)o;
         
-        return (reason == blame.reason) &&
-                (accused == blame.accused || accused != null && accused.equals(blame.accused)) &&
-                (t == blame.t || t != null && t.equals(blame.t)) &&
-                (packets == blame.packets || packets != null && packets.equals(blame.packets)) &&
-                (privateKey == blame.privateKey || privateKey != null && privateKey.equals(blame.privateKey)) &&
-                (invalid == blame.invalid || invalid != null && invalid.equals(blame.invalid));
+        return (reason == blame.reason)
+                && (accused == blame.accused || accused != null && accused.equals(blame.accused))
+                && (t == blame.t || t != null && t.equals(blame.t))
+                && (packets == blame.packets || packets != null && packets.equals(blame.packets))
+                && (privateKey == blame.privateKey
+                    || privateKey != null && privateKey.equals(blame.privateKey))
+                && (invalid == blame.invalid || invalid != null && invalid.equals(blame.invalid));
     }
 
     // Sent when a player has insufficient funds in his address.
@@ -131,11 +136,6 @@ public class Blame implements Serializable {
         return new Blame(Reason.DoubleSpend, accused, t, null, null, null);
     }
 
-    // Sent in phase 2 or three if an output is missing.
-    public static Blame MissingOutput(VerificationKey accused) {
-        return new Blame(Reason.MissingOutput, accused, null, null, null, null);
-    }
-
     // Sent when a player makes an invalid signature to the transaction.
     public static Blame InvalidSignature(VerificationKey accused, Signature invalid) {
         return new Blame(Reason.InvalidSignature, accused, null, null, null, invalid);
@@ -147,12 +147,21 @@ public class Blame implements Serializable {
     }
 
     // Sent when something goes wrong in phase 2.
-    public static Blame ShuffleFailure() {
-        return new Blame(Reason.ShuffleFailure, null, null, null, null, null);
+    public static Blame ShuffleFailure(VerificationKey accused) {
+        return new Blame(Reason.ShuffleFailure, accused, null, null, null, null);
+    }
+
+    // Sent in phase three if an output is missing.
+    public static Blame MissingOutput(VerificationKey accused) {
+        return new Blame(Reason.MissingOutput, accused, null, null, null, null);
     }
 
     // Sent when there is a failure in phase two and in the subsequent equivocation check.
-    public static Blame ShuffleAndEquivocationFailure(DecryptionKey privateKey, Queue<SignedPacket> packets) {
-        return new Blame(Reason.ShuffleAndEquivocationFailure, null, null, privateKey, packets, null);
+    public static Blame ShuffleAndEquivocationFailure(
+            DecryptionKey privateKey,
+            Queue<SignedPacket> packets
+    ) {
+        return new Blame(
+                Reason.ShuffleAndEquivocationFailure, null, null, privateKey, packets, null);
     }
 }

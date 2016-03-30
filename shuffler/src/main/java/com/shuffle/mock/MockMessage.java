@@ -1,3 +1,11 @@
+/**
+ *
+ * Copyright © 2016 Mycelium.
+ * Use of this source code is governed by an ISC
+ * license that can be found in the LICENSE file.
+ *
+ */
+
 package com.shuffle.mock;
 
 import com.shuffle.bitcoin.Address;
@@ -22,7 +30,7 @@ import java.util.Iterator;
 /**
  */
 public class MockMessage implements Message, Serializable {
-    private transient static Logger log = LogManager.getLogger(MockMessage.class);
+    private static transient Logger log = LogManager.getLogger(MockMessage.class);
 
     public static class Hash implements Serializable {
         public final Atom hashed;
@@ -71,7 +79,16 @@ public class MockMessage implements Message, Serializable {
 
         public final Atom next;
 
-        private Atom(Address addr, EncryptionKey ek, Signature sig, Hash hash, Blame blame, Transaction t, Packet packet, Atom next) {
+        private Atom(
+                Address addr,
+                EncryptionKey ek,
+                Signature sig,
+                Hash hash,
+                Blame blame,
+                Transaction t,
+                Packet packet,
+                Atom next
+        ) {
             // Enforce the correct format.
             format : {
                 if (addr != null) {
@@ -177,13 +194,13 @@ public class MockMessage implements Message, Serializable {
             Atom a = (Atom)o;
 
             return this == a || a.sig == sig &&
-                    ((a.ek == null && ek == null) || (a.ek != null && ek != null && ek.equals(a.ek))) &&
-                    ((a.addr == null && addr == null) || (a.addr != null && addr != null && addr.equals(a.addr)))
-                     && ((a.t == null && t == null) || (a.t != null && t != null && t.equals(a.t))) &&
-                    ((a.packet == null && packet == null) || (a.packet != null && packet != null && packet.equals(a.packet)))
-                     && ((a.blame == null && blame == null) || (a.blame != null && blame != null && blame.equals(a.blame)))
-                     && ((a.hash == null && hash == null) || (a.hash != null && hash != null && hash.equals(a.hash)))
-                     && ((a.next == null && next == null) || (next != null && next.equals(a.next)));
+                    (a.ek == null && ek == null || ek != null && ek.equals(a.ek))
+                    && (a.addr == null && addr == null || addr != null && addr.equals(a.addr))
+                    && (a.t == null && t == null || t != null && t.equals(a.t))
+                    && (a.packet == null && packet == null || packet != null && packet.equals(a.packet))
+                    && (a.blame == null && blame == null || blame != null && blame.equals(a.blame))
+                    && (a.hash == null && hash == null || hash != null && hash.equals(a.hash))
+                    && (a.next == null && next == null || next != null && next.equals(a.next));
         }
 
         @Override
@@ -201,37 +218,21 @@ public class MockMessage implements Message, Serializable {
         public String toString() {
             String str = "";
 
-            if (addr != null) {
-                str += addr.toString();
-            }
+            if (addr != null) str += addr.toString();
 
-            if (ek != null) {
-                str += ek.toString();
-            }
+            if (ek != null) str += ek.toString();
 
-            if (sig != null) {
-                str += sig.toString();
-            }
+            if (sig != null) str += sig.toString();
 
-            if (hash != null) {
-                str += hash.toString();
-            }
+            if (hash != null) str += hash.toString();
 
-            if (t != null) {
-                str += t.toString();
-            }
+            if (t != null) str += t.toString();
 
-            if (packet != null) {
-                str += packet.toString();
-            }
+            if (packet != null) str += packet.toString();
 
-            if (blame != null) {
-                str += blame.toString();
-            }
+            if (blame != null) str += blame.toString();
 
-            if (next != null) {
-                str += "⊕" + next.toString();
-            }
+            if (next != null) str += "⊕" + next.toString();
 
             return str;
         }
@@ -265,9 +266,7 @@ public class MockMessage implements Message, Serializable {
     }
 
     public Message attachAddrs(Deque<Address> addrs) {
-        if (addrs == null) {
-            throw new NullPointerException();
-        }
+        if (addrs == null) throw new NullPointerException();
 
         MockMessage m = new MockMessage(addrs);
 
@@ -276,83 +275,64 @@ public class MockMessage implements Message, Serializable {
 
     @Override
     public Message attach(EncryptionKey ek) {
-        if (ek == null) {
-            throw new NullPointerException();
-        }
+        if (ek == null) throw new NullPointerException();
 
         return new MockMessage(Atom.attach(atoms, Atom.make(ek)));
     }
 
     @Override
     public Message attach(Address addr) {
-        if (addr == null) {
-            throw new NullPointerException();
-        }
+        if (addr == null) throw new NullPointerException();
 
         return new MockMessage(Atom.attach(atoms, Atom.make(addr)));
     }
 
     @Override
     public Message attach(Signature sig) {
-        if (sig == null) {
-            throw new NullPointerException();
-        }
+        if (sig == null) throw new NullPointerException();
 
         return new MockMessage(Atom.attach(atoms, Atom.make(sig)));
     }
 
     @Override
     public Message attach(Blame blame) {
-        if (blame == null) {
-            throw new NullPointerException();
-        }
+        if (blame == null) throw new NullPointerException();
 
         return new MockMessage(Atom.attach(atoms, Atom.make(blame)));
     }
 
     public Message attach(Hash hash) {
-        if (hash == null) {
-            throw new NullPointerException();
-        }
+        if (hash == null) throw new NullPointerException();
 
         return new MockMessage(Atom.attach(atoms, Atom.make(hash)));
     }
 
     @Override
     public Message attach(Message message) throws InvalidImplementationError {
-        if (message == null) {
-            throw new NullPointerException();
-        }
-        if (!(message instanceof MockMessage)) {
-            throw new InvalidImplementationError();
-        }
+        if (message == null) throw new NullPointerException();
+
+        if (!(message instanceof MockMessage)) throw new InvalidImplementationError();
 
         return new MockMessage(Atom.attach(atoms, ((MockMessage)message).atoms));
     }
 
     @Override
     public EncryptionKey readEncryptionKey() throws FormatException {
-        if (atoms == null || atoms.ek == null) {
-            throw new FormatException();
-        }
+        if (atoms == null || atoms.ek == null) throw new FormatException();
 
         return atoms.ek;
     }
 
     @Override
     public Address readAddress() throws FormatException {
-        if (atoms == null || atoms.addr == null) {
-            throw new FormatException();
-        }
+        if (atoms == null || atoms.addr == null) throw new FormatException();
 
         return atoms.addr;
     }
 
     @Override
     public Blame readBlame() throws FormatException, CryptographyError {
-        if (atoms == null || atoms.blame == null) {
-            throw new FormatException();
-        }
+        if (atoms == null || atoms.blame == null) throw new FormatException();
 
         Blame blame = atoms.blame;
 
@@ -370,9 +350,7 @@ public class MockMessage implements Message, Serializable {
 
     @Override
     public Signature readSignature() throws FormatException {
-        if (atoms == null || atoms.sig == null) {
-            throw new FormatException();
-        }
+        if (atoms == null || atoms.sig == null) throw new FormatException();
 
         return atoms.sig;
     }
@@ -380,22 +358,16 @@ public class MockMessage implements Message, Serializable {
     @Override
     public Message rest() throws FormatException {
 
-        if (atoms == null) {
-            throw new FormatException();
-        }
+        if (atoms == null) throw new FormatException();
 
         return new MockMessage(atoms.next);
     }
 
     @Override
     public boolean equals(Object o) {
-        if (o == null) {
-            return false;
-        }
+        if (o == null) return false;
 
-        if (!(o instanceof MockMessage)) {
-            return false;
-        }
+        if (!(o instanceof MockMessage)) return false;
 
         MockMessage mock = (MockMessage)o;
 
@@ -404,9 +376,8 @@ public class MockMessage implements Message, Serializable {
 
     @Override
     public String toString() {
-        if (atoms == null) {
-            return "";
-        }
+        if (atoms == null) return "";
+
         return atoms.toString();
     }
 }

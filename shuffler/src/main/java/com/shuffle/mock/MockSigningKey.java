@@ -1,3 +1,11 @@
+/**
+ *
+ * Copyright © 2016 Mycelium.
+ * Use of this source code is governed by an ISC
+ * license that can be found in the LICENSE file.
+ *
+ */
+
 package com.shuffle.mock;
 
 import com.shuffle.bitcoin.CryptographyError;
@@ -34,15 +42,8 @@ public class MockSigningKey extends SigningKey {
 
     @Override
     public boolean equals(Object o) {
-        if (o == null) {
-            return false;
-        }
+        return o != null && o instanceof MockSigningKey && index == ((MockSigningKey) o).index;
 
-        if (!(o instanceof MockSigningKey)) {
-            return false;
-        }
-
-        return index == ((MockSigningKey)o).index;
     }
 
     @Override
@@ -57,7 +58,7 @@ public class MockSigningKey extends SigningKey {
 
     @Override
     public int compareTo(Object o) {
-        if(!(o instanceof MockSigningKey)) {
+        if (!(o instanceof MockSigningKey)) {
             return -1;
         }
 

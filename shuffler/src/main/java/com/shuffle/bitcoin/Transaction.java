@@ -1,3 +1,11 @@
+/**
+ *
+ * Copyright © 2016 Mycelium.
+ * Use of this source code is governed by an ISC
+ * license that can be found in the LICENSE file.
+ *
+ */
+
 package com.shuffle.bitcoin;
 
 /**
@@ -7,5 +15,5 @@ package com.shuffle.bitcoin;
  */
 public interface Transaction {
     // Send the transaction into the network.
-    void send() throws CoinNetworkError;
+    boolean send() throws CoinNetworkException;
 }

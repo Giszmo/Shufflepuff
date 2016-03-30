@@ -1,3 +1,11 @@
+/**
+ *
+ * Copyright © 2016 Mycelium.
+ * Use of this source code is governed by an ISC
+ * license that can be found in the LICENSE file.
+ *
+ */
+
 package com.shuffle.mock;
 
 import com.shuffle.bitcoin.Address;
@@ -17,7 +25,7 @@ import java.io.Serializable;
  * Created by Daniel Krawisz on 12/7/15.
  */
 public class MockVerificationKey implements VerificationKey, Serializable {
-    final public int index;
+    public final int index;
 
     public MockVerificationKey(int index) {
         this.index = index;
@@ -48,15 +56,9 @@ public class MockVerificationKey implements VerificationKey, Serializable {
 
     @Override
     public boolean equals(Object vk) {
-        if (vk == null) {
-            return false;
-        }
+        return vk != null
+                && vk instanceof MockVerificationKey && index == ((MockVerificationKey) vk).index;
 
-        if(!(vk instanceof MockVerificationKey)) {
-            return false;
-        }
-
-        return index == ((MockVerificationKey)vk).index;
     }
 
     @Override
@@ -75,7 +77,7 @@ public class MockVerificationKey implements VerificationKey, Serializable {
 
     @Override
     public int compareTo(Object o) {
-        if(!(o instanceof MockVerificationKey)) {
+        if (!(o instanceof MockVerificationKey)) {
             return -1;
         }
 

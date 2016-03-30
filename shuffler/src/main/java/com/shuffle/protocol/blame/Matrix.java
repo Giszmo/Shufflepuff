@@ -1,14 +1,18 @@
+/**
+ *
+ * Copyright © 2016 Mycelium.
+ * Use of this source code is governed by an ISC
+ * license that can be found in the LICENSE file.
+ *
+ */
+
 package com.shuffle.protocol.blame;
 
-import com.shuffle.bitcoin.EncryptionKey;
-import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.VerificationKey;
-import com.shuffle.protocol.Packet;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -24,6 +28,7 @@ public class Matrix {
     // Who blames who?
     Map<VerificationKey, Map<VerificationKey, Evidence>> blame = new HashMap<>();
 
+    // Put a new entry in the blame matrix.
     public void put(VerificationKey accuser, Evidence evidence) {
         if (accuser == null || evidence == null) {
             throw new NullPointerException();
@@ -40,15 +45,18 @@ public class Matrix {
 
         Evidence blame = blames.get(accused);
 
-        if(blame != null) {
-            // There is a warning rather than an exception because I don't know for certain that this should never happen.
-            log.warn("Overwriting blame matrix entry " + blame.toString() + "at [" + accuser.toString() + ", " + accused.toString() + "]" + Arrays.toString(new Throwable().getStackTrace()));
+        if (blame != null) {
+            log.error("Overwriting blame matrix entry "
+                    + accused + " => " + blame + " with " + evidence);
+            throw new IllegalArgumentException();
         }
 
         blames.put(accused, evidence);
     }
 
-    private static Map<VerificationKey, Evidence> put(Map<VerificationKey, Evidence> to, VerificationKey key, Map<VerificationKey, Evidence> row) {
+    private static Map<VerificationKey, Evidence> put(
+            Map<VerificationKey, Evidence> to,
+            Map<VerificationKey, Evidence> row) {
         if (to == null) {
             return row;
         } else {
@@ -63,7 +71,7 @@ public class Matrix {
     ) {
         for (Map.Entry<VerificationKey, Map<VerificationKey, Evidence>> row : bm.entrySet()) {
             VerificationKey key = row.getKey();
-            to.put(key, put(to.get(key), key, row.getValue()));
+            to.put(key, put(to.get(key), row.getValue()));
         }
     }
 
@@ -77,15 +85,8 @@ public class Matrix {
 
         Evidence offense = blames.get(accused);
 
-        if (offense == null) {
-            return false;
-        }
+        return offense != null && offense.reason == reason;
 
-        if (offense.reason == reason) {
-            return true;
-        }
-
-        return false;
     }
 
     public Evidence get(VerificationKey accuser, VerificationKey accused) {
@@ -97,6 +98,10 @@ public class Matrix {
 
         return accusations.get(accused);
 
+    }
+
+    public boolean isEmpty() {
+        return blame.isEmpty();
     }
 
     @Override

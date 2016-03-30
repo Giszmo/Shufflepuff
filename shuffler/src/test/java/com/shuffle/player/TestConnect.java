@@ -1,7 +1,16 @@
+/**
+ *
+ * Copyright © 2016 Mycelium.
+ * Use of this source code is governed by an ISC
+ * license that can be found in the LICENSE file.
+ *
+ */
+
 package com.shuffle.player;
 
 import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.mock.InsecureRandom;
 import com.shuffle.mock.MockChannel;
 import com.shuffle.mock.MockCrypto;
 import com.shuffle.mock.MockMarshaller;
@@ -160,7 +169,7 @@ public class TestConnect {
 
         System.out.println("Running connect test with " + n + " addresses. ");
 
-        Crypto crypto = new MockCrypto(seed);
+        Crypto crypto = new MockCrypto(new InsecureRandom(seed));
 
         // Create the set of known hosts for each player.
         Map<Integer, MockChannel<Bytestring>> knownHosts = new ConcurrentHashMap<>();
@@ -185,7 +194,7 @@ public class TestConnect {
             pKeys.remove(i);
 
             future = future.plus(new NaturalSummableFuture<>(
-                    new ConnectFuture(i, new Connect<Integer>(new MockCrypto(i + seed)), knownHosts.get(i), pKeys)));
+                    new ConnectFuture(i, new Connect<Integer>(new MockCrypto(new InsecureRandom(i + seed))), knownHosts.get(i), pKeys)));
         }
 
         // Get the result of the computation.

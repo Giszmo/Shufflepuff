@@ -1,3 +1,11 @@
+/**
+ *
+ * Copyright © 2016 Mycelium.
+ * Use of this source code is governed by an ISC
+ * license that can be found in the LICENSE file.
+ *
+ */
+
 package com.shuffle.protocol.blame;
 
 /**
@@ -18,4 +26,5 @@ public enum Reason {
     InvalidSignature, // A signature has come out invalid.
     MissingOutput, // An output is missing from the output vector.
     Liar, // A player has falsely accused another of being malicious.
+    EmptyBlameMessage,
 }

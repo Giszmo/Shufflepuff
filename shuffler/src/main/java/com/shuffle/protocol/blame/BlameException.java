@@ -1,3 +1,11 @@
+/**
+ *
+ * Copyright © 2016 Mycelium.
+ * Use of this source code is governed by an ISC
+ * license that can be found in the LICENSE file.
+ *
+ */
+
 package com.shuffle.protocol.blame;
 
 import com.shuffle.bitcoin.VerificationKey;
@@ -8,9 +16,9 @@ import com.shuffle.protocol.Packet;
  *
  * This exception is thrown when malicious behavior is detected on the part of another player.
  */
-final public class BlameException extends Exception {
-    final public VerificationKey sender;
-    final public Packet packet;
+public final class BlameException extends Exception {
+    public final VerificationKey sender;
+    public final Packet packet;
 
     // A blame message history from another party.
     public BlameException(VerificationKey sender, Packet packet) {

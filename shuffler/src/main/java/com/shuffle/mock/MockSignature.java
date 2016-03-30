@@ -1,3 +1,11 @@
+/**
+ *
+ * Copyright © 2016 Mycelium.
+ * Use of this source code is governed by an ISC
+ * license that can be found in the LICENSE file.
+ *
+ */
+
 package com.shuffle.mock;
 
 import com.shuffle.bitcoin.Signature;
@@ -38,9 +46,9 @@ public class MockSignature implements Signature, Serializable {
 
         MockSignature sig = (MockSignature)o;
 
-        return (t == sig.t || t != null && t.equals(sig.t)) &&
-                (packet == sig.packet || packet != null && packet.equals(sig.packet)) &&
-                (key == sig.key || key != null && key.equals(sig.key));
+        return (t == sig.t || t != null && t.equals(sig.t))
+                && (packet == sig.packet || packet != null && packet.equals(sig.packet))
+                && (key == sig.key || key != null && key.equals(sig.key));
     }
 
     @Override

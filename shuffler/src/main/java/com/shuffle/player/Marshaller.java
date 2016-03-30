@@ -1,3 +1,11 @@
+/**
+ *
+ * Copyright © 2016 Mycelium.
+ * Use of this source code is governed by an ISC
+ * license that can be found in the LICENSE file.
+ *
+ */
+
 package com.shuffle.player;
 
 import com.shuffle.p2p.Bytestring;
@@ -11,5 +19,6 @@ import java.io.IOException;
  */
 public interface Marshaller<Format> {
     public Format marshall(SignedPacket packet);
+
     public SignedPacket unmarshall(Format string) throws FormatException;
 }

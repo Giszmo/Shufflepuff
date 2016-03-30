@@ -6,15 +6,16 @@ import com.shuffle.protocol.InvalidImplementationError;
 /**
  * Created by Daniel Krawisz on 12/6/15.
  */
-public class MockRandomSequence {
+public class RandomSequence implements MockCrypto.Random {
     private int counter = 0;
-    final public int sequence[];
+    public final int[] sequence;
 
-    public MockRandomSequence(int sequence[]) {
+    public RandomSequence(int[] sequence) {
         this.sequence = sequence;
     }
 
-    int getRandom(int n) throws CryptographyError, InvalidImplementationError {
+    @Override
+    public int getRandom(int n) throws CryptographyError, InvalidImplementationError {
         // we use a premature end of the sequence blockchain simulate a problem.
         if (counter >= sequence.length) {
             throw new CryptographyError();

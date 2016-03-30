@@ -1,13 +1,24 @@
+/**
+ *
+ * Copyright © 2016 Mycelium.
+ * Use of this source code is governed by an ISC
+ * license that can be found in the LICENSE file.
+ *
+ */
+
 package com.shuffle.protocol;
 
 import com.shuffle.bitcoin.CryptographyError;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.protocol.blame.Blame;
 import com.shuffle.protocol.blame.BlameException;
+import com.shuffle.protocol.blame.Reason;
 
 import java.net.ProtocolException;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
@@ -27,8 +38,7 @@ public class Mailbox {
 
     final private Queue<SignedPacket> delivered = new LinkedList<>(); // A queue of messages that has been delivered that we aren't ready to look at yet.
     final private Queue<SignedPacket> history = new LinkedList<>(); // All messages received (does not include those in delivered).
-    final private Queue<SignedPacket> sent = new LinkedList<>();
-    private boolean blame = false;
+    private Set<Reason> blame = new HashSet<Reason>();
 
     public Mailbox(SessionIdentifier session, SigningKey sk, Collection<VerificationKey> players, Network network) {
         this.sk = sk;
@@ -37,9 +47,11 @@ public class Mailbox {
         this.players = players;
     }
 
-    public boolean blame() {
-        return blame;
+    // Whether a blame message with the given reason has been received.
+    public boolean blame(Reason reason) {
+        return blame.contains(reason);
     }
+    public boolean blame() {return blame.size() > 0; }
 
     public void broadcast(Message message, Phase phase) throws TimeoutError, CryptographyError, InvalidImplementationError {
         for (VerificationKey to : players) {
@@ -61,11 +73,14 @@ public class Mailbox {
         if (packet.recipient.equals(sk.VerificationKey())) {
             history.add(signed);
             if (packet.phase == Phase.Blame) {
-                blame = true;
+                try {
+                    blame.add(packet.message.readBlame().reason);
+                } catch (FormatException e) {
+                    e.printStackTrace();
+                }
             }
         } else {
             network.sendTo(packet.recipient, signed);
-            sent.add(signed);
         }
     }
 
@@ -126,7 +141,12 @@ public class Mailbox {
 
         history.add(found);
         if (found.payload.phase == Phase.Blame) {
-            blame = true;
+
+            try {
+                blame.add(found.payload.message.readBlame().reason);
+            } catch (FormatException e) {
+                e.printStackTrace();
+            }
         }
         return found;
     }
@@ -167,7 +187,31 @@ public class Mailbox {
             throw new BlameException(packet.signer, packet);
         }
 
-        // If we receive a message, but it is not from the expected source, it might be a blame message.
+        // Check signature.
+        if (!from.equals(packet.signer)) {
+            throw new ValueException(ValueException.Values.phase, packet.phase.toString(), expectedPhase.toString());
+        }
+
+        return packet.message;
+    }
+
+    // Wait to receive a message from a given player.
+    public Message receiveFromBlameless(VerificationKey from, Phase expectedPhase)
+            throws TimeoutError,
+            CryptographyError,
+            FormatException,
+            ValueException,
+            InvalidImplementationError,
+            InterruptedException,
+            SignatureException {
+
+        Packet packet = null;
+        do {
+            packet = receiveNextPacket(expectedPhase).payload;
+
+        } while (expectedPhase != Phase.Blame && packet.phase == Phase.Blame);
+
+        // Check signature.
         if (!from.equals(packet.signer)) {
             throw new ValueException(ValueException.Values.phase, packet.phase.toString(), expectedPhase.toString());
         }
@@ -186,29 +230,41 @@ public class Mailbox {
             ProtocolException, BlameException, SignatureException {
 
         // Collect the messages in here.
-        Map<VerificationKey, Message> broadcasts = new HashMap<>();
+        Map<VerificationKey, SignedPacket> broadcasts = new HashMap<>();
 
         // Don't receive a message from myself.
         from.remove(sk.VerificationKey());
 
         while (from.size() > 0) {
-            Packet packet = receiveNextPacket(expectedPhase).payload;
-            if (expectedPhase != Phase.Blame && packet.phase == Phase.Blame) {
+            SignedPacket packet = receiveNextPacket(expectedPhase);
+            if (expectedPhase != Phase.Blame && packet.payload.phase == Phase.Blame) {
                 if (!ignoreBlame) {
-                    throw new BlameException(packet.signer, packet);
+                    // Put the messages already collected back so that they can be received later.
+                    for (SignedPacket p : broadcasts.values()) {
+                        delivered.add(p);
+                    }
+
+                    throw new BlameException(packet.payload.signer, packet.payload);
                 }
                 continue;
             }
-            VerificationKey sender = packet.signer;
+            VerificationKey sender = packet.payload.signer;
 
             if(broadcasts.containsKey(sender)) {
                 throw new ProtocolException();
             }
-            broadcasts.put(sender, packet.message);
+            broadcasts.put(sender, packet);
             from.remove(sender);
         }
 
-        return broadcasts;
+        // Strip the messages of signatures and routing information.
+        Map<VerificationKey, Message> messages = new HashMap<>();
+
+        for (Map.Entry<VerificationKey, SignedPacket> packet : broadcasts.entrySet()) {
+            messages.put(packet.getKey(), packet.getValue().payload.message);
+        }
+
+        return messages;
     }
 
     public Map<VerificationKey, Message> receiveFromMultipleBlameless(
