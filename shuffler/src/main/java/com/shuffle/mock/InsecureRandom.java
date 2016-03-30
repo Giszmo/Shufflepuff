@@ -10,7 +10,7 @@ import com.shuffle.protocol.InvalidImplementationError;
  * Created by Daniel Krawisz on 3/23/16.
  */
 public class InsecureRandom implements MockCrypto.Random {
-    final java.util.Random r;
+    private final java.util.Random r;
 
     public InsecureRandom(int seed) {
         this.r = new java.util.Random(seed);

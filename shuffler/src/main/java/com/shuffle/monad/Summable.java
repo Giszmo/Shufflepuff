@@ -8,8 +8,6 @@
 
 package com.shuffle.monad;
 
-import java.util.concurrent.ExecutionException;
-
 /**
  * Created by DanielKrawisz on 3/2/16.
  */

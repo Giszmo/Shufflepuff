@@ -15,8 +15,8 @@ import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.protocol.SignedPacket;
 
-import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 
 import java.util.Map;
 
@@ -27,7 +27,7 @@ import java.util.Map;
  * This format is not sent over the internet and is for the user's records only.
  */
 public class Evidence {
-    private static Logger log = LogManager.getLogger(Evidence.class);
+    private static final Logger log = LogManager.getLogger(Evidence.class);
 
     public final VerificationKey accused;
     public final Reason reason;

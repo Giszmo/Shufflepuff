@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit;
  * Created by Daniel Krawisz on 3/2/16.
  */
 public class PlusSummableFuture<X> extends SummableFutureAbstract<X> {
-    final SummableFuture<X> fore, aft;
+    private final SummableFuture<X> fore, aft;
 
     public PlusSummableFuture(SummableFuture<X> fore, SummableFuture<X> aft) {
         if (fore == null || aft == null) {

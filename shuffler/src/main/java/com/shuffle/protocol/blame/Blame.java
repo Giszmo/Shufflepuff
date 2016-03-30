@@ -31,7 +31,7 @@ public class Blame implements Serializable {
     public final DecryptionKey privateKey;
     public final Signature invalid;
 
-    Blame(Reason reason,
+    private Blame(Reason reason,
           VerificationKey accused,
           Transaction t,
           DecryptionKey privateKey,

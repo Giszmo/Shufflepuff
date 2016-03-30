@@ -30,7 +30,7 @@ import java.util.Iterator;
 /**
  */
 public class MockMessage implements Message, Serializable {
-    private static transient Logger log = LogManager.getLogger(MockMessage.class);
+    private static final transient Logger log = LogManager.getLogger(MockMessage.class);
 
     public static class Hash implements Serializable {
         public final Atom hashed;

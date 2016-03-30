@@ -10,7 +10,6 @@ package com.shuffle.monad;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 
 /**
  * Created by Daniel Krawisz on 3/2/16.

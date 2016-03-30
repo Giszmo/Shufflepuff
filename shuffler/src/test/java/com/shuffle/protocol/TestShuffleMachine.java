@@ -17,8 +17,8 @@ import com.shuffle.mock.MockMessageFactory;
 import com.shuffle.mock.MockSessionIdentifier;
 import com.shuffle.sim.*;
 
-import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -33,15 +33,15 @@ import java.util.Map;
  * Created by Daniel Krawisz on 12/10/15.
  */
 public class TestShuffleMachine {
-    protected static Logger log = LogManager.getLogger(TestShuffleMachine.class);
-    static int defaultSeed = 99;
-    static int defaultTrials = 100;
+    static final Logger log = LogManager.getLogger(TestShuffleMachine.class);
+    private static final int defaultSeed = 99;
+    private static final int defaultTrials = 10;
 
-    int seed = 99;
+    private int seed = 99;
 
-    public int caseNo = 0;
+    int caseNo = 0;
 
-    int trials = 1;
+    private int trials = 1;
 
     public TestShuffleMachine() {
         seed = defaultSeed;
@@ -65,11 +65,11 @@ public class TestShuffleMachine {
         }
     }
 
-    List<Report> reports = new LinkedList<>();
+    private final List<Report> reports = new LinkedList<>();
 
     public class MockTestCase extends TestCase {
 
-        protected MockTestCase(String description) {
+        MockTestCase(String description) {
             super(17, new MockMessageFactory(), new MockSessionIdentifier(description));
         }
 
@@ -81,7 +81,7 @@ public class TestShuffleMachine {
 
     public class NoShuffleTestCase extends TestCase {
 
-        protected NoShuffleTestCase(String description) {
+        NoShuffleTestCase(String description) {
             super(17, new MockMessageFactory(), new MockSessionIdentifier(description));
         }
 
@@ -92,7 +92,7 @@ public class TestShuffleMachine {
         }
     }
 
-    public  void check(String description, InitialState init) {
+    void check(String description, InitialState init) {
         int fail = 0;
         int success = 0;
         caseNo++;

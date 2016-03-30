@@ -13,10 +13,17 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.TimeUnit;
 
 /**
+ * Zero element for summable futures. (In other words, you can add this to any summable future
+ * without changanging it.
+ *
  * Created by Daniel Krawisz on 3/2/16.
  */
 public class SummableFutureZero<X> extends Summable.Zero<X> implements SummableFuture<X> {
-    Summable.Zero<X> z;
+    private final X zero;
+
+    public SummableFutureZero(Summable<X> s) {
+        this.zero = s.zero().value();
+    }
 
     @Override
     public boolean cancel(boolean b) {
@@ -35,19 +42,19 @@ public class SummableFutureZero<X> extends Summable.Zero<X> implements SummableF
 
     @Override
     public X value() {
-        return z.value();
+        return zero;
     }
 
     @Override
     public X get() throws InterruptedException, ExecutionException {
-        return z.value();
+        return zero;
     }
 
     @Override
     public X get(long l, TimeUnit timeUnit)
             throws InterruptedException, ExecutionException, TimeoutException {
 
-        return z.value();
+        return zero;
     }
 
     @Override

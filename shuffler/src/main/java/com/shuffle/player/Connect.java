@@ -36,7 +36,7 @@ import java.util.concurrent.TimeUnit;
  * Created by Daniel Krawisz on 2/16/16.
  */
 public class Connect<Identity> {
-    final Crypto crypto;
+    private final Crypto crypto;
 
     public Connect(Crypto crypto) {
         this.crypto = crypto;
@@ -61,7 +61,7 @@ public class Connect<Identity> {
         public Receiver<Bytestring> newSession(Session<Identity, Bytestring> session) {
             VerificationKey key = keys.get(session.peer().identity());
 
-            if(peers.remove(session.peer())) {
+            if (peers.remove(session.peer())) {
                 players.put(key, session);
             }
 
@@ -100,7 +100,7 @@ public class Connect<Identity> {
     // and the one for receiving connections. We set it in its own class to allow for some
     // synchronized functions.
     private class Peers {
-        final private Queue<Peer<Identity, Bytestring>> peers = new LinkedList<>();
+        private final Queue<Peer<Identity, Bytestring>> peers = new LinkedList<>();
 
         private Peers() { }
 
@@ -135,7 +135,7 @@ public class Connect<Identity> {
         }
     }
 
-    Connection<Identity, Bytestring> connection;
+    private Connection<Identity, Bytestring> connection;
 
     // Connect to all peers; remote peers can be initiating connections to us as well.
     public com.shuffle.protocol.Network connect(
@@ -190,7 +190,7 @@ public class Connect<Identity> {
         final Retries retries = new Retries();
 
         int l = 0;
-        while(true) {
+        while (true) {
             Peer<Identity, Bytestring> peer = peers.peek();
             if (peer == null) {
                 break;
@@ -211,7 +211,7 @@ public class Connect<Identity> {
 
             int r = retries.increment(peer);
 
-            if(r > maxRetries) {
+            if (r > maxRetries) {
                 // Maximum number of retries has prevented us from making all connections.
                 // TODO In some instances, it should be possible to run coin shuffle with fewer
                 // players, so we should still return the network object.
@@ -260,19 +260,10 @@ public class Connect<Identity> {
 
         }
 
-        // Receiver<Bytestring>.
-        //
-        // We collect all messages from everybody in a central queue.
-
-        @Override
-        public void receive(Bytestring bytestring) {
-            received.send(bytestring);
-        }
-
         // Network.
         //
-        // This is the part that connects to the protocol. It allows the protocol to send and receive
-        // when it needs to without thinking about what's going on underneith.
+        // This is the part that connects to the protocol. It allows the protocol to send and
+        // receive when it needs to without thinking about what's going on underneith.
 
         @Override
         public void sendTo(VerificationKey to, SignedPacket packet)
@@ -280,7 +271,7 @@ public class Connect<Identity> {
 
             Session<Identity, Bytestring> session = players.get(to);
 
-            if(session == null) {
+            if (session == null) {
                 throw new InvalidImplementationError();
             }
 
@@ -294,6 +285,15 @@ public class Connect<Identity> {
 
             Bytestring str = received.receive(timeout, TimeUnit.SECONDS);
             return marshall.unmarshall(str);
+        }
+
+        // Receiver<Bytestring>.
+        //
+        // We collect all messages from everybody in a central queue.
+
+        @Override
+        public void receive(Bytestring bytestring) {
+            received.send(bytestring);
         }
     }
 }

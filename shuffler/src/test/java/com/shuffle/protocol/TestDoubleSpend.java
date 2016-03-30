@@ -20,7 +20,7 @@ public class TestDoubleSpend extends TestShuffleMachine {
         super(99, 10);
     }
 
-    public void DoubleSpend(int[] views, int[] doubleSpenders) {
+    private void DoubleSpend(int[] views, int[] doubleSpenders) {
         String description = "case " + caseNo + "; Double spend test case.";
         check(description, new MockTestCase(description).doubleSpendTestCase(views, doubleSpenders));
     }

@@ -14,9 +14,8 @@ import com.shuffle.protocol.Machine;
 import com.shuffle.protocol.MessageFactory;
 import com.shuffle.protocol.SessionIdentifier;
 
-import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.junit.Assert;
+import org.apache.logging.log4j.LogManager;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -28,9 +27,9 @@ import java.util.Map;
  * Created by Daniel Krawisz on 3/15/16.
  */
 public abstract class TestCase {
-    private static Logger log = LogManager.getLogger(TestCase.class);
+    private static final Logger log = LogManager.getLogger(TestCase.class);
 
-    public final static class Mismatch {
+    public static final class Mismatch {
         public final SigningKey player;
         public final Machine.Expected expected;
         public final Machine result;
@@ -95,7 +94,8 @@ public abstract class TestCase {
             final int[] deadbeats,
             final int[] poor,
             final int[] spenders) {
-        return InitialState.insufficientFunds(session, amount, crypto(), numPlayers, deadbeats, poor, spenders);
+        return InitialState.insufficientFunds(
+                session, amount, crypto(), numPlayers, deadbeats, poor, spenders);
     }
 
     public final InitialState doubleSpendTestCase(
@@ -109,13 +109,15 @@ public abstract class TestCase {
             final int numPlayers,
             final InitialState.Equivocation[] equivocators
     ) {
-        return InitialState.equivocateAnnouncement(session, amount, crypto(), numPlayers, equivocators);
+        return InitialState.equivocateAnnouncement(
+                session, amount, crypto(), numPlayers, equivocators);
     }
 
     public final InitialState equivocateBroadcastTestCase(
             final int numPlayers,
             final int[] equivocation) {
-        return InitialState.equivocateBroadcast(session, amount, crypto(), numPlayers, equivocation);
+        return InitialState.equivocateBroadcast(
+                session, amount, crypto(), numPlayers, equivocation);
     }
 
     public final InitialState dropAddressTestCase(
@@ -123,7 +125,8 @@ public abstract class TestCase {
             final int[][] drop,
             final int[][] replaceNew,
             final int[][] replaceDuplicate) {
-        return InitialState.dropAddress(session, amount, crypto(), numPlayers, drop, replaceNew, replaceDuplicate);
+        return InitialState.dropAddress(
+                session, amount, crypto(), numPlayers, drop, replaceNew, replaceDuplicate);
     }
 
     public final InitialState invalidSignatureTestCase(

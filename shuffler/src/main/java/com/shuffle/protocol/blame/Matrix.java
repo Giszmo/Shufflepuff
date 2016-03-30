@@ -10,8 +10,8 @@ package com.shuffle.protocol.blame;
 
 import com.shuffle.bitcoin.VerificationKey;
 
-import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -23,10 +23,10 @@ import java.util.Map;
  * the evidence to prove it.
  */
 public class Matrix {
-    private static Logger log = LogManager.getLogger(Matrix.class);
+    private static final Logger log = LogManager.getLogger(Matrix.class);
 
     // Who blames who?
-    Map<VerificationKey, Map<VerificationKey, Evidence>> blame = new HashMap<>();
+    final Map<VerificationKey, Map<VerificationKey, Evidence>> blame = new HashMap<>();
 
     // Put a new entry in the blame matrix.
     public void put(VerificationKey accuser, Evidence evidence) {

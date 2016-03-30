@@ -10,8 +10,6 @@ package com.shuffle.p2p;
 
 import com.shuffle.chan.SendChan;
 
-import java.io.IOException;
-
 /**
  * The session is an open means of communication between two peers.
  *

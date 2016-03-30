@@ -10,6 +10,9 @@ package com.shuffle.player;
 
 import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.chan.Chan;
+import com.shuffle.chan.ReceiveChan;
+import com.shuffle.chan.SendChan;
 import com.shuffle.mock.InsecureRandom;
 import com.shuffle.mock.MockChannel;
 import com.shuffle.mock.MockCrypto;
@@ -19,11 +22,9 @@ import com.shuffle.monad.Summable;
 import com.shuffle.monad.SummableFuture;
 import com.shuffle.monad.SummableFutureZero;
 import com.shuffle.monad.SummableMap;
+import com.shuffle.monad.SummableMaps;
 import com.shuffle.p2p.Bytestring;
 import com.shuffle.p2p.Channel;
-import com.shuffle.chan.Chan;
-import com.shuffle.chan.ReceiveChan;
-import com.shuffle.chan.SendChan;
 import com.shuffle.protocol.Network;
 
 import org.junit.Assert;
@@ -35,8 +36,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Test class for connect.
@@ -46,13 +47,13 @@ import java.util.concurrent.TimeoutException;
 public class TestConnect {
 
     public static class ConnectRun implements Runnable {
-        Channel<Integer, Bytestring> channel;
-        SendChan<Network> net;
-        final Connect<Integer> connect;
+        private final Channel<Integer, Bytestring> channel;
+        private final SendChan<Network> net;
+        private final Connect<Integer> connect;
 
-        final Map<Integer, VerificationKey> keys;
-        final int timeout;
-        final int maxRetries;
+        private final Map<Integer, VerificationKey> keys;
+        private final int timeout;
+        private final int maxRetries;
 
         public ConnectRun(
                 Connect<Integer> connect,
@@ -148,7 +149,8 @@ public class TestConnect {
         }
 
         @Override
-        public SummableMap<Integer, Network> get(long l, TimeUnit timeUnit) throws InterruptedException, ExecutionException, TimeoutException {
+        public SummableMap<Integer, Network> get(long l, TimeUnit timeUnit)
+                throws InterruptedException, ExecutionException, TimeoutException {
 
             if (net != null) {
                 return net;
@@ -162,7 +164,7 @@ public class TestConnect {
         }
     }
 
-    public boolean simulation(int n, int seed) {
+    private boolean simulation(int n, int seed) {
         if (n < 0) {
             return true;
         }
@@ -185,7 +187,9 @@ public class TestConnect {
         }
 
         // Construct the future which represents all players trying to connect to one another.
-        SummableFuture<Map<Integer, Network>> future = new SummableFutureZero<>();
+        SummableFuture<Map<Integer, Network>> future = new SummableFutureZero<>(
+                new SummableMaps<Integer, Network>()
+        );
 
         for (int i = 1; i <= n; i++) {
             // Make new set of keys (missing the one corresponding to this node).
@@ -194,7 +198,8 @@ public class TestConnect {
             pKeys.remove(i);
 
             future = future.plus(new NaturalSummableFuture<>(
-                    new ConnectFuture(i, new Connect<Integer>(new MockCrypto(new InsecureRandom(i + seed))), knownHosts.get(i), pKeys)));
+                    new ConnectFuture(i, new Connect<Integer>(new MockCrypto(
+                            new InsecureRandom(i + seed))), knownHosts.get(i), pKeys)));
         }
 
         // Get the result of the computation.

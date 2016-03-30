@@ -10,11 +10,12 @@ package com.shuffle.sim;
 
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.chan.Chan;
 import com.shuffle.mock.MockMessageFactory;
 import com.shuffle.monad.NaturalSummableFuture;
 import com.shuffle.monad.SummableFuture;
 import com.shuffle.monad.SummableFutureZero;
-import com.shuffle.chan.Chan;
+import com.shuffle.monad.SummableMaps;
 import com.shuffle.protocol.InvalidImplementationError;
 import com.shuffle.protocol.Machine;
 import com.shuffle.protocol.MessageFactory;
@@ -22,8 +23,8 @@ import com.shuffle.protocol.Network;
 import com.shuffle.protocol.SignedPacket;
 import com.shuffle.protocol.TimeoutError;
 
-import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -36,7 +37,7 @@ import java.util.concurrent.TimeUnit;
  * Created by Daniel Krawisz on 12/6/15.
  */
 public final class Simulator {
-    private static Logger log= LogManager.getLogger(Simulator.class);
+    private static final Logger log = LogManager.getLogger(Simulator.class);
 
     /**
      * A network connecting different players together in a simulation.
@@ -55,13 +56,17 @@ public final class Simulator {
         }
 
         @Override
-        public void sendTo(VerificationKey to, SignedPacket packet) throws InvalidImplementationError, TimeoutError {
+        public void sendTo(
+                VerificationKey to,
+                SignedPacket packet
+        ) throws InvalidImplementationError, TimeoutError {
 
             try {
                 networks.get(to).deliver(packet);
             } catch (InterruptedException e) {
-                // This means that the thread running the machine we are delivering to has been interrupted.
-                // This would look like a timeout if this were happening over a real network.
+                // This means that the thread running the machine we are delivering to
+                // has been interrupted. This would look like a timeout if this were
+                // happening over a real network.
                 throw new TimeoutError();
             }
         }
@@ -118,7 +123,9 @@ public final class Simulator {
             Map<SigningKey, Adversary> machines)  {
 
         // Create a future for the set of entries.
-        SummableFuture<Map<SigningKey, Machine>> wait = new SummableFutureZero<>();
+        SummableFuture<Map<SigningKey, Machine>> wait = new SummableFutureZero<>(
+                new SummableMaps<SigningKey, Machine>()
+        );
 
         // Start the simulations.
         for (Adversary in : machines.values()) {
@@ -128,7 +135,8 @@ public final class Simulator {
         try {
             return wait.get();
         } catch (InterruptedException | ExecutionException e) {
-            log.error("Returning null. This indicates that some player returned an exception and was not able to complete the protocol.");
+            log.error("Returning null. This indicates that some player returned an exception "
+                    + "and was not able to complete the protocol.");
             return null;
         }
     }

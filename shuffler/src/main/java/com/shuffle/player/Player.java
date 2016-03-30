@@ -39,7 +39,7 @@ import java.util.TreeSet;
  *
  * Created by Daniel Krawisz on 2/1/16.
  */
-public class Player<Identity, Format> {
+class Player<Identity, Format> {
     private static final Logger log = LogManager.getLogger(Player.class);
 
     private final SigningKey sk;
@@ -75,7 +75,7 @@ public class Player<Identity, Format> {
         }
     }
 
-    public Player(
+    Player(
             SigningKey sk,
             MessageFactory messages, // Object that knows how to create and copy messages.
             Crypto crypto, // Connects to the cryptography.

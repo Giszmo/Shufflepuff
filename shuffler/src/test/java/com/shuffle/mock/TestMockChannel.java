@@ -48,7 +48,7 @@ public class TestMockChannel {
     }
 
     public class MockReceiver implements Receiver<String> {
-        List<String> messages = new LinkedList<>();
+        final List<String> messages = new LinkedList<>();
 
         @Override
         public void receive(String s) {

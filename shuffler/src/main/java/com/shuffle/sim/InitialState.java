@@ -44,7 +44,7 @@ public class InitialState {
     // Used for ensuring a test can't fail no matter what value
     // simulated adversaries return, since we only care about testing the response of the
     // honest players.
-    public final static class ExpectedPatternAny extends Machine.Expected {
+    public static final class ExpectedPatternAny extends Machine.Expected {
 
         public ExpectedPatternAny() {
             super(null, null, null, null);
@@ -61,7 +61,7 @@ public class InitialState {
         }
     }
 
-    private final static class EvidencePatternAny extends Evidence {
+    private static final class EvidencePatternAny extends Evidence {
         private EvidencePatternAny(VerificationKey accused) {
             super(accused, Reason.NoFundsAtAll, null, null, null, null, null, null, null);
 
@@ -78,10 +78,10 @@ public class InitialState {
         }
     }
 
-    private final static class EvidencePatternOr extends Evidence {
+    private static final class EvidencePatternOr extends Evidence {
         private final Evidence or;
 
-        protected EvidencePatternOr(VerificationKey accused, Reason reason, Evidence or) {
+        EvidencePatternOr(VerificationKey accused, Reason reason, Evidence or) {
             super(accused, reason);
             this.or = or;
         }
@@ -106,11 +106,11 @@ public class InitialState {
         }
     }
 
-    public static ExpectedPatternAny any = new ExpectedPatternAny();
+    private static final ExpectedPatternAny any = new ExpectedPatternAny();
 
-    public final SessionIdentifier session;
-    public final long amount;
-    public final Crypto crypto;
+    private final SessionIdentifier session;
+    private final long amount;
+    private final Crypto crypto;
     private final LinkedList<PlayerInitialState> players = new LinkedList<>();
     private MockCoin mockCoin = null;
 
@@ -118,7 +118,7 @@ public class InitialState {
     public final class PlayerInitialState {
         final SigningKey sk;
         final VerificationKey vk;
-        SortedSet<VerificationKey> keys = new TreeSet<>();
+        final SortedSet<VerificationKey> keys = new TreeSet<>();
         long initialAmount = 0;
         long spend = 0;
         long doubleSpend = 0;
@@ -133,7 +133,7 @@ public class InitialState {
         int[] equivocateOutputVector = new int[]{};
 
         int drop = 0; // Whether to drop an address in phase 2.
-        int duplicate = 0; // Whether to duplicate another address and replace it with the dropped address.
+        int duplicate = 0; // Whether to duplicate another address to replace it with.
         boolean replace = false; // Whether to replace dropped address with a new one.
 
         PlayerInitialState(SigningKey sk) {
@@ -177,14 +177,21 @@ public class InitialState {
                     if (player.initialAmount > 0) {
                         Address address = player.sk.VerificationKey().address();
 
-                        Address previousAddress = crypto.makeSigningKey().VerificationKey().address();
+                        Address previousAddress
+                                = crypto.makeSigningKey().VerificationKey().address();
 
                         mockCoin.put(previousAddress, player.initialAmount);
-                        mockCoin.makeSpendingTransaction(previousAddress, address, player.initialAmount).send();
+                        mockCoin.makeSpendingTransaction(
+                                previousAddress, address, player.initialAmount
+                        ).send();
 
                         // Plot twist! We spend it all!
                         if (player.spend > 0) {
-                            mockCoin.makeSpendingTransaction(address, crypto.makeSigningKey().VerificationKey().address(), player.spend).send();
+                            mockCoin.makeSpendingTransaction(
+                                    address,
+                                    crypto.makeSigningKey().VerificationKey().address(),
+                                    player.spend
+                            ).send();
                         }
                     }
                 }
@@ -196,7 +203,11 @@ public class InitialState {
         }
 
         // Turn the initial state into an Adversary object that can be run in the simulator.
-        public Adversary adversary(MessageFactory messages, Network network) throws CoinNetworkException {
+        public Adversary adversary(
+                MessageFactory messages,
+                Network network
+        ) throws CoinNetworkException {
+
             if (sk == null) {
                 return null;
             }
@@ -206,19 +217,30 @@ public class InitialState {
             CoinShuffle shuffle;
 
             if (equivocateAnnouncement != null && equivocateAnnouncement.length > 0) {
-                shuffle = MaliciousMachine.announcementEquivocator(messages, crypto, coin, fromSet(keys, equivocateAnnouncement));
+                shuffle = MaliciousMachine.announcementEquivocator(
+                        messages, crypto, coin, fromSet(keys, equivocateAnnouncement)
+                );
             } else if (equivocateOutputVector != null && equivocateOutputVector.length > 0) {
-                shuffle = MaliciousMachine.broadcastEquivocator(messages, crypto, coin, fromSet(keys, equivocateOutputVector));
+                shuffle = MaliciousMachine.broadcastEquivocator(
+                        messages, crypto, coin, fromSet(keys, equivocateOutputVector)
+                );
             } else if (replace && drop != 0) {
                 shuffle = MaliciousMachine.addressReplacer(messages, crypto, coin, drop);
             } else if (duplicate != 0 && drop != 0) {
-                shuffle = MaliciousMachine.addressDropperDuplicator(messages, crypto, coin, drop, duplicate);
+                shuffle = MaliciousMachine.addressDropperDuplicator(
+                        messages, crypto, coin, drop, duplicate
+                );
             } else if (drop != 0) {
                 shuffle = MaliciousMachine.addressDropper(messages, crypto, coin, drop);
             } else if (doubleSpend > 0) {
                 // is he going to double spend? If so, make a new transaction for him.
                 shuffle = MaliciousMachine.doubleSpender(messages, crypto, coin,
-                        coin.makeSpendingTransaction(address, crypto.makeSigningKey().VerificationKey().address(), doubleSpend));
+                        coin.makeSpendingTransaction(
+                                address,
+                                crypto.makeSigningKey().VerificationKey().address(),
+                                doubleSpend
+                        )
+                );
             } else if (mutate) {
                 shuffle = new CoinShuffle(messages, crypto, coin.mutated());
             } else {
@@ -280,9 +302,9 @@ public class InitialState {
 
             Matrix bm = new Matrix();
 
-            for(PlayerInitialState i : players) {
+            for (PlayerInitialState i : players) {
                 for (PlayerInitialState j : players) {
-                    // We don't care who malicious players blame because they aren't trustworthy anyway.
+                    // We don't care who malicious players blame.
                     if (i.maliciousBehavior() != null) {
                         bm.put(i.vk, new EvidencePatternAny(j.vk));
                         continue;
@@ -308,7 +330,9 @@ public class InitialState {
                         continue;
                     }
 
-                    if (reason == Reason.NoFundsAtAll || reason == Reason.InsufficientFunds || reason == Reason.InvalidSignature) {
+                    if (reason == Reason.NoFundsAtAll || reason == Reason.InsufficientFunds
+                            || reason == Reason.InvalidSignature) {
+
                         bm.put(i.vk, Evidence.Expected(j.vk, reason));
                         continue;
                     }
@@ -325,6 +349,7 @@ public class InitialState {
 
     public interface Initializer {
         MessageFactory messages(VerificationKey key);
+
         Network network(VerificationKey key);
     }
 
@@ -337,7 +362,12 @@ public class InitialState {
             }
 
             try {
-                p.put(player.sk, player.adversary(initializer.messages(player.vk), initializer.network(player.vk)));
+                p.put(player.sk,
+                        player.adversary(
+                                initializer.messages(player.vk),
+                                initializer.network(player.vk)
+                        ));
+
             } catch (CoinNetworkException e) {
                 return null; // Should not really happen.
             }
@@ -362,7 +392,7 @@ public class InitialState {
         return players.get(n);
     }
 
-    public Map<Integer, MockCoin> networkPoints = null;
+    private Map<Integer, MockCoin> networkPoints = null;
 
     public InitialState(SessionIdentifier session, long amount, Crypto crypto) {
 
@@ -603,7 +633,7 @@ public class InitialState {
         for (int i = 1; i <= numPlayers; i ++) {
             init.player().initialFunds(20);
 
-            while(eq < equivocators.length && equivocators[eq].equivocator < i) {
+            while (eq < equivocators.length && equivocators[eq].equivocator < i) {
                 eq++;
             }
 
@@ -714,7 +744,7 @@ public class InitialState {
         for (int i = 1; i <= numPlayers; i ++) {
             init.player().initialFunds(20);
 
-            if(mutantsSet.contains(i)) {
+            if (mutantsSet.contains(i)) {
                 init.mutateTransaction();
             }
         }

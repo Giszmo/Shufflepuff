@@ -17,7 +17,7 @@ import java.util.Map;
  * Created by Daniel Krawisz on 3/2/16.
  */
 public class SummableMap<X, Y> implements Summable.SummableElement<Map<X, Y>> {
-    Map<X, Y> map;
+    private final Map<X, Y> map;
 
     public SummableMap(X x, Y y) {
         map = new HashMap<>();

@@ -41,7 +41,7 @@ public class Mailbox {
     // All messages received (does not include those in delivered).
     private final Queue<SignedPacket> history = new LinkedList<>();
 
-    private Set<Reason> blame = new HashSet<>();
+    private final Set<Reason> blame = new HashSet<>();
 
     public Mailbox(
             SessionIdentifier session,
@@ -60,7 +60,9 @@ public class Mailbox {
         return blame.contains(reason);
     }
 
-    public boolean blame() {return blame.size() > 0; }
+    public boolean blame() {
+        return blame.size() > 0;
+    }
 
     public void broadcast(Message message, Phase phase)
             throws TimeoutError, CryptographyError, InvalidImplementationError {
@@ -100,7 +102,7 @@ public class Mailbox {
     // Get the next message from the phase we're in. It's possible for other players to get
     // ahead under some circumstances, so we have to keep their messages to look at later.
     // It always returns a blame packet if encountered.
-    SignedPacket receiveNextPacket(Phase expectedPhase)
+    private SignedPacket receiveNextPacket(Phase expectedPhase)
             throws FormatException, CryptographyError,
             InterruptedException, TimeoutError, InvalidImplementationError,
             ValueException, SignatureException {
@@ -289,6 +291,17 @@ public class Mailbox {
         return messages;
     }
 
+    public Map<VerificationKey, Message> receiveFromMultiple(
+            Set<VerificationKey> from,
+            Phase expectedPhase
+    )
+            throws TimeoutError, CryptographyError, FormatException,
+            InvalidImplementationError, ValueException, InterruptedException,
+            ProtocolException, BlameException, SignatureException {
+
+        return receiveFromMultiple(from, expectedPhase, false);
+    }
+
     public Map<VerificationKey, Message> receiveFromMultipleBlameless(
             Set<VerificationKey> from,
             Phase expectedPhase
@@ -304,17 +317,6 @@ public class Mailbox {
 
         assert true; // Should not reach here.
         return null;
-    }
-
-    public Map<VerificationKey, Message> receiveFromMultiple(
-            Set<VerificationKey> from,
-            Phase expectedPhase
-    )
-            throws TimeoutError, CryptographyError, FormatException,
-            InvalidImplementationError, ValueException, InterruptedException,
-            ProtocolException, BlameException, SignatureException {
-
-        return receiveFromMultiple(from, expectedPhase, false);
     }
 
     // When the blame phase it reached, there may be a lot of blame going around. This function
@@ -338,7 +340,7 @@ public class Mailbox {
         }
 
         // Then receive any more blame messages until there are no more.
-        while(true) {
+        while (true) {
             try {
                 SignedPacket next = receiveNextPacket(Phase.Blame);
                 blame.get(next.payload.signer).add(next);

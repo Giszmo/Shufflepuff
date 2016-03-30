@@ -22,7 +22,7 @@ import java.util.Queue;
  * Created by Daniel Krawisz on 3/9/16.
  */
 public class TransactionMutator implements Coin {
-    final MockCoin coin;
+    private final MockCoin coin;
 
     public TransactionMutator(MockCoin coin) {
         this.coin = coin;

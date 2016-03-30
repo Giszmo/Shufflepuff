@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit;
  * Created by Daniel Krawisz on 3/2/16.
  */
 public class NaturalSummableFuture<X> extends SummableFutureAbstract<X> {
-    final Future<Summable.SummableElement<X>> f;
+    private final Future<Summable.SummableElement<X>> f;
 
     public NaturalSummableFuture(Future<Summable.SummableElement<X>> f) {
         this.f = f;

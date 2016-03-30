@@ -8,7 +8,6 @@
 
 package com.shuffle.protocol;
 
-import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.VerificationKey;
 
 import java.io.Serializable;

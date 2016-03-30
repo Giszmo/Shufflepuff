@@ -16,6 +16,7 @@ import com.shuffle.monad.Either;
  * Created by Daniel Krawisz on 1/31/16.
  */
 public class Multiplexer<X, Y, Message> implements Channel<Either<X, Y>, Message> {
+
     class EitherSession extends Either<Session<X, Message>, Session<Y, Message>>
             implements Session<Either<X, Y>, Message> {
 
@@ -116,8 +117,13 @@ public class Multiplexer<X, Y, Message> implements Channel<Either<X, Y>, Message
         }
     }
 
-    Channel<X, Message> x;
-    Channel<Y, Message> y;
+    private final Channel<X, Message> x;
+    private final Channel<Y, Message> y;
+
+    public Multiplexer(Channel<X, Message> x, Channel<Y, Message> y) {
+        this.x = x;
+        this.y = y;
+    }
 
     @Override
     public Peer<Either<X, Y>, Message> getPeer(Either<X, Y> you) {

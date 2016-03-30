@@ -59,11 +59,11 @@ import java.util.concurrent.TimeUnit;
  *
  */
 public class CoinShuffle {
-    static Logger log= LogManager.getLogger(CoinShuffle.class);
+    private static final Logger log= LogManager.getLogger(CoinShuffle.class);
 
     final Crypto crypto;
 
-    final Coin coin;
+    private final Coin coin;
 
     final MessageFactory messages;
 
@@ -74,31 +74,31 @@ public class CoinShuffle {
 
         final SessionIdentifier session;
 
-        final long amount; // The amount to be shuffled.
+        private final long amount; // The amount to be shuffled.
 
-        final SigningKey sk; // My signing private key.
+        private final SigningKey sk; // My signing private key.
 
-        final public int me; // Which player am I?
+        public final int me; // Which player am I?
 
-        final public Map<Integer, VerificationKey> players; // The players' public keys.
+        public final Map<Integer, VerificationKey> players; // The players' public keys.
 
-        final public int N; // The number of players.
+        public final int N; // The number of players.
 
-        final public VerificationKey vk; // My verification public key, which is also my identity.
+        public final VerificationKey vk; // My verification public key, which is also my identity.
 
         public DecryptionKey dk = null;
 
         // This will contain the new encryption public keys.
-        final public Map<VerificationKey, EncryptionKey> encryptionKeys = new HashMap<>();
+        public final Map<VerificationKey, EncryptionKey> encryptionKeys = new HashMap<>();
 
         // The set of new addresses into which the coins will be deposited.
         public Queue<Address> newAddresses = null;
 
-        final public Address change; // My change address. (may be null).
+        public final Address change; // My change address. (may be null).
 
-        final public Map<VerificationKey, Signature> signatures = new HashMap<>();
+        public final Map<VerificationKey, Signature> signatures = new HashMap<>();
 
-        final public Mailbox mailbox;
+        public final Mailbox mailbox;
 
         void protocolDefinition(
         ) throws
@@ -520,7 +520,7 @@ public class CoinShuffle {
             return equivocationCheck(encryptionKeys, newAddresses, true);
         }
 
-        protected Matrix blameBroadcastShuffleMessages()
+        Matrix blameBroadcastShuffleMessages()
                 throws InterruptedException, SignatureException, ValueException, FormatException {
 
             machine.phase = Phase.Blame;
@@ -537,7 +537,7 @@ public class CoinShuffle {
             return fillBlameMatrix(new Matrix());
         }
 
-        protected Matrix checkDoubleSpending(Transaction t) throws
+        Matrix checkDoubleSpending(Transaction t) throws
                 InterruptedException, SignatureException, ValueException, FormatException {
             // Check for double spending.
             Message doubleSpend = messages.make();
@@ -808,7 +808,7 @@ public class CoinShuffle {
         }
 
         // Get the set of players from i to N.
-        final public Set<VerificationKey> playerSet(int i, int n)
+        public final Set<VerificationKey> playerSet(int i, int n)
                 throws CryptographyError, InvalidImplementationError {
 
             if (i < 1) {
@@ -827,7 +827,7 @@ public class CoinShuffle {
         }
 
         // get the set of all players for this round.
-        final public Set<VerificationKey> playerSet() throws CryptographyError, InvalidImplementationError {
+        public final Set<VerificationKey> playerSet() throws CryptographyError, InvalidImplementationError {
             return playerSet(1, N);
         }
 
@@ -942,7 +942,7 @@ public class CoinShuffle {
     // In phase 1, everybody announces their new encryption keys to one another. They also
     // optionally send change addresses to one another. This function reads that information
     // from a message and puts it in some nice data structures.
-    static void readAnnouncements(Map<VerificationKey, Message> messages,
+    private static void readAnnouncements(Map<VerificationKey, Message> messages,
                            Map<VerificationKey, EncryptionKey> encryptionKeys,
                            Map<VerificationKey, Address> change) throws FormatException {
         for (Map.Entry<VerificationKey, Message> entry : messages.entrySet()) {
@@ -960,7 +960,7 @@ public class CoinShuffle {
 
     // This function is only called by fillBlameMatrix to collect messages sent in
     // phases 1, 2, and 3. and to organize the information appropriately.
-    static void fillBlameMatrixCollectHistory(
+    private static void fillBlameMatrixCollectHistory(
             VerificationKey vk,
             VerificationKey from,
             Queue<SignedPacket> packets,
@@ -1025,7 +1025,7 @@ public class CoinShuffle {
         }
     }
 
-    public static Evidence checkShuffleMisbehavior(
+    private static Evidence checkShuffleMisbehavior(
             Map<Integer, VerificationKey> players,
             Map<VerificationKey, DecryptionKey> decryptionKeys,
             Map<VerificationKey, SignedPacket> shuffleMessages,
@@ -1106,7 +1106,7 @@ public class CoinShuffle {
         return null;
     }
 
-    protected Machine run(Machine state, Address change, Network network)  {
+    Machine run(Machine state, Address change, Network network)  {
 
         // Get the initial ordering of the players.
         int i = 1;

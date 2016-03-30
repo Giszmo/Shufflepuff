@@ -23,8 +23,8 @@ import java.util.Map;
 import java.util.SortedSet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.TimeUnit;
 
 /**
  * The adversary provides for an environment in which the protocol can run in a separate thread.
@@ -61,9 +61,12 @@ public class Adversary {
     }
 
     // Return a future that can be composed with others.
-    public Future<Summable.SummableElement<Map<SigningKey, Machine>>> turnOn() throws InvalidImplementationError {
+    public Future<Summable.SummableElement<Map<SigningKey, Machine>>> turnOn(
+    ) throws InvalidImplementationError {
+
         return new Future<Summable.SummableElement<Map<SigningKey, Machine>>>() {
-            final Future<Machine> m = shuffle.runProtocolFuture(session, amount, sk, players, null, network);
+            final Future<Machine> m
+                    = shuffle.runProtocolFuture(session, amount, sk, players, null, network);
 
             @Override
             public boolean cancel(boolean b) {
@@ -88,12 +91,17 @@ public class Adversary {
             }
 
             @Override
-            public Summable.SummableElement<Map<SigningKey, Machine>> get() throws InterruptedException, ExecutionException {
+            public Summable.SummableElement<Map<SigningKey, Machine>> get(
+            ) throws InterruptedException, ExecutionException {
+
                 return g(m.get());
             }
 
             @Override
-            public Summable.SummableElement<Map<SigningKey, Machine>> get(long l, TimeUnit timeUnit) throws InterruptedException, ExecutionException, TimeoutException {
+            public Summable.SummableElement<Map<SigningKey, Machine>> get(
+                    long l, TimeUnit timeUnit
+            ) throws InterruptedException, ExecutionException, TimeoutException {
+
                 return g(m.get(l, timeUnit));
             }
 
