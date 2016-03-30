@@ -11,6 +11,7 @@ package com.shuffle.sim;
 import com.shuffle.bitcoin.CoinNetworkException;
 import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.chan.Chan;
 import com.shuffle.mock.InsecureRandom;
 import com.shuffle.mock.MockCrypto;
 import com.shuffle.mock.MockMarshaller;
@@ -18,9 +19,8 @@ import com.shuffle.mock.MockMessageFactory;
 import com.shuffle.mock.MockSessionIdentifier;
 import com.shuffle.p2p.Bytestring;
 import com.shuffle.p2p.Channel;
-import com.shuffle.p2p.TCPChannel;
+import com.shuffle.p2p.TcpChannel;
 import com.shuffle.player.Connect;
-import com.shuffle.chan.Chan;
 import com.shuffle.protocol.CoinShuffle;
 import com.shuffle.protocol.Machine;
 import com.shuffle.protocol.Phase;
@@ -209,9 +209,9 @@ public class Player implements Runnable {
     }
 
     private Machine play() {
-        Channel<InetSocketAddress, Bytestring> tcp = new TCPChannel(param.port, exec);
+        Channel<InetSocketAddress, Bytestring> tcp = new TcpChannel(param.port, exec);
 
-        Connect<InetSocketAddress> connect = (Connect<InetSocketAddress>) new Connect<InetSocketAddress>(param.init.crypto());
+        Connect<InetSocketAddress> connect = new Connect<>(param.init.crypto());
 
         try {
             return new CoinShuffle(new MockMessageFactory(), param.init.crypto(), param.init.coin()).runProtocol(

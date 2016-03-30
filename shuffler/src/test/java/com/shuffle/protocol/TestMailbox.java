@@ -61,7 +61,7 @@ public class TestMailbox {
             MockNetwork network = new MockNetwork();
 
             // make the set of players.
-            Set<VerificationKey> players = new HashSet<VerificationKey>();
+            Set<VerificationKey> players = new HashSet<>();
             for (int i = 1; i <= test.recipients; i ++) {
                 players.add(new MockVerificationKey(i));
             }
@@ -121,7 +121,7 @@ public class TestMailbox {
             MockNetwork network = new MockNetwork();
 
             // make the set of players.
-            Set<VerificationKey> players = new HashSet<VerificationKey>();
+            Set<VerificationKey> players = new HashSet<>();
             for (int j = 1; j <= test.players; j ++) {
                 players.add(new MockVerificationKey(j));
             }
@@ -188,7 +188,7 @@ public class TestMailbox {
             MockNetwork network = new MockNetwork();
 
             // make the set of players.
-            Set<VerificationKey> players = new HashSet<VerificationKey>();
+            Set<VerificationKey> players = new HashSet<>();
             for (int j = 1; j <= test.players.length; j ++) {
                 players.add(new MockVerificationKey(test.players[j - 1]));
             }
@@ -259,7 +259,7 @@ public class TestMailbox {
             MockNetwork network = new MockNetwork();
 
             // make the set of players.
-            Set<VerificationKey> players = new HashSet<VerificationKey>();
+            Set<VerificationKey> players = new HashSet<>();
             for (int j = 1; j <= test.players; j ++) {
                 players.add(new MockVerificationKey(j));
             }

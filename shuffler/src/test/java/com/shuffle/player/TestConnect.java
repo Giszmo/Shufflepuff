@@ -101,7 +101,7 @@ public class TestConnect {
                 Map<Integer, VerificationKey> keys) {
             me = i;
 
-            Chan<Network> netChan = new Chan<Network>();
+            Chan<Network> netChan = new Chan<>();
             this.netChan = netChan;
 
             new Thread(new ConnectRun(connect, channel, keys, 1, 3, netChan)).start();
@@ -174,7 +174,7 @@ public class TestConnect {
         // Create the set of known hosts for each player.
         Map<Integer, MockChannel<Bytestring>> knownHosts = new ConcurrentHashMap<>();
         for (int i = 1; i <= n; i++) {
-            MockChannel<Bytestring> channel = new MockChannel<Bytestring>(i, knownHosts);
+            MockChannel<Bytestring> channel = new MockChannel<>(i, knownHosts);
             knownHosts.put(i, channel);
         }
 
@@ -185,7 +185,7 @@ public class TestConnect {
         }
 
         // Construct the future which represents all players trying to connect to one another.
-        SummableFuture<Map<Integer, Network>> future = new SummableFutureZero<Map<Integer, Network>>();
+        SummableFuture<Map<Integer, Network>> future = new SummableFutureZero<>();
 
         for (int i = 1; i <= n; i++) {
             // Make new set of keys (missing the one corresponding to this node).

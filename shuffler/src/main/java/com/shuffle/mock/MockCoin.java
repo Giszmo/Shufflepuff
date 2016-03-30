@@ -74,9 +74,11 @@ public class MockCoin implements com.shuffle.sim.MockCoin {
         }
 
         public MockTransaction(List<Output> inputs, List<Output> outputs, int z) {
-            for (Output output : inputs) if (output == null) throw new NullPointerException();
+            for (Output output : inputs)
+                if (output == null) throw new NullPointerException();
 
-            for (Output output : outputs) if (output == null) throw new NullPointerException();
+            for (Output output : outputs)
+                if (output == null) throw new NullPointerException();
 
             this.z = z;
             this.inputs.addAll(inputs);
@@ -146,7 +148,7 @@ public class MockCoin implements com.shuffle.sim.MockCoin {
 
     public MockCoin(Map<Address, Output> blockchain) {
         this.blockchain.putAll(blockchain);
-    };
+    }
 
     public MockCoin() {
     }
@@ -255,7 +257,7 @@ public class MockCoin implements com.shuffle.sim.MockCoin {
             if (change != null) outputs.add(new Output(change, value - amount));
         }
 
-        for(Address address : to) outputs.add(new Output(address, amount));
+        for (Address address : to) outputs.add(new Output(address, amount));
 
         return new MockTransaction(inputs, outputs, z);
     }

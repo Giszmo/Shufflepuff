@@ -19,7 +19,7 @@ public class SummableMaps<X, Y> implements Summable<Map<X,Y>> {
 
     @Override
     public Summable.Zero<Map<X, Y>> zero() {
-        return new Zero<X, Y>();
+        return new Zero<>();
     }
 
     @Override
@@ -31,7 +31,7 @@ public class SummableMaps<X, Y> implements Summable<Map<X,Y>> {
 
         @Override
         public Map<X, Y> value() {
-            return new HashMap<X, Y>();
+            return new HashMap<>();
         }
     }
 

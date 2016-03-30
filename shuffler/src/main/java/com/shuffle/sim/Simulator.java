@@ -8,7 +8,6 @@
 
 package com.shuffle.sim;
 
-import com.shuffle.bitcoin.CoinNetworkException;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.mock.MockMessageFactory;
@@ -119,11 +118,11 @@ public final class Simulator {
             Map<SigningKey, Adversary> machines)  {
 
         // Create a future for the set of entries.
-        SummableFuture<Map<SigningKey, Machine>> wait = new SummableFutureZero<Map<SigningKey, Machine>>();
+        SummableFuture<Map<SigningKey, Machine>> wait = new SummableFutureZero<>();
 
         // Start the simulations.
         for (Adversary in : machines.values()) {
-            wait = wait.plus(new NaturalSummableFuture<Map<SigningKey, Machine>>(in.turnOn()));
+            wait = wait.plus(new NaturalSummableFuture<>(in.turnOn()));
         }
 
         try {

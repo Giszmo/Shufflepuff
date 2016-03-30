@@ -17,10 +17,10 @@ public abstract class SummableFutureAbstract<X> implements SummableFuture<X> {
             return null;
         }
 
-        return new PlusSummableFuture<X>(this, (SummableFuture<X>) x);
+        return new PlusSummableFuture<>(this, (SummableFuture<X>) x);
     }
 
     public SummableFuture<X> plus(SummableFuture<X> x) {
-        return new PlusSummableFuture<X>(this, x);
+        return new PlusSummableFuture<>(this, x);
     }
 }

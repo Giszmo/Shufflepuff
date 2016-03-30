@@ -13,8 +13,8 @@ import com.shuffle.bitcoin.Coin;
 import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
-import com.shuffle.p2p.Channel;
 import com.shuffle.chan.Chan;
+import com.shuffle.p2p.Channel;
 import com.shuffle.protocol.CoinShuffle;
 import com.shuffle.protocol.Machine;
 import com.shuffle.protocol.Mailbox;
@@ -23,8 +23,8 @@ import com.shuffle.protocol.Network;
 import com.shuffle.protocol.Phase;
 import com.shuffle.protocol.SessionIdentifier;
 
-import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -40,7 +40,7 @@ import java.util.TreeSet;
  * Created by Daniel Krawisz on 2/1/16.
  */
 public class Player<Identity, Format> {
-    private final static Logger log= LogManager.getLogger(Player.class);
+    private static final Logger log = LogManager.getLogger(Player.class);
 
     private final SigningKey sk;
 
@@ -58,7 +58,14 @@ public class Player<Identity, Format> {
         final int maxRetries;
         final int timeout;
 
-        public Settings(SessionIdentifier session, long amount, Address change, int minPlayers, int maxRetries, int timeout) {
+        public Settings(
+                SessionIdentifier session,
+                long amount,
+                Address change,
+                int minPlayers,
+                int maxRetries,
+                int timeout
+        ) {
             this.session = session;
             this.amount = amount;
             this.change = change;
@@ -150,7 +157,8 @@ public class Player<Identity, Format> {
             // this round of the protocol.
             // TODO
 
-            Machine machine = shuffle.runProtocol(session, settings.amount, sk, validPlayers, settings.change, net, chan);
+            Machine machine = shuffle.runProtocol(session,
+                    settings.amount, sk, validPlayers, settings.change, net, chan);
 
             if (machine.exception() == null && machine.phase() != Phase.Blame) {
                 break;

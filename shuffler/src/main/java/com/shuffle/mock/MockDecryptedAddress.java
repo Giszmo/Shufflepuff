@@ -12,9 +12,12 @@ import com.shuffle.bitcoin.Address;
 import com.shuffle.bitcoin.EncryptionKey;
 
 /**
+ * Represents an address that has been inappropriately decrypted with a key that was never
+ * used to encrypt it.
+ *
  * Created by Daniel Krawisz on 2/7/16.
  */
-public class MockDecryptedAddress implements Address {
+class MockDecryptedAddress implements Address {
     public final Address decrypted;
     public final EncryptionKey key;
 

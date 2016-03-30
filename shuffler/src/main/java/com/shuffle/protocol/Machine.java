@@ -106,10 +106,10 @@ public class Machine {
     // A representation of an expected result for a CoinShuffle round.
     public static class Expected {
 
-        final public Phase phase;
-        final public SessionIdentifier session;
-        final public Exception e;
-        final public Matrix matrix;
+        public final Phase phase;
+        public final SessionIdentifier session;
+        public final Exception e;
+        public final Matrix matrix;
 
         public Expected(
                 SessionIdentifier session,
@@ -125,10 +125,10 @@ public class Machine {
 
         // Whether two return states are equivalent.
         public boolean match(Machine m) {
-            return session == m.session &&
-                    (phase == null || phase == m.phase) &&
-                    (e == null && m.e == null ||
-                            e != null && m.e != null && e.getClass().equals(m.e.getClass()))
+            return session == m.session
+                    && (phase == null || phase == m.phase)
+                    && (e == null && m.e == null
+                        || e != null && m.e != null && e.getClass().equals(m.e.getClass()))
                     && ((matrix == null && (m.matrix == null || m.matrix.isEmpty()))
                         || (matrix != null && matrix.match(m.matrix)));
         }

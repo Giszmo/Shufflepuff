@@ -106,7 +106,7 @@ public class InitialState {
         }
     }
 
-    static public ExpectedPatternAny any = new ExpectedPatternAny();
+    public static ExpectedPatternAny any = new ExpectedPatternAny();
 
     public final SessionIdentifier session;
     public final long amount;

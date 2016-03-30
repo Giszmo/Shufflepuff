@@ -21,15 +21,21 @@ public interface Message {
     boolean isEmpty();
 
     Message attach(EncryptionKey ek);
+
     Message attach(Address addr);
+
     Message attach(Signature sig);
+
     Message attach(Blame blame);
 
     Message attach(Message message) throws InvalidImplementationError;
 
     EncryptionKey readEncryptionKey() throws FormatException;
+
     Signature readSignature() throws FormatException;
+
     Address readAddress() throws FormatException;
+
     Blame readBlame() throws FormatException, CryptographyError;
 
     Message rest() throws FormatException;

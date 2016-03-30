@@ -8,8 +8,6 @@
 
 package com.shuffle.bitcoin;
 
- import com.shuffle.bitcoin.blockchain.Bitcoin;
-
  import java.util.List;
  import java.util.Map;
  import java.util.Queue;

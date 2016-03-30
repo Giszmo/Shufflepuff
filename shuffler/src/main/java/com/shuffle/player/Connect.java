@@ -10,20 +10,19 @@ package com.shuffle.player;
 
 import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.chan.Chan;
 import com.shuffle.p2p.Bytestring;
 import com.shuffle.p2p.Channel;
 import com.shuffle.p2p.Connection;
 import com.shuffle.p2p.Peer;
 import com.shuffle.p2p.Receiver;
 import com.shuffle.p2p.Session;
-import com.shuffle.chan.Chan;
 import com.shuffle.protocol.FormatException;
 import com.shuffle.protocol.InvalidImplementationError;
 import com.shuffle.protocol.SignedPacket;
 import com.shuffle.protocol.TimeoutError;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
@@ -240,12 +239,13 @@ public class Connect<Identity> {
 
     /**
      * An implementation of Network which connects the interface defined in com.shuffle.protocol
-     * to the channel through which the communication takes place. It manages the opening of channels
-     * and the marshalling of messages.
+     * to the channel through which the communication takes place. It manages the opening of
+     * channels and the marshalling of messages.
      *
      * Created by Daniel Krawisz on 2/13/16.
      */
-    private static class Network<Identity> implements com.shuffle.protocol.Network, Receiver<Bytestring> {
+    private static class Network<Identity>
+            implements com.shuffle.protocol.Network, Receiver<Bytestring> {
 
         final Map<VerificationKey, Session<Identity, Bytestring>> players;
         final Marshaller<Bytestring> marshall;
@@ -275,7 +275,9 @@ public class Connect<Identity> {
         // when it needs to without thinking about what's going on underneith.
 
         @Override
-        public void sendTo(VerificationKey to, SignedPacket packet) throws InvalidImplementationError, TimeoutError {
+        public void sendTo(VerificationKey to, SignedPacket packet)
+                throws InvalidImplementationError, TimeoutError {
+
             Session<Identity, Bytestring> session = players.get(to);
 
             if(session == null) {
@@ -286,7 +288,10 @@ public class Connect<Identity> {
         }
 
         @Override
-        public SignedPacket receive() throws TimeoutError, InvalidImplementationError, InterruptedException, FormatException {
+        public SignedPacket receive()
+                throws TimeoutError, InvalidImplementationError,
+                InterruptedException, FormatException {
+
             Bytestring str = received.receive(timeout, TimeUnit.SECONDS);
             return marshall.unmarshall(str);
         }

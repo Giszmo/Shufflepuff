@@ -10,8 +10,8 @@ package com.shuffle.monad;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Transforms a future of a summable into a summable future.
@@ -29,8 +29,7 @@ public class NaturalSummableFuture<X> extends SummableFutureAbstract<X> {
     public Summable.SummableElement<X> getSummable()
             throws InterruptedException, ExecutionException {
 
-        Summable.SummableElement<X> z = f.get();
-        return z;
+        return f.get();
     }
 
     @Override

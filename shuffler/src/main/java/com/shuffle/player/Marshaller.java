@@ -8,17 +8,16 @@
 
 package com.shuffle.player;
 
-import com.shuffle.p2p.Bytestring;
 import com.shuffle.protocol.FormatException;
 import com.shuffle.protocol.SignedPacket;
 
-import java.io.IOException;
-
 /**
+ * Represents a way of serializing a class.
+ *
  * Created by Daniel Krawisz on 1/31/16.
  */
 public interface Marshaller<Format> {
-    public Format marshall(SignedPacket packet);
+    Format marshall(SignedPacket packet);
 
-    public SignedPacket unmarshall(Format string) throws FormatException;
+    SignedPacket unmarshall(Format string) throws FormatException;
 }

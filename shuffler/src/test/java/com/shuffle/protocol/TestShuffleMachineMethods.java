@@ -50,7 +50,7 @@ import java.util.TreeSet;
  * Created by Daniel Krawisz on 12/5/15.
  */
 public class TestShuffleMachineMethods {
-    private static Logger log= LogManager.getLogger(TestShuffleMachineMethods.class);
+    private static Logger log = LogManager.getLogger(TestShuffleMachineMethods.class);
 
     public CoinShuffle.Round net(
             int seed,
@@ -124,7 +124,7 @@ public class TestShuffleMachineMethods {
         int i = 0;
         for(playerSetTestCase test : tests) {
             // make the set of players.
-            TreeMap<Integer, VerificationKey> players = new TreeMap<Integer, VerificationKey>();
+            TreeMap<Integer, VerificationKey> players = new TreeMap<>();
             for (int j = 1; j <= test.N; j ++) {
                 players.put(j, new MockVerificationKey(j));
             }
@@ -258,7 +258,7 @@ public class TestShuffleMachineMethods {
     }
 
     private class areEqualTestCase {
-        List<Message> input = new LinkedList<>();;
+        List<Message> input = new LinkedList<>();
         boolean expected;
 
         areEqualTestCase(int[] input, boolean expected) {
@@ -502,7 +502,7 @@ public class TestShuffleMachineMethods {
                 try {
                     round.readNewAddresses(input);
                     Assert.fail();
-                } catch (FormatException e) {
+                } catch (FormatException ignored) {
                 }
             }
         } catch (CryptographyError | InvalidParticipantSetException | InvalidImplementationError e) {

@@ -18,7 +18,7 @@ import java.util.SortedSet;
  * Created by Daniel Krawisz on 12/25/15.
  */
 public interface Mixes {
-    public enum MixOutcome {
+    enum MixOutcome {
         Pending,
         Running,
         Success,
@@ -26,7 +26,7 @@ public interface Mixes {
         Unknown
     }
 
-    public interface Mix {
+    interface Mix {
 
         // The specific protocol and version to be run.
         SessionIdentifier session();
@@ -55,6 +55,7 @@ public interface Mixes {
 
         // Who can view and join this mix.
         Permission permission();
+
         void setPermission(Permission permission);
 
         // Whether the mix was completed successfully.
@@ -68,7 +69,7 @@ public interface Mixes {
         Registration register(Player player);
     }
 
-    public interface MixQuery {
+    interface MixQuery {
         MixQuery outcome(MixOutcome outcome);
 
         // All mixes that this player has permission to see.
@@ -78,5 +79,7 @@ public interface Mixes {
     }
 
     MixQuery get();
-    Mix create(long amount, long minTime, long maxTime, int minPlayers, int maxPlayers, int retries);
+
+    Mix create(
+            long amount, long minTime, long maxTime, int minPlayers, int maxPlayers, int retries);
 }

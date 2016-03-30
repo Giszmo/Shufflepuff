@@ -27,7 +27,8 @@ public abstract class FundamentalPeer<Identity, Message> implements Peer<Identit
     }
 
     // Returns null if there is a session already open.
-    public abstract Session<Identity, Message> openSession(Receiver<Message> receiver) throws InterruptedException;
+    public abstract Session<Identity, Message> openSession(Receiver<Message> receiver)
+            throws InterruptedException;
 
     // Whether there is an open session to this peer.
     public final boolean open() {

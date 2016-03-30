@@ -13,6 +13,8 @@ import com.shuffle.bitcoin.Address;
 import java.io.Serializable;
 
 /**
+ * Mock Bitcoin address used for testing.
+ *
  * Created by Daniel Krawisz on 12/19/15.
  */
 public class MockAddress implements Address, Serializable {
@@ -24,15 +26,8 @@ public class MockAddress implements Address, Serializable {
 
     @Override
     public boolean equals(Object o) {
-        if (o == null) {
-            return false;
-        }
+        return o != null && o instanceof MockAddress && index == ((MockAddress) o).index;
 
-        if (!(o instanceof MockAddress)) {
-            return false;
-        }
-
-        return index == ((MockAddress)o).index;
     }
 
     @Override

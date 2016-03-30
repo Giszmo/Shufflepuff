@@ -22,7 +22,7 @@ import java.io.Serializable;
  * Created by Daniel Krawisz on 12/19/15.
  */
 public class Bytestring implements Serializable {
-    final public byte[] bytes;
+    public final byte[] bytes;
 
     public Bytestring(byte[] bytes) {
         this.bytes = bytes;
@@ -36,8 +36,8 @@ public class Bytestring implements Serializable {
             newBytes[i] = pre[i];
         }
 
-        for (int j = 0; j < bytes.length; j++) {
-            newBytes[i] = bytes[j];
+        for (byte aByte : bytes) {
+            newBytes[i] = aByte;
             i++;
         }
 

@@ -20,8 +20,8 @@ import com.shuffle.protocol.Packet;
 import com.shuffle.protocol.SignedPacket;
 import com.shuffle.protocol.blame.Blame;
 
-import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 
 import java.io.Serializable;
 import java.util.Deque;
@@ -193,11 +193,12 @@ public class MockMessage implements Message, Serializable {
 
             Atom a = (Atom)o;
 
-            return this == a || a.sig == sig &&
-                    (a.ek == null && ek == null || ek != null && ek.equals(a.ek))
+            return this == a || a.sig == sig
+                    && (a.ek == null && ek == null || ek != null && ek.equals(a.ek))
                     && (a.addr == null && addr == null || addr != null && addr.equals(a.addr))
                     && (a.t == null && t == null || t != null && t.equals(a.t))
-                    && (a.packet == null && packet == null || packet != null && packet.equals(a.packet))
+                    && (a.packet == null && packet == null
+                        || packet != null && packet.equals(a.packet))
                     && (a.blame == null && blame == null || blame != null && blame.equals(a.blame))
                     && (a.hash == null && hash == null || hash != null && hash.equals(a.hash))
                     && (a.next == null && next == null || next != null && next.equals(a.next));
@@ -253,7 +254,7 @@ public class MockMessage implements Message, Serializable {
 
         Iterator i = atoms.descendingIterator();
 
-        while(i.hasNext()) {
+        while (i.hasNext()) {
             atom = Atom.make(i.next(), atom);
         }
 

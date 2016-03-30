@@ -48,7 +48,7 @@ public class SummableMap<X, Y> implements Summable.SummableElement<Map<X, Y>> {
         Map<X, Y> m = new HashMap<>();
         m.putAll(map);
         m.putAll(w.value());
-        return new SummableMap<X, Y>(m);
+        return new SummableMap<>(m);
     }
 
     @Override

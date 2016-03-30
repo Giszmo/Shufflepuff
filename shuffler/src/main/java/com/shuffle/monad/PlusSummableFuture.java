@@ -9,8 +9,8 @@
 package com.shuffle.monad;
 
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Two summable futures whose results are to be added together.
