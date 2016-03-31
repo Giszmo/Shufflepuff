@@ -59,7 +59,7 @@ public class TestMockChannel {
     @Test
     public void testMockChannel() throws InterruptedException {
         // Create channels.
-        Map<Integer, MockChannel<String>> knownHosts = new HashMap<>();
+        Map<Integer, MockChannel<Integer, String>> knownHosts = new HashMap<>();
         Map<Integer, Connection<Integer, String>> connections = new HashMap<>();
         Map<Integer, MockListener> listeners = new HashMap<>();
         Map<Integer, MockReceiver> receivers = new HashMap<>();

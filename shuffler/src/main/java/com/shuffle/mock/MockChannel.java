@@ -20,22 +20,22 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Mock channel for testing purposes.
+ * Mock channel for testing purposes. 
  *
  * Created by Daniel Krawisz on 3/2/16.
  */
-public class MockChannel<X> implements Channel<Integer, X> {
-    final Map<Integer, MockChannel<X>> knownHosts;
-    final Map<Integer, MockPeer> peers = new HashMap<>();
+public class MockChannel<Q, X> implements Channel<Q, X> {
+    final Map<Q, MockChannel<Q, X>> knownHosts;
+    final Map<Q, MockPeer> peers = new HashMap<>();
     MockConnection connection;
-    Listener<Integer, X> listener;
+    Listener<Q, X> listener;
 
-    public MockChannel(Integer me, Map<Integer, MockChannel<X>> knownHosts) {
+    public MockChannel(Q me, Map<Q, MockChannel<Q, X>> knownHosts) {
         this.knownHosts = knownHosts;
         this.me = me;
     }
 
-    class MockConnection implements Connection<Integer, X> {
+    class MockConnection implements Connection<Q, X> {
 
         @Override
         public void close() {
@@ -54,17 +54,17 @@ public class MockChannel<X> implements Channel<Integer, X> {
         }
     }
 
-    public class MockPeer extends FundamentalPeer<Integer, X> {
+    public class MockPeer extends FundamentalPeer<Q, X> {
 
-        MockPeer(Integer you) {
+        MockPeer(Q you) {
             super(you);
         }
 
-        Session<Integer, X> getSession() {
+        Session<Q, X> getSession() {
             return currentSession;
         }
 
-        void setSession(Session<Integer, X> session) {
+        void setSession(Session<Q, X> session) {
             currentSession = session;
         }
 
@@ -76,17 +76,17 @@ public class MockChannel<X> implements Channel<Integer, X> {
         @Override
         // Open a session with a mock remote peer. Include a function which is to be
         // called when a X is received.
-        public synchronized Session<Integer, X> openSession(Receiver<X> receiver)
+        public synchronized Session<Q, X> openSession(Receiver<X> receiver)
                 throws InterruptedException {
             // if there is already an open session, fail.
             if (currentSession != null) {
                 return null;
             }
 
-            Integer identity = identity();
+            Q identity = identity();
 
             // Do we know this remote peer?
-            MockChannel<X> remote = knownHosts.get(identity);
+            MockChannel<Q, X> remote = knownHosts.get(identity);
             if (remote == null) {
                 return null;
             }
@@ -108,7 +108,7 @@ public class MockChannel<X> implements Channel<Integer, X> {
             return session;
         }
 
-        public class MockSession implements Session<Integer, X> {
+        public class MockSession implements Session<Q, X> {
             final Receiver<X> receiver;
             boolean closed;
 
@@ -139,16 +139,16 @@ public class MockChannel<X> implements Channel<Integer, X> {
             }
 
             @Override
-            public Peer<Integer, X> peer() {
+            public Peer<Q, X> peer() {
                 return MockPeer.this;
             }
         }
     }
 
-    final Integer me;
+    final Q me;
 
     @Override
-    public Peer<Integer, X> getPeer(Integer you) {
+    public Peer<Q, X> getPeer(Q you) {
         // Can't establish a connection to myself.
         if (you.equals(me)) {
             return null;
@@ -166,7 +166,7 @@ public class MockChannel<X> implements Channel<Integer, X> {
     }
 
     @Override
-    public Connection<Integer, X> open(Listener<Integer, X> listener) {
+    public Connection<Q, X> open(Listener<Q, X> listener) {
         if (this.listener != null) {
             return null;
         }
@@ -176,7 +176,7 @@ public class MockChannel<X> implements Channel<Integer, X> {
         return this.connection;
     }
 
-    Receiver<X> connect(Integer you, Receiver<X> receiver) throws InterruptedException {
+    Receiver<X> connect(Q you, Receiver<X> receiver) throws InterruptedException {
         Thread.sleep(100);
 
         if (listener == null || receiver == null) {

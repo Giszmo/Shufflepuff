@@ -174,9 +174,9 @@ public class TestConnect {
         Crypto crypto = new MockCrypto(new InsecureRandom(seed));
 
         // Create the set of known hosts for each player.
-        Map<Integer, MockChannel<Bytestring>> knownHosts = new ConcurrentHashMap<>();
+        Map<Integer, MockChannel<Integer, Bytestring>> knownHosts = new ConcurrentHashMap<>();
         for (int i = 1; i <= n; i++) {
-            MockChannel<Bytestring> channel = new MockChannel<>(i, knownHosts);
+            MockChannel<Integer, Bytestring> channel = new MockChannel<>(i, knownHosts);
             knownHosts.put(i, channel);
         }
 
