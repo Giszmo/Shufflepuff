@@ -16,7 +16,9 @@ import com.shuffle.monad.Either;
  * Created by Daniel Krawisz on 1/31/16.
  */
 public class Multiplexer<X, Y, Message> implements Channel<Either<X, Y>, Message> {
-    class EitherSession extends Either<Session<X, Message>, Session<Y, Message>> implements Session<Either<X, Y>, Message> {
+
+    class EitherSession extends Either<Session<X, Message>, Session<Y, Message>>
+            implements Session<Either<X, Y>, Message> {
 
         public EitherSession(Session<X, Message> x, Session<Y, Message> y) {
             super(x, y);
@@ -60,7 +62,8 @@ public class Multiplexer<X, Y, Message> implements Channel<Either<X, Y>, Message
         }
     }
 
-    class EitherPeer extends Either<Peer<X, Message>, Peer<Y, Message>> implements Peer<Either<X, Y>, Message> {
+    class EitherPeer extends Either<Peer<X, Message>, Peer<Y, Message>>
+            implements Peer<Either<X, Y>, Message> {
 
         public EitherPeer(Peer<X, Message> x, Peer<Y, Message> y) {
             super(x, y);
@@ -69,14 +72,16 @@ public class Multiplexer<X, Y, Message> implements Channel<Either<X, Y>, Message
         @Override
         public Either<X, Y> identity() {
             if (x == null) {
-                return new Either<X, Y>(null, y.identity());
+                return new Either<>(null, y.identity());
             }
 
-            return new Either<X, Y>(x.identity(), null);
+            return new Either<>(x.identity(), null);
         }
 
         @Override
-        public Session<Either<X, Y>, Message> openSession(Receiver<Message> receiver) throws InterruptedException {
+        public Session<Either<X, Y>, Message> openSession(Receiver<Message> receiver)
+                throws InterruptedException {
+
             if (x == null) {
                 Session<Y, Message> sy = y.openSession(receiver);
 
@@ -112,8 +117,13 @@ public class Multiplexer<X, Y, Message> implements Channel<Either<X, Y>, Message
         }
     }
 
-    Channel<X, Message> x;
-    Channel<Y, Message> y;
+    private final Channel<X, Message> x;
+    private final Channel<Y, Message> y;
+
+    public Multiplexer(Channel<X, Message> x, Channel<Y, Message> y) {
+        this.x = x;
+        this.y = y;
+    }
 
     @Override
     public Peer<Either<X, Y>, Message> getPeer(Either<X, Y> you) {

@@ -48,7 +48,7 @@ public class TestMockChannel {
     }
 
     public class MockReceiver implements Receiver<String> {
-        List<String> messages = new LinkedList<String>();
+        final List<String> messages = new LinkedList<>();
 
         @Override
         public void receive(String s) {
@@ -63,8 +63,8 @@ public class TestMockChannel {
         Map<Integer, Connection<Integer, String>> connections = new HashMap<>();
         Map<Integer, MockListener> listeners = new HashMap<>();
         Map<Integer, MockReceiver> receivers = new HashMap<>();
-        knownHosts.put(1, new MockChannel<String>(1, knownHosts));
-        knownHosts.put(2, new MockChannel<String>(2, knownHosts));
+        knownHosts.put(1, new MockChannel<>(1, knownHosts));
+        knownHosts.put(2, new MockChannel<>(2, knownHosts));
         listeners.put(1, new MockListener());
         listeners.put(2, new MockListener());
         receivers.put(1, new MockReceiver());

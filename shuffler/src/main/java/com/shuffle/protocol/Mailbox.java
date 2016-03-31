@@ -11,7 +11,6 @@ package com.shuffle.protocol;
 import com.shuffle.bitcoin.CryptographyError;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
-import com.shuffle.protocol.blame.Blame;
 import com.shuffle.protocol.blame.BlameException;
 import com.shuffle.protocol.blame.Reason;
 
@@ -26,21 +25,30 @@ import java.util.Queue;
 import java.util.Set;
 
 /**
- *
+ * A class for managing messages for the core protocol.
  *
  * Created by Daniel Krawisz on 1/22/16.
  */
 public class Mailbox {
-    final private Network network;
-    final private SessionIdentifier session;
-    final private SigningKey sk;
-    final private Collection<VerificationKey> players; // The keys representing all the players.
+    private final Network network;
+    private final SessionIdentifier session;
+    private final SigningKey sk;
+    private final Collection<VerificationKey> players; // The keys representing all the players.
 
-    final private Queue<SignedPacket> delivered = new LinkedList<>(); // A queue of messages that has been delivered that we aren't ready to look at yet.
-    final private Queue<SignedPacket> history = new LinkedList<>(); // All messages received (does not include those in delivered).
-    private Set<Reason> blame = new HashSet<Reason>();
+    // A queue of messages that has been delivered that we aren't ready to look at yet.
+    private final Queue<SignedPacket> delivered = new LinkedList<>();
 
-    public Mailbox(SessionIdentifier session, SigningKey sk, Collection<VerificationKey> players, Network network) {
+    // All messages received (does not include those in delivered).
+    private final Queue<SignedPacket> history = new LinkedList<>();
+
+    private final Set<Reason> blame = new HashSet<>();
+
+    public Mailbox(
+            SessionIdentifier session,
+            SigningKey sk,
+            Collection<VerificationKey> players,
+            Network network) {
+
         this.sk = sk;
         this.session = session;
         this.network = network;
@@ -51,16 +59,23 @@ public class Mailbox {
     public boolean blame(Reason reason) {
         return blame.contains(reason);
     }
-    public boolean blame() {return blame.size() > 0; }
 
-    public void broadcast(Message message, Phase phase) throws TimeoutError, CryptographyError, InvalidImplementationError {
+    public boolean blame() {
+        return blame.size() > 0;
+    }
+
+    public void broadcast(Message message, Phase phase)
+            throws TimeoutError, CryptographyError, InvalidImplementationError {
+
         for (VerificationKey to : players) {
             send(new Packet(message, session, phase, sk.VerificationKey(), to));
         }
     }
 
     // Send a message into the network.
-    public void send(Packet packet) throws TimeoutError, CryptographyError, InvalidImplementationError {
+    public void send(Packet packet)
+            throws TimeoutError, CryptographyError, InvalidImplementationError {
+
         SignedPacket signed = new SignedPacket(packet, sk.makeSignature(packet));
 
         // Don't send anything to a nonexistent player.
@@ -87,9 +102,10 @@ public class Mailbox {
     // Get the next message from the phase we're in. It's possible for other players to get
     // ahead under some circumstances, so we have to keep their messages to look at later.
     // It always returns a blame packet if encountered.
-    SignedPacket receiveNextPacket(Phase expectedPhase)
+    private SignedPacket receiveNextPacket(Phase expectedPhase)
             throws FormatException, CryptographyError,
-            InterruptedException, TimeoutError, InvalidImplementationError, ValueException, SignatureException {
+            InterruptedException, TimeoutError, InvalidImplementationError,
+            ValueException, SignatureException {
 
         SignedPacket found = null;
 
@@ -122,12 +138,16 @@ public class Mailbox {
 
                 // Check that this is someone in the same session of this protocol as us.
                 if (!session.equals(packet.session)) {
-                    throw new ValueException(ValueException.Values.session, session.toString(), packet.session.toString());
+                    throw new ValueException(
+                            ValueException.Values.session,
+                            session.toString(), packet.session.toString());
                 }
 
                 // Check that this message is intended for us.
                 if (!packet.recipient.equals(sk.VerificationKey())) {
-                    throw new ValueException(ValueException.Values.recipient, sk.VerificationKey().toString(), packet.recipient.toString());
+                    throw new ValueException(
+                            ValueException.Values.recipient,
+                            sk.VerificationKey().toString(), packet.recipient.toString());
                 }
 
                 if (expectedPhase == phase || phase == Phase.Blame) {
@@ -189,7 +209,9 @@ public class Mailbox {
 
         // Check signature.
         if (!from.equals(packet.signer)) {
-            throw new ValueException(ValueException.Values.phase, packet.phase.toString(), expectedPhase.toString());
+            throw new ValueException(
+                    ValueException.Values.phase,
+                    packet.phase.toString(), expectedPhase.toString());
         }
 
         return packet.message;
@@ -213,7 +235,9 @@ public class Mailbox {
 
         // Check signature.
         if (!from.equals(packet.signer)) {
-            throw new ValueException(ValueException.Values.phase, packet.phase.toString(), expectedPhase.toString());
+            throw new ValueException(
+                    ValueException.Values.phase,
+                    packet.phase.toString(), expectedPhase.toString());
         }
 
         return packet.message;
@@ -267,6 +291,17 @@ public class Mailbox {
         return messages;
     }
 
+    public Map<VerificationKey, Message> receiveFromMultiple(
+            Set<VerificationKey> from,
+            Phase expectedPhase
+    )
+            throws TimeoutError, CryptographyError, FormatException,
+            InvalidImplementationError, ValueException, InterruptedException,
+            ProtocolException, BlameException, SignatureException {
+
+        return receiveFromMultiple(from, expectedPhase, false);
+    }
+
     public Map<VerificationKey, Message> receiveFromMultipleBlameless(
             Set<VerificationKey> from,
             Phase expectedPhase
@@ -277,22 +312,11 @@ public class Mailbox {
 
         try {
             return receiveFromMultiple(from, expectedPhase, true);
-        } catch (BlameException e) {
+        } catch (BlameException ignored) {
         }
 
         assert true; // Should not reach here.
         return null;
-    }
-
-    public Map<VerificationKey, Message> receiveFromMultiple(
-            Set<VerificationKey> from,
-            Phase expectedPhase
-    )
-            throws TimeoutError, CryptographyError, FormatException,
-            InvalidImplementationError, ValueException, InterruptedException,
-            ProtocolException, BlameException, SignatureException {
-
-        return receiveFromMultiple(from, expectedPhase, false);
     }
 
     // When the blame phase it reached, there may be a lot of blame going around. This function
@@ -316,7 +340,7 @@ public class Mailbox {
         }
 
         // Then receive any more blame messages until there are no more.
-        while(true) {
+        while (true) {
             try {
                 SignedPacket next = receiveNextPacket(Phase.Blame);
                 blame.get(next.payload.signer).add(next);

@@ -21,7 +21,7 @@ import org.junit.Test;
 public class TestEquivocateAnnouncement extends TestShuffleMachine{
 
     // Run a test case for equivocation during phase 1.
-    public void EquivocateAnnouncement(
+    private void EquivocateAnnouncement(
             int numPlayers,
             InitialState.Equivocation[] equivocators
     ) {

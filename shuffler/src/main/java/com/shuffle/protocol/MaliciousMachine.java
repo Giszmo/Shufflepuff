@@ -340,7 +340,7 @@ public final class MaliciousMachine extends CoinShuffle {
         }
 
         @Override
-        // This is when we maliciously double spend the transaction. This could happen anywhere though.
+        // This is when we maliciously double spend the transaction.
         Matrix equivocationCheck(
                 Map<VerificationKey, EncryptionKey> encryptonKeys,
                 Queue<Address> newAddresses,
@@ -353,7 +353,7 @@ public final class MaliciousMachine extends CoinShuffle {
                     t.send();
                     spent = true;
                 } catch (CoinNetworkException e) {
-
+                    // TODO
                 }
             }
 
@@ -367,12 +367,12 @@ public final class MaliciousMachine extends CoinShuffle {
         }
     }
 
-    final Phase maliciousPhase;
-    final Set<VerificationKey> equivocate;
-    final int drop;
-    final int duplicate;
-    final boolean replaceNew;
-    final Transaction t;
+    private final Phase maliciousPhase;
+    private final Set<VerificationKey> equivocate;
+    private final int drop;
+    private final int duplicate;
+    private final boolean replaceNew;
+    private final Transaction t;
 
     @Override
     protected Machine run(Machine state, Address change, Network network)  {
@@ -421,10 +421,11 @@ public final class MaliciousMachine extends CoinShuffle {
                     }
                     break;
                 }
-                case VerificationAndSubmission:{
+                case VerificationAndSubmission: {
                     round = new DoubleSpender(state, numberedPlayers, change, mailbox, t);
                     break;
                 }
+                default: { }
             }
 
             if (round == null) {

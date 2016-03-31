@@ -5,7 +5,7 @@
 
 <!--
 
-    Checkstyle configurartion that checks the Google coding conventions from:
+    Checkstyle configuration that checks the Google coding conventions from:
     
     -  Google Java Style
        https://google-styleguide.googlecode.com/svn-history/r130/trunk/javaguide.html
@@ -75,7 +75,7 @@
                 value="WhitespaceAround: ''{0}'' is not preceded with whitespace."/>
         </module>
         <module name="OneStatementPerLine"/>
-        <module name="MultipleVariableDeclarations"/>
+        <!-- <module name="MultipleVariableDeclarations"/> -->
         <module name="ArrayTypeStyle"/>
         <module name="MissingSwitchDefault"/>
         <module name="FallThrough"/>
@@ -119,12 +119,12 @@
                 value="Local variable name ''{0}'' must match pattern ''{1}''."/>
         </module>
         <module name="ClassTypeParameterName">
-            <property name="format" value="(^[A-Z][0-9]?)$|([A-Z][a-zA-Z0-9]*[T]$)"/>
+            <property name="format" value="^[A-Z][a-zA-Z0-9]*$"/>
             <message key="name.invalidPattern"
                 value="Class type name ''{0}'' must match pattern ''{1}''."/>
         </module>
         <module name="MethodTypeParameterName">
-            <property name="format" value="(^[A-Z][0-9]?)$|([A-Z][a-zA-Z0-9]*[T]$)"/>
+            <property name="format" value="^[A-Z][a-zA-Z0-9]*$"/>
             <message key="name.invalidPattern"
                 value="Method type name ''{0}'' must match pattern ''{1}''."/>
         </module>
@@ -145,7 +145,7 @@
             <property name="caseIndent" value="4"/>
             <property name="throwsIndent" value="4"/>
             <property name="lineWrappingIndentation" value="4"/>
-            <property name="arrayInitIndent" value="2"/>
+            <property name="arrayInitIndent" value="8"/>
         </module>
         <module name="AbbreviationAsWordInName">
             <property name="ignoreFinal" value="false"/>

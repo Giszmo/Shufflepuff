@@ -16,10 +16,10 @@ import java.net.URL;
  *
  * Created by Daniel Krawisz on 1/29/16.
  */
-public class Identity {
-    public final String name;
-    public final InetSocketAddress ip;
-    public final URL url;
+class Identity {
+    private final String name;
+    private final InetSocketAddress ip;
+    private final URL url;
 
     public Identity(InetSocketAddress ip) {
         if (ip == null) {

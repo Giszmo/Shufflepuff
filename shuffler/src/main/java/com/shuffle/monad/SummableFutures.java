@@ -15,7 +15,7 @@ public class SummableFutures<X> implements Summable<X> {
 
     @Override
     public Zero<X> zero() {
-        return new SummableFutureZero<>();
+        return new SummableFutureZero<>(this);
     }
 
     @Override

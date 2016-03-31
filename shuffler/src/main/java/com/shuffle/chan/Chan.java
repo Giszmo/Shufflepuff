@@ -34,9 +34,9 @@ public class Chan<X> implements ReceiveChan<X>, SendChan<X> {
         }
     }
 
-    boolean sendClosed = false;
-    boolean receiveClosed = false;
-    LinkedBlockingQueue<Message> queue = new LinkedBlockingQueue<>();
+    private boolean sendClosed = false;
+    private boolean receiveClosed = false;
+    private final LinkedBlockingQueue<Message> queue = new LinkedBlockingQueue<>();
 
     private X receiveMessage(Message m) {
         if (m.x == null) {

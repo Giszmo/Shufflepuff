@@ -34,8 +34,8 @@ import java.util.Set;
 public class TestMailbox {
 
     static class BroadcastTestCase {
-        int recipients;
-        int sender;
+        public final int recipients;
+        public final int sender;
 
         public BroadcastTestCase(int recipients, int sender) {
             this.recipients = recipients;
@@ -61,7 +61,7 @@ public class TestMailbox {
             MockNetwork network = new MockNetwork();
 
             // make the set of players.
-            Set<VerificationKey> players = new HashSet<VerificationKey>();
+            Set<VerificationKey> players = new HashSet<>();
             for (int i = 1; i <= test.recipients; i ++) {
                 players.add(new MockVerificationKey(i));
             }
@@ -88,10 +88,10 @@ public class TestMailbox {
     }
 
     static class sendToTestCase {
-        int sender;
-        int recipient;
-        int players;
-        boolean success;
+        public final int sender;
+        public final int recipient;
+        public final int players;
+        public final boolean success;
 
         public sendToTestCase(int sender, int recipient, int players, boolean success) {
             this.sender = sender;
@@ -121,7 +121,7 @@ public class TestMailbox {
             MockNetwork network = new MockNetwork();
 
             // make the set of players.
-            Set<VerificationKey> players = new HashSet<VerificationKey>();
+            Set<VerificationKey> players = new HashSet<>();
             for (int j = 1; j <= test.players; j ++) {
                 players.add(new MockVerificationKey(j));
             }
@@ -155,11 +155,11 @@ public class TestMailbox {
     }
 
     static class receiveFromTestCase {
-        int[] players;
-        int requested; // The player that the message was expected from.
-        Phase phase; // The expected phase.
-        Packet packet;
-        Error e; // If an exception is expected.
+        public final int[] players;
+        public final int requested; // The player that the message was expected from.
+        public final Phase phase; // The expected phase.
+        public final Packet packet;
+        public final Error e; // If an exception is expected.
 
         public receiveFromTestCase(int[] players, int requested, Phase phase,Packet packet, Error e) {
             this.players = players;
@@ -188,7 +188,7 @@ public class TestMailbox {
             MockNetwork network = new MockNetwork();
 
             // make the set of players.
-            Set<VerificationKey> players = new HashSet<VerificationKey>();
+            Set<VerificationKey> players = new HashSet<>();
             for (int j = 1; j <= test.players.length; j ++) {
                 players.add(new MockVerificationKey(test.players[j - 1]));
             }
@@ -203,12 +203,12 @@ public class TestMailbox {
     }
 
     static class receiveFromMultipleTestCase {
-        final int players;
-        final int me;
-        final int[] receiveFrom; // Who are we expecting?
-        final int[] sendBefore; // Send before we call the function.
-        final int[] sendAfter; // Send after the function is called.
-        final boolean timeoutExpected;
+        public final int players;
+        public final int me;
+        public final int[] receiveFrom; // Who are we expecting?
+        public final int[] sendBefore; // Send before we call the function.
+        public final int[] sendAfter; // Send after the function is called.
+        public final boolean timeoutExpected;
 
         public receiveFromMultipleTestCase(int players, int me, int[] receiveFrom, int[] sendBefore, int[] sendAfter) {
             this.players = players;
@@ -259,7 +259,7 @@ public class TestMailbox {
             MockNetwork network = new MockNetwork();
 
             // make the set of players.
-            Set<VerificationKey> players = new HashSet<VerificationKey>();
+            Set<VerificationKey> players = new HashSet<>();
             for (int j = 1; j <= test.players; j ++) {
                 players.add(new MockVerificationKey(j));
             }

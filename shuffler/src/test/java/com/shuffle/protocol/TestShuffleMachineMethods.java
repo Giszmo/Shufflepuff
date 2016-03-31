@@ -23,13 +23,13 @@ import com.shuffle.mock.MockEncryptionKey;
 import com.shuffle.mock.MockMessage;
 import com.shuffle.mock.MockMessageFactory;
 import com.shuffle.mock.MockNetwork;
-import com.shuffle.mock.RandomSequence;
 import com.shuffle.mock.MockSessionIdentifier;
 import com.shuffle.mock.MockSigningKey;
 import com.shuffle.mock.MockVerificationKey;
+import com.shuffle.mock.RandomSequence;
 
-import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -50,9 +50,9 @@ import java.util.TreeSet;
  * Created by Daniel Krawisz on 12/5/15.
  */
 public class TestShuffleMachineMethods {
-    private static Logger log= LogManager.getLogger(TestShuffleMachineMethods.class);
+    private static final Logger log = LogManager.getLogger(TestShuffleMachineMethods.class);
 
-    public CoinShuffle.Round net(
+    private CoinShuffle.Round net(
             int seed,
             MockSessionIdentifier session,
             MockSigningKey sk,
@@ -71,11 +71,11 @@ public class TestShuffleMachineMethods {
     }
 
     static class playerSetTestCase {
-        int i; // Minimum number blockchain take.
-        int n; // Maximum number blockchain take.
-        int N; // Number of players.
-        int player; // Which player is us.
-        int[] expected; // Which keys should have been returned.
+        final int i; // Minimum number blockchain take.
+        final int n; // Maximum number blockchain take.
+        final int N; // Number of players.
+        final int player; // Which player is us.
+        final int[] expected; // Which keys should have been returned.
 
         playerSetTestCase(int i, int n, int N, int player, int[] expected) {
             this.i = i;
@@ -124,7 +124,7 @@ public class TestShuffleMachineMethods {
         int i = 0;
         for(playerSetTestCase test : tests) {
             // make the set of players.
-            TreeMap<Integer, VerificationKey> players = new TreeMap<Integer, VerificationKey>();
+            TreeMap<Integer, VerificationKey> players = new TreeMap<>();
             for (int j = 1; j <= test.N; j ++) {
                 players.put(j, new MockVerificationKey(j));
             }
@@ -146,9 +146,9 @@ public class TestShuffleMachineMethods {
     }
 
     private class shuffleTestCase {
-        int[] randomSequence;
-        int[] input;
-        int[] expected;
+        final int[] randomSequence;
+        final int[] input;
+        final int[] expected;
 
         shuffleTestCase(int[] randomSequence, int[] input, int[] expected) {
             this.randomSequence = randomSequence;
@@ -258,8 +258,8 @@ public class TestShuffleMachineMethods {
     }
 
     private class areEqualTestCase {
-        List<Message> input = new LinkedList<>();;
-        boolean expected;
+        final List<Message> input = new LinkedList<>();
+        final boolean expected;
 
         areEqualTestCase(int[] input, boolean expected) {
 
@@ -502,7 +502,7 @@ public class TestShuffleMachineMethods {
                 try {
                     round.readNewAddresses(input);
                     Assert.fail();
-                } catch (FormatException e) {
+                } catch (FormatException ignored) {
                 }
             }
         } catch (CryptographyError | InvalidParticipantSetException | InvalidImplementationError e) {

@@ -9,8 +9,8 @@
 package com.shuffle.monad;
 
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Two summable futures whose results are to be added together.
@@ -18,7 +18,7 @@ import java.util.concurrent.TimeoutException;
  * Created by Daniel Krawisz on 3/2/16.
  */
 public class PlusSummableFuture<X> extends SummableFutureAbstract<X> {
-    final SummableFuture<X> fore, aft;
+    private final SummableFuture<X> fore, aft;
 
     public PlusSummableFuture(SummableFuture<X> fore, SummableFuture<X> aft) {
         if (fore == null || aft == null) {

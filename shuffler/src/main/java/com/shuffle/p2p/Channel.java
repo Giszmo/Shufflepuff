@@ -11,12 +11,6 @@ package com.shuffle.p2p;
 /**
  * A channel through which connections can be created to other peers.
  *
- * Created by Daniel Krawisz on 1/25/16.
- */
-
-import java.io.IOException;
-
-/**
  * Identity -- the object used to identify a particular tcppeer.
  *
  * Message  -- the object which will be sent back and forth over this channel.

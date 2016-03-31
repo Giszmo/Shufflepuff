@@ -8,7 +8,6 @@
 
 package com.shuffle.protocol;
 
-import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.VerificationKey;
 
 import java.io.Serializable;
@@ -22,13 +21,19 @@ import java.io.Serializable;
  */
 public class Packet implements Serializable {
 
-    final public Message message;
-    final public SessionIdentifier session;
-    final public Phase phase;
-    final public VerificationKey signer;
-    final public VerificationKey recipient;
+    public final Message message;
+    public final SessionIdentifier session;
+    public final Phase phase;
+    public final VerificationKey signer;
+    public final VerificationKey recipient;
 
-    public Packet(Message message, SessionIdentifier session, Phase phase, VerificationKey signer, VerificationKey recipient) {
+    public Packet(
+            Message message,
+            SessionIdentifier session,
+            Phase phase,
+            VerificationKey signer,
+            VerificationKey recipient
+    ) {
         if (session == null || phase == null || signer == null || recipient == null) {
             throw new NullPointerException();
         }
@@ -68,6 +73,7 @@ public class Packet implements Serializable {
 
     @Override
     public String toString() {
-        return "{" + message.toString() + ", " + session.toString() + ", " + phase.toString() + ", " + recipient.toString() + ", " + signer.toString() + "}";
+        return "{" + message.toString() + ", " + session.toString() + ", " + phase.toString() + ", "
+                + recipient.toString() + ", " + signer.toString() + "}";
     }
 }

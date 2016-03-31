@@ -26,7 +26,7 @@ import java.util.Map;
  */
 public class MockChannel<X> implements Channel<Integer, X> {
     final Map<Integer, MockChannel<X>> knownHosts;
-    Map<Integer, MockPeer> peers = new HashMap<>();
+    final Map<Integer, MockPeer> peers = new HashMap<>();
     MockConnection connection;
     Listener<Integer, X> listener;
 
@@ -109,7 +109,7 @@ public class MockChannel<X> implements Channel<Integer, X> {
         }
 
         public class MockSession implements Session<Integer, X> {
-            Receiver<X> receiver;
+            final Receiver<X> receiver;
             boolean closed;
 
             MockSession(Receiver<X> receiver) {

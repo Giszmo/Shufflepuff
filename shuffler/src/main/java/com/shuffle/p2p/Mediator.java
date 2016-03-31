@@ -8,15 +8,8 @@
 
 package com.shuffle.p2p;
 
-import com.shuffle.p2p.Channel;
-import com.shuffle.p2p.Listener;
-import com.shuffle.p2p.Peer;
-import com.shuffle.player.Connect;
-
-import java.io.IOException;
-
 /**
- * TODO
+ * A single session that acts as a mediator for many virtual sessions.
  *
  * Created by Daniel Krawisz on 1/26/16.
  */

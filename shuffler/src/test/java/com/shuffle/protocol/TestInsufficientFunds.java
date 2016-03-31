@@ -17,7 +17,7 @@ import org.junit.Test;
  */
 public class TestInsufficientFunds extends TestShuffleMachine{
 
-    public void InsufficientFunds(
+    private void InsufficientFunds(
             int numPlayers,
             int[] deadbeats,
             int[] poor,

@@ -10,20 +10,19 @@ package com.shuffle.player;
 
 import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.chan.Chan;
 import com.shuffle.p2p.Bytestring;
 import com.shuffle.p2p.Channel;
 import com.shuffle.p2p.Connection;
 import com.shuffle.p2p.Peer;
 import com.shuffle.p2p.Receiver;
 import com.shuffle.p2p.Session;
-import com.shuffle.chan.Chan;
 import com.shuffle.protocol.FormatException;
 import com.shuffle.protocol.InvalidImplementationError;
 import com.shuffle.protocol.SignedPacket;
 import com.shuffle.protocol.TimeoutError;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
@@ -37,7 +36,7 @@ import java.util.concurrent.TimeUnit;
  * Created by Daniel Krawisz on 2/16/16.
  */
 public class Connect<Identity> {
-    final Crypto crypto;
+    private final Crypto crypto;
 
     public Connect(Crypto crypto) {
         this.crypto = crypto;
@@ -62,7 +61,7 @@ public class Connect<Identity> {
         public Receiver<Bytestring> newSession(Session<Identity, Bytestring> session) {
             VerificationKey key = keys.get(session.peer().identity());
 
-            if(peers.remove(session.peer())) {
+            if (peers.remove(session.peer())) {
                 players.put(key, session);
             }
 
@@ -101,7 +100,7 @@ public class Connect<Identity> {
     // and the one for receiving connections. We set it in its own class to allow for some
     // synchronized functions.
     private class Peers {
-        final private Queue<Peer<Identity, Bytestring>> peers = new LinkedList<>();
+        private final Queue<Peer<Identity, Bytestring>> peers = new LinkedList<>();
 
         private Peers() { }
 
@@ -136,7 +135,7 @@ public class Connect<Identity> {
         }
     }
 
-    Connection<Identity, Bytestring> connection;
+    private Connection<Identity, Bytestring> connection;
 
     // Connect to all peers; remote peers can be initiating connections to us as well.
     public com.shuffle.protocol.Network connect(
@@ -191,7 +190,7 @@ public class Connect<Identity> {
         final Retries retries = new Retries();
 
         int l = 0;
-        while(true) {
+        while (true) {
             Peer<Identity, Bytestring> peer = peers.peek();
             if (peer == null) {
                 break;
@@ -212,7 +211,7 @@ public class Connect<Identity> {
 
             int r = retries.increment(peer);
 
-            if(r > maxRetries) {
+            if (r > maxRetries) {
                 // Maximum number of retries has prevented us from making all connections.
                 // TODO In some instances, it should be possible to run coin shuffle with fewer
                 // players, so we should still return the network object.
@@ -240,12 +239,13 @@ public class Connect<Identity> {
 
     /**
      * An implementation of Network which connects the interface defined in com.shuffle.protocol
-     * to the channel through which the communication takes place. It manages the opening of channels
-     * and the marshalling of messages.
+     * to the channel through which the communication takes place. It manages the opening of
+     * channels and the marshalling of messages.
      *
      * Created by Daniel Krawisz on 2/13/16.
      */
-    private static class Network<Identity> implements com.shuffle.protocol.Network, Receiver<Bytestring> {
+    private static class Network<Identity>
+            implements com.shuffle.protocol.Network, Receiver<Bytestring> {
 
         final Map<VerificationKey, Session<Identity, Bytestring>> players;
         final Marshaller<Bytestring> marshall;
@@ -260,25 +260,18 @@ public class Connect<Identity> {
 
         }
 
-        // Receiver<Bytestring>.
-        //
-        // We collect all messages from everybody in a central queue.
-
-        @Override
-        public void receive(Bytestring bytestring) {
-            received.send(bytestring);
-        }
-
         // Network.
         //
-        // This is the part that connects to the protocol. It allows the protocol to send and receive
-        // when it needs to without thinking about what's going on underneith.
+        // This is the part that connects to the protocol. It allows the protocol to send and
+        // receive when it needs to without thinking about what's going on underneith.
 
         @Override
-        public void sendTo(VerificationKey to, SignedPacket packet) throws InvalidImplementationError, TimeoutError {
+        public void sendTo(VerificationKey to, SignedPacket packet)
+                throws InvalidImplementationError, TimeoutError {
+
             Session<Identity, Bytestring> session = players.get(to);
 
-            if(session == null) {
+            if (session == null) {
                 throw new InvalidImplementationError();
             }
 
@@ -286,9 +279,21 @@ public class Connect<Identity> {
         }
 
         @Override
-        public SignedPacket receive() throws TimeoutError, InvalidImplementationError, InterruptedException, FormatException {
+        public SignedPacket receive()
+                throws TimeoutError, InvalidImplementationError,
+                InterruptedException, FormatException {
+
             Bytestring str = received.receive(timeout, TimeUnit.SECONDS);
             return marshall.unmarshall(str);
+        }
+
+        // Receiver<Bytestring>.
+        //
+        // We collect all messages from everybody in a central queue.
+
+        @Override
+        public void receive(Bytestring bytestring) {
+            received.send(bytestring);
         }
     }
 }

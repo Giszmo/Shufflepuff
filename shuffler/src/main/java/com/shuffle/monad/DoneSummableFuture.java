@@ -9,8 +9,8 @@
 package com.shuffle.monad;
 
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.TimeUnit;
 
 /**
  * A summable future that is already done.
@@ -18,7 +18,7 @@ import java.util.concurrent.TimeoutException;
  * Created by Daniel Krawisz on 3/2/16.
  */
 public class DoneSummableFuture<X> extends SummableFutureAbstract<X> {
-    final X x;
+    private final X x;
 
     public DoneSummableFuture(X x) {
         this.x = x;

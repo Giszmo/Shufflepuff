@@ -23,7 +23,7 @@ public class TestShuffleMischief extends TestShuffleMachine {
     }
 
     // Run a test case for a player who drops an address in phase 2.
-    public void DropAddress(int numPlayers, int[][] drop, int[][] replaceNew, int[][] replaceDuplicate) {
+    private void DropAddress(int numPlayers, int[][] drop, int[][] replaceNew, int[][] replaceDuplicate) {
         String description = "case " + caseNo + "; shuffle phase mischief test case.";
         check(description, new NoShuffleTestCase(description).dropAddressTestCase(numPlayers, drop, replaceNew, replaceDuplicate));
     }

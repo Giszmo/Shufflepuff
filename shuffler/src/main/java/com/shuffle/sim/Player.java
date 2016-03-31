@@ -11,6 +11,7 @@ package com.shuffle.sim;
 import com.shuffle.bitcoin.CoinNetworkException;
 import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.chan.Chan;
 import com.shuffle.mock.InsecureRandom;
 import com.shuffle.mock.MockCrypto;
 import com.shuffle.mock.MockMarshaller;
@@ -18,9 +19,8 @@ import com.shuffle.mock.MockMessageFactory;
 import com.shuffle.mock.MockSessionIdentifier;
 import com.shuffle.p2p.Bytestring;
 import com.shuffle.p2p.Channel;
-import com.shuffle.p2p.TCPChannel;
+import com.shuffle.p2p.TcpChannel;
 import com.shuffle.player.Connect;
-import com.shuffle.chan.Chan;
 import com.shuffle.protocol.CoinShuffle;
 import com.shuffle.protocol.Machine;
 import com.shuffle.protocol.Phase;
@@ -45,7 +45,7 @@ import java.util.regex.Pattern;
  *
  * Created by Daniel Krawisz on 2/3/16.
  */
-public class Player implements Runnable {
+class Player implements Runnable {
     private static class Parameters {
         public final int port;
         public final int threads;
@@ -62,10 +62,10 @@ public class Player implements Runnable {
         }
     }
 
-    final Chan<Machine> msg = new Chan<>();
-    final Executor exec;
-    final Parameters param;
-    final PrintStream stream;
+    private final Chan<Machine> msg = new Chan<>();
+    private final Executor exec;
+    private final Parameters param;
+    private final PrintStream stream;
 
     private Player(Parameters param, PrintStream stream) {
         this.param = param;
@@ -79,9 +79,10 @@ public class Player implements Runnable {
         return new String(encoded, encoding);
     }
 
-    static Map<String, Integer> readOptions(String[] args) {
+    private static Map<String, Integer> readOptions(String[] args) {
         if (args.length % 2 != 0) {
-            System.out.println("Invalid argument list: " + args.length + " elements found; should be even.");
+            System.out.println("Invalid argument list: " + args.length
+                    + " elements found; should be even.");
             throw new IllegalArgumentException();
         }
 
@@ -137,7 +138,7 @@ public class Player implements Runnable {
         return map;
     }
 
-    public static Parameters readParameters(String[] args) {
+    private static Parameters readParameters(String[] args) {
         Map<String, Integer> options = readOptions(args);
         Map<InetSocketAddress, VerificationKey> identities = new HashMap<>();
         Crypto crypto = new MockCrypto(new InsecureRandom(7777));
@@ -153,7 +154,7 @@ public class Player implements Runnable {
         int port = options.get("-minport");
         try {
             for (VerificationKey vk : keys) {
-                    identities.put(new InetSocketAddress(InetAddress.getLocalHost(), port), vk);
+                identities.put(new InetSocketAddress(InetAddress.getLocalHost(), port), vk);
                 port ++;
             }
         } catch (UnknownHostException e) {
@@ -183,7 +184,7 @@ public class Player implements Runnable {
 
     }
 
-    void report() {
+    private void report() {
         try {
             Machine machine = msg.receive();
             stream.println("Protocol has started.");
@@ -209,12 +210,14 @@ public class Player implements Runnable {
     }
 
     private Machine play() {
-        Channel<InetSocketAddress, Bytestring> tcp = new TCPChannel(param.port, exec);
+        Channel<InetSocketAddress, Bytestring> tcp = new TcpChannel(param.port, exec);
 
-        Connect<InetSocketAddress> connect = (Connect<InetSocketAddress>) new Connect<InetSocketAddress>(param.init.crypto());
+        Connect<InetSocketAddress> connect = new Connect<>(param.init.crypto());
 
         try {
-            return new CoinShuffle(new MockMessageFactory(), param.init.crypto(), param.init.coin()).runProtocol(
+            return new CoinShuffle(
+                    new MockMessageFactory(), param.init.crypto(), param.init.coin()).runProtocol(
+
                     param.init.getSession(),
                     param.init.getAmount(),
                     param.init.sk,
