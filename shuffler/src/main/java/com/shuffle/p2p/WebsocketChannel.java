@@ -12,16 +12,16 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import javax.websocket.DeploymentException;
-import javax.websocket.MessageHandler;
 
 import javax.websocket.ClientEndpoint;
 import javax.websocket.CloseReason;
 import javax.websocket.ContainerProvider;
+import javax.websocket.DeploymentException;
+import javax.websocket.MessageHandler;
 import javax.websocket.OnClose;
 import javax.websocket.OnOpen;
 import javax.websocket.Session;
@@ -37,7 +37,7 @@ import javax.websocket.WebSocketContainer;
  * A manager for websocket connections.
  */
 
-public class WebsocketChannel implements Channel<URI, Bytestring>{
+public class WebsocketChannel implements Channel<URI, Bytestring> {
 
     /**
      *  Necessary class to use the javax.websocket library.
@@ -49,8 +49,8 @@ public class WebsocketChannel implements Channel<URI, Bytestring>{
         Session userSession = null;
         URI uri;
 
-        public WebsocketClientEndpoint(URI endpointURI) {
-            this.uri = endpointURI;
+        public WebsocketClientEndpoint(URI endpointUri) {
+            this.uri = endpointUri;
         }
 
         public Session newSession() throws RuntimeException, DeploymentException, IOException {
@@ -95,7 +95,9 @@ public class WebsocketChannel implements Channel<URI, Bytestring>{
 
         // We don't want to overwrite a session that already exists, so this is in a synchronized
         // function. This is for creating new sessions.
-        public synchronized WebsocketPeer.WebsocketSession putNewSession(URI identity, WebsocketPeer peer) throws Exception {
+        public synchronized WebsocketPeer.WebsocketSession putNewSession(URI identity,
+                                                                         WebsocketPeer peer)
+                throws Exception {
             WebsocketPeer.WebsocketSession openSession = openSessions.get(identity);
             if (openSession != null) {
                 if (!openSession.closed()) {
@@ -143,21 +145,23 @@ public class WebsocketChannel implements Channel<URI, Bytestring>{
             return this;
         }
 
-        WebsocketPeer.WebsocketSession newSession() throws DeploymentException{
+        WebsocketPeer.WebsocketSession newSession() throws DeploymentException {
             URI identity = identity();
             try {
                 WebsocketClientEndpoint clientEndPoint = new WebsocketClientEndpoint(identity);
-                WebsocketPeer.WebsocketSession session = new WebsocketPeer(identity).new WebsocketSession(clientEndPoint.newSession());
+                WebsocketPeer.WebsocketSession session = new WebsocketPeer(identity).new
+                        WebsocketSession(clientEndPoint.newSession());
                 return session;
-            } catch(IOException e) {
+            } catch (IOException e) {
                 return null;
             }
         }
 
         @Override
-        public synchronized com.shuffle.p2p.Session<URI, Bytestring> openSession(final Receiver<Bytestring> receiver) {
+        public synchronized com.shuffle.p2p.Session<URI, Bytestring> openSession(
+                final Receiver<Bytestring> receiver) {
             // Don't allow sessions to be opened when we're opening or closing the channel.
-            synchronized (lock) {}
+            synchronized (lock) { }
 
             if (openSessions == null) {
                 return null;
@@ -183,7 +187,7 @@ public class WebsocketChannel implements Channel<URI, Bytestring>{
                 });
 
                 return session;
-            } catch(Exception e) {
+            } catch (Exception e) {
                 return null;
             }
 
@@ -193,14 +197,14 @@ public class WebsocketChannel implements Channel<URI, Bytestring>{
         public class WebsocketSession implements com.shuffle.p2p.Session<URI, Bytestring> {
             javax.websocket.Session session;
 
-            public WebsocketSession (javax.websocket.Session session) throws IOException {
+            public WebsocketSession(javax.websocket.Session session) throws IOException {
                 this.session = session;
             }
 
             @Override
             public synchronized boolean send(Bytestring message) {
                 // Don't allow sending messages while we're opening or closing the channel.
-                synchronized (lock) {}
+                synchronized (lock) { }
 
                 if (!session.isOpen()) {
                     return false;
@@ -220,7 +224,7 @@ public class WebsocketChannel implements Channel<URI, Bytestring>{
             public synchronized void close() {
                 try {
                     session.close();
-                } catch(IOException e) {
+                } catch (IOException e) {
 
                 }
                 session = null;

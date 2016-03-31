@@ -367,6 +367,7 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
                         openSessions.closeAll();
                         openSessions = null;
                     } catch (IOException ignored) {
+
                     }
                     server = null;
                     running = false;
