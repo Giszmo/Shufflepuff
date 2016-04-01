@@ -26,39 +26,39 @@ public class Multiplexer<X, Y, Message> implements Channel<Either<X, Y>, Message
 
         @Override
         public boolean send(Message message) throws InterruptedException {
-            if (x == null) {
-                return y.send(message);
+            if (first == null) {
+                return second.send(message);
             }
 
-            return x.send(message);
+            return first.send(message);
         }
 
         @Override
         public void close() {
-            if (x == null) {
-                y.close();
+            if (first == null) {
+                second.close();
                 return;
             }
 
-            x.close();
+            first.close();
         }
 
         @Override
         public boolean closed() {
-            if (x == null) {
-                return y.closed();
+            if (first == null) {
+                return second.closed();
             }
 
-            return x.closed();
+            return first.closed();
         }
 
         @Override
         public Peer<Either<X, Y>, Message> peer() {
-            if (x == null) {
-                return new EitherPeer(null, y.peer());
+            if (first == null) {
+                return new EitherPeer(null, second.peer());
             }
 
-            return new EitherPeer(x.peer(), null);
+            return new EitherPeer(first.peer(), null);
         }
     }
 
@@ -71,26 +71,26 @@ public class Multiplexer<X, Y, Message> implements Channel<Either<X, Y>, Message
 
         @Override
         public Either<X, Y> identity() {
-            if (x == null) {
-                return new Either<>(null, y.identity());
+            if (first == null) {
+                return new Either<>(null, second.identity());
             }
 
-            return new Either<>(x.identity(), null);
+            return new Either<>(first.identity(), null);
         }
 
         @Override
         public Session<Either<X, Y>, Message> openSession(Receiver<Message> receiver)
                 throws InterruptedException {
 
-            if (x == null) {
-                Session<Y, Message> sy = y.openSession(receiver);
+            if (first == null) {
+                Session<Y, Message> sy = second.openSession(receiver);
 
                 if (sy == null) return null;
 
                 return new EitherSession(null, sy);
             }
 
-            Session<X, Message> sx = x.openSession(receiver);
+            Session<X, Message> sx = first.openSession(receiver);
 
             if (sx == null) return null;
 
@@ -99,21 +99,21 @@ public class Multiplexer<X, Y, Message> implements Channel<Either<X, Y>, Message
 
         @Override
         public boolean open() {
-            if (x == null) {
-                return y.open();
+            if (first == null) {
+                return second.open();
             }
 
-            return x.open();
+            return first.open();
         }
 
         @Override
         public void close() {
-            if (x == null) {
-                y.close();
+            if (first == null) {
+                second.close();
                 return;
             }
 
-            x.close();
+            first.close();
         }
     }
 
@@ -127,15 +127,15 @@ public class Multiplexer<X, Y, Message> implements Channel<Either<X, Y>, Message
 
     @Override
     public Peer<Either<X, Y>, Message> getPeer(Either<X, Y> you) {
-        if (you.x == null) {
-            Peer<Y, Message> py = y.getPeer(you.y);
+        if (you.first == null) {
+            Peer<Y, Message> py = y.getPeer(you.second);
 
             if (py == null) return null;
 
             return new EitherPeer(null, py);
         }
 
-        Peer<X, Message> px = x.getPeer(you.x);
+        Peer<X, Message> px = x.getPeer(you.first);
 
         if (px == null) return null;
 

@@ -10,6 +10,7 @@ package com.shuffle.sim;
 
 import com.shuffle.bitcoin.CoinNetworkException;
 import com.shuffle.bitcoin.Crypto;
+import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.chan.BasicChan;
 import com.shuffle.chan.Chan;
@@ -23,8 +24,14 @@ import com.shuffle.p2p.Channel;
 import com.shuffle.p2p.TcpChannel;
 import com.shuffle.player.Connect;
 import com.shuffle.protocol.CoinShuffle;
+import com.shuffle.protocol.FormatException;
+import com.shuffle.protocol.InvalidParticipantSetException;
 import com.shuffle.protocol.Machine;
 import com.shuffle.protocol.Phase;
+import com.shuffle.protocol.SignatureException;
+import com.shuffle.protocol.TimeoutException;
+import com.shuffle.protocol.ValueException;
+import com.shuffle.protocol.blame.Matrix;
 
 import java.io.IOException;
 import java.io.PrintStream;
@@ -210,8 +217,9 @@ class Player implements Runnable {
         }
     }
 
-    private Machine play() {
-        Channel<InetSocketAddress, Bytestring> tcp = new TcpChannel(InetSocketAddress.createUnresolved("localhost", param.port), exec);
+    private Transaction play() {
+        Channel<InetSocketAddress, Bytestring> tcp =
+                new TcpChannel(InetSocketAddress.createUnresolved("localhost", param.port), exec);
 
         Connect<InetSocketAddress> connect = new Connect<>(param.init.crypto());
 
@@ -227,8 +235,18 @@ class Player implements Runnable {
                     connect.connect(tcp, param.identities, new MockMarshaller(), 1, 3),
                     msg
             );
-        } catch (IOException | InterruptedException | CoinNetworkException e) {
+        } catch (IOException
+                | InterruptedException
+                | CoinNetworkException
+                | TimeoutException
+                | SignatureException
+                | FormatException
+                | ValueException
+                | InvalidParticipantSetException e) {
             // TODO handle these problems appropriately.
+            return null;
+        } catch (Matrix matrix) {
+            matrix.printStackTrace();
             return null;
         } finally {
             connect.shutdown();

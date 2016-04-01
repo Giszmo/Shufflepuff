@@ -377,7 +377,7 @@ public class TestShuffleMachineMethods {
     }
 
     @Test
-    public void testDecryptAll() throws InterruptedException {
+    public void testDecryptAll() throws InterruptedException, TimeoutException {
         MockCrypto crypto = new MockCrypto(new InsecureRandom(56));
         MessageFactory messages = new MockMessageFactory();
 

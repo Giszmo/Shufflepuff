@@ -22,7 +22,7 @@ import java.util.Map;
  * The matrix represents a set blame accusations from one player to another along with
  * the evidence to prove it.
  */
-public class Matrix {
+public class Matrix extends Throwable {
     private static final Logger log = LogManager.getLogger(Matrix.class);
 
     // Who blames who?
@@ -101,7 +101,13 @@ public class Matrix {
     }
 
     public boolean isEmpty() {
-        return blame.isEmpty();
+        if (blame.isEmpty()) return true;
+
+        for (Map<VerificationKey, Evidence> row : blame.values()) {
+            if (!row.isEmpty()) return false;
+        }
+
+        return true;
     }
 
     @Override

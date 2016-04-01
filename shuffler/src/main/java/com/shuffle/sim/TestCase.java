@@ -10,9 +10,12 @@ package com.shuffle.sim;
 
 import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.SigningKey;
+import com.shuffle.bitcoin.Transaction;
+import com.shuffle.monad.Either;
 import com.shuffle.protocol.Machine;
 import com.shuffle.protocol.MessageFactory;
 import com.shuffle.protocol.SessionIdentifier;
+import com.shuffle.protocol.blame.Matrix;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
@@ -31,10 +34,12 @@ public abstract class TestCase {
 
     public static final class Mismatch {
         public final SigningKey player;
-        public final Machine.Expected expected;
-        public final Machine result;
+        public final Matrix expected; // Can be null.
+        public final Matrix result;   // Can be null.
 
-        public Mismatch(SigningKey player, Machine.Expected expected, Machine result) {
+        public Mismatch(SigningKey player, Matrix expected, Matrix result) {
+            if (player == null) throw new NullPointerException();
+            
             this.player = player;
             this.expected = expected;
             this.result = result;
@@ -43,28 +48,28 @@ public abstract class TestCase {
 
     // Returns a map containing the set of results which did not match expectations. An empty map
     // represents a successful test.
-    public static Map<SigningKey, Mismatch> test(InitialState init, MessageFactory messages) {
+    public static Map<SigningKey, Mismatch> test(InitialState init) {
 
         // Run the simulation.
-        Map<SigningKey, Machine> results = Simulator.run(init, messages);
+        Map<SigningKey, Either<Transaction, Matrix>> results = Simulator.run(init);
 
         if (results == null) {
             return null;
         }
 
         // Get the expected values.
-        Map<SigningKey, Machine.Expected> expected = init.expected();
+        Map<SigningKey, Matrix> expected = init.expected();
 
         // The result to be returned.
         Map<SigningKey, Mismatch> mismatch = new HashMap<>();
 
         // Check that the map of error states returned matches that which was expected.
-        for (Map.Entry<SigningKey, Machine.Expected> ex : expected.entrySet()) {
+        for (Map.Entry<SigningKey, Matrix> ex : expected.entrySet()) {
             SigningKey key = ex.getKey();
-            Machine result = results.get(key);
-            Machine.Expected expect = ex.getValue();
+            Matrix result = results.get(key).second;
+            Matrix expect = ex.getValue();
 
-            if (result == null || !expect.match(result)) {
+            if (!expect.match(result)) {
                 log.error("  expected " + expect);
                 log.error("  result   " + result);
                 mismatch.put(key, new Mismatch(key, expect, result));

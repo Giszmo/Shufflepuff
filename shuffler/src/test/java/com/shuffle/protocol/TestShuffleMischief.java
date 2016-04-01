@@ -31,7 +31,7 @@ public class TestShuffleMischief extends TestShuffleMachine {
             int[][] replaceDuplicate
     ) {
         String description = "case " + caseNo + "; shuffle phase mischief test case.";
-        check(description, new NoShuffleTestCase(description).dropAddressTestCase(
+        check(new NoShuffleTestCase(description).dropAddressTestCase(
                 numPlayers, drop, replaceNew, replaceDuplicate
         ));
     }

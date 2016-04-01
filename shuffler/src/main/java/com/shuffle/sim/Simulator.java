@@ -9,20 +9,21 @@
 package com.shuffle.sim;
 
 import com.shuffle.bitcoin.SigningKey;
+import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.chan.BasicChan;
 import com.shuffle.chan.Chan;
 import com.shuffle.mock.MockMessageFactory;
+import com.shuffle.monad.Either;
 import com.shuffle.monad.NaturalSummableFuture;
 import com.shuffle.monad.SummableFuture;
 import com.shuffle.monad.SummableFutureZero;
 import com.shuffle.monad.SummableMaps;
 import com.shuffle.protocol.InvalidImplementationError;
-import com.shuffle.protocol.Machine;
 import com.shuffle.protocol.MessageFactory;
 import com.shuffle.protocol.Network;
 import com.shuffle.protocol.SignedPacket;
-import com.shuffle.protocol.TimeoutError;
+import com.shuffle.protocol.blame.Matrix;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
@@ -62,20 +63,13 @@ public final class Simulator {
         public void sendTo(
                 VerificationKey to,
                 SignedPacket packet
-        ) throws InvalidImplementationError, TimeoutError {
+        ) throws InvalidImplementationError, InterruptedException {
 
-            try {
-                networks.get(to).deliver(packet);
-            } catch (InterruptedException e) {
-                // This means that the thread running the machine we are delivering to
-                // has been interrupted. This would look like a timeout if this were
-                // happening over a real network.
-                throw new TimeoutError();
-            }
+            networks.get(to).deliver(packet);
         }
 
         @Override
-        public SignedPacket receive() throws TimeoutError, InterruptedException {
+        public SignedPacket receive() throws InterruptedException {
             for (int i = 0; i < 2; i++) {
                 SignedPacket next = inbox.receive(300, TimeUnit.MILLISECONDS);
 
@@ -84,7 +78,7 @@ public final class Simulator {
                 }
             }
 
-            throw new TimeoutError();
+            return null;
         }
 
         public void deliver(SignedPacket packet) throws InterruptedException {
@@ -111,23 +105,23 @@ public final class Simulator {
         }
     }
 
-    public static Map<SigningKey, Machine> run(InitialState init, MessageFactory messages) {
+    public static Map<SigningKey, Either<Transaction, Matrix>> run(InitialState init) {
 
         final SimulationInitializer initializer = new SimulationInitializer();
         final Map<SigningKey, Adversary> machines = init.getPlayers(initializer);
 
-        Map<SigningKey, Machine> results = runSimulation(machines);
+        Map<SigningKey, Either<Transaction, Matrix>> results = runSimulation(machines);
 
         initializer.networks.clear(); // Avoid memory leak.
         return results;
     }
 
-    private static synchronized Map<SigningKey, Machine> runSimulation(
+    private static synchronized Map<SigningKey, Either<Transaction, Matrix>> runSimulation(
             Map<SigningKey, Adversary> machines)  {
 
         // Create a future for the set of entries.
-        SummableFuture<Map<SigningKey, Machine>> wait = new SummableFutureZero<>(
-                new SummableMaps<SigningKey, Machine>()
+        SummableFuture<Map<SigningKey, Either<Transaction, Matrix>>> wait = new SummableFutureZero<>(
+                new SummableMaps<SigningKey, Either<Transaction, Matrix>>()
         );
 
         // Start the simulations.

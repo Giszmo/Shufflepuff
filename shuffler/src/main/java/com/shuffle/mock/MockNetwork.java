@@ -11,7 +11,7 @@ package com.shuffle.mock;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.protocol.Network;
 import com.shuffle.protocol.SignedPacket;
-import com.shuffle.protocol.TimeoutError;
+import com.shuffle.protocol.TimeoutException;
 
 import java.util.LinkedList;
 import java.util.Map;
@@ -95,9 +95,9 @@ public class MockNetwork implements Network {
     }
 
     @Override
-    public SignedPacket receive() throws TimeoutError {
+    public SignedPacket receive() {
         if (sent.size() == 0) {
-            throw new TimeoutError();
+            return null;
         }
 
         return sent.remove();

@@ -21,7 +21,7 @@ import com.shuffle.p2p.Session;
 import com.shuffle.protocol.FormatException;
 import com.shuffle.protocol.InvalidImplementationError;
 import com.shuffle.protocol.SignedPacket;
-import com.shuffle.protocol.TimeoutError;
+import com.shuffle.protocol.TimeoutException;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -268,7 +268,7 @@ public class Connect<Identity> {
 
         @Override
         public void sendTo(VerificationKey to, SignedPacket packet)
-                throws InvalidImplementationError, TimeoutError, InterruptedException {
+                throws InvalidImplementationError, InterruptedException {
 
             Session<Identity, Bytestring> session = players.get(to);
 
@@ -281,7 +281,7 @@ public class Connect<Identity> {
 
         @Override
         public SignedPacket receive()
-                throws TimeoutError, InvalidImplementationError,
+                throws InvalidImplementationError,
                 InterruptedException, FormatException {
 
             Bytestring str = received.receive(timeout, TimeUnit.SECONDS);

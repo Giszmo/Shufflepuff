@@ -17,8 +17,8 @@ import com.shuffle.bitcoin.VerificationKey;
  */
 public interface Network {
     void sendTo(VerificationKey to, SignedPacket packet)
-            throws InvalidImplementationError, TimeoutError, InterruptedException;
+            throws InvalidImplementationError, InterruptedException;
 
     SignedPacket receive()
-            throws TimeoutError, InvalidImplementationError, InterruptedException, FormatException;
+            throws InvalidImplementationError, InterruptedException, FormatException;
 }

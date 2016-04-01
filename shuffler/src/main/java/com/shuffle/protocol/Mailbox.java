@@ -65,7 +65,7 @@ public class Mailbox {
     }
 
     public void broadcast(Message message, Phase phase)
-            throws TimeoutError, CryptographyError, InvalidImplementationError, InterruptedException {
+            throws TimeoutException, CryptographyError, InvalidImplementationError, InterruptedException {
 
         for (VerificationKey to : players) {
             send(new Packet(message, session, phase, sk.VerificationKey(), to));
@@ -74,7 +74,7 @@ public class Mailbox {
 
     // Send a message into the network.
     public void send(Packet packet)
-            throws TimeoutError, CryptographyError, InvalidImplementationError, InterruptedException {
+            throws TimeoutException, CryptographyError, InvalidImplementationError, InterruptedException {
 
         SignedPacket signed = new SignedPacket(packet, sk.makeSignature(packet));
 
@@ -104,7 +104,7 @@ public class Mailbox {
     // It always returns a blame packet if encountered.
     private SignedPacket receiveNextPacket(Phase expectedPhase)
             throws FormatException, CryptographyError,
-            InterruptedException, TimeoutError, InvalidImplementationError,
+            InterruptedException, InvalidImplementationError,
             ValueException, SignatureException {
 
         SignedPacket found = null;
@@ -129,6 +129,10 @@ public class Mailbox {
         if (found == null) {
             while (true) {
                 SignedPacket next = network.receive();
+                if (next == null) {
+                    return null;
+                }
+
                 Packet packet = next.payload;
                 Phase phase = packet.phase;
 
@@ -192,7 +196,7 @@ public class Mailbox {
 
     // Wait to receive a message from a given player.
     public Message receiveFrom(VerificationKey from, Phase expectedPhase)
-            throws TimeoutError,
+            throws TimeoutException,
             CryptographyError,
             FormatException,
             ValueException,
@@ -201,7 +205,12 @@ public class Mailbox {
             BlameException,
             SignatureException {
 
-        Packet packet = receiveNextPacket(expectedPhase).payload;
+        SignedPacket signed = receiveNextPacket(expectedPhase);
+        if (signed == null) {
+            throw new TimeoutException(from);
+        }
+
+        Packet packet = signed.payload;
 
         if (packet.phase == Phase.Blame && expectedPhase != Phase.Blame) {
             throw new BlameException(packet.signer, packet);
@@ -219,7 +228,7 @@ public class Mailbox {
 
     // Wait to receive a message from a given player.
     public Message receiveFromBlameless(VerificationKey from, Phase expectedPhase)
-            throws TimeoutError,
+            throws TimeoutException,
             CryptographyError,
             FormatException,
             ValueException,
@@ -229,7 +238,10 @@ public class Mailbox {
 
         Packet packet = null;
         do {
-            packet = receiveNextPacket(expectedPhase).payload;
+            SignedPacket signed = receiveNextPacket(expectedPhase);
+            if (signed == null) throw new TimeoutException(from);
+
+            packet = signed.payload;
 
         } while (expectedPhase != Phase.Blame && packet.phase == Phase.Blame);
 
@@ -249,7 +261,7 @@ public class Mailbox {
             Phase expectedPhase,
             boolean ignoreBlame // Whether to stop if a blame message is received.
     )
-            throws TimeoutError, CryptographyError, FormatException,
+            throws TimeoutException, CryptographyError, FormatException,
             InvalidImplementationError, ValueException, InterruptedException,
             ProtocolException, BlameException, SignatureException {
 
@@ -261,6 +273,8 @@ public class Mailbox {
 
         while (from.size() > 0) {
             SignedPacket packet = receiveNextPacket(expectedPhase);
+            if (packet == null) throw new TimeoutException(from);
+
             if (expectedPhase != Phase.Blame && packet.payload.phase == Phase.Blame) {
                 if (!ignoreBlame) {
                     // Put the messages already collected back so that they can be received later.
@@ -295,7 +309,7 @@ public class Mailbox {
             Set<VerificationKey> from,
             Phase expectedPhase
     )
-            throws TimeoutError, CryptographyError, FormatException,
+            throws TimeoutException, CryptographyError, FormatException,
             InvalidImplementationError, ValueException, InterruptedException,
             ProtocolException, BlameException, SignatureException {
 
@@ -306,7 +320,7 @@ public class Mailbox {
             Set<VerificationKey> from,
             Phase expectedPhase
     )
-            throws TimeoutError, CryptographyError, FormatException,
+            throws TimeoutException, CryptographyError, FormatException,
             InvalidImplementationError, ValueException, InterruptedException,
             ProtocolException, SignatureException {
 
@@ -341,12 +355,10 @@ public class Mailbox {
 
         // Then receive any more blame messages until there are no more.
         while (true) {
-            try {
-                SignedPacket next = receiveNextPacket(Phase.Blame);
-                blame.get(next.payload.signer).add(next);
-            } catch (TimeoutError e) {
-                break;
-            }
+            SignedPacket next = receiveNextPacket(Phase.Blame);
+            if (next == null) break;
+
+            blame.get(next.payload.signer).add(next);
         }
 
         return blame;

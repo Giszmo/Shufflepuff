@@ -20,4 +20,9 @@ public class SignatureException extends Exception {
         }
         this.packet = packet;
     }
+
+    @Override
+    public String getMessage() {
+        return "CoinShuffle Signature Exception";
+    }
 }

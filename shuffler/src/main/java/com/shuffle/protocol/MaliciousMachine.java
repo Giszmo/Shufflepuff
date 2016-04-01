@@ -14,8 +14,10 @@ import com.shuffle.bitcoin.CoinNetworkException;
 import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.DecryptionKey;
 import com.shuffle.bitcoin.EncryptionKey;
+import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.chan.SendChan;
 import com.shuffle.protocol.blame.Blame;
 import com.shuffle.protocol.blame.BlameException;
 import com.shuffle.protocol.blame.Matrix;
@@ -28,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.SortedSet;
 import java.util.TreeMap;
 
 /**
@@ -52,7 +55,7 @@ public final class MaliciousMachine extends CoinShuffle {
         }
 
         @Override
-        DecryptionKey newDecryptionKey(Map<VerificationKey, Address> changeAddresses) throws InterruptedException {
+        DecryptionKey newDecryptionKey(Map<VerificationKey, Address> changeAddresses) throws InterruptedException, TimeoutException {
             DecryptionKey dk = null;
             if (me != 1) {
                 dk = crypto.makeDecryptionKey();
@@ -78,13 +81,13 @@ public final class MaliciousMachine extends CoinShuffle {
         }
 
         @Override
-        Matrix equivocationCheck(
+        final void equivocationCheck(
                 Map<VerificationKey, EncryptionKey> encryptonKeys,
                 Queue<Address> newAddresses,
                 boolean errorCase)
                 throws InterruptedException, ValueException,
                 FormatException, ProtocolException,
-                SignatureException {
+                SignatureException, TimeoutException, Matrix {
 
             Map<VerificationKey, EncryptionKey> otherKeys = new HashMap<>();
             otherKeys.putAll(encryptonKeys);
@@ -108,10 +111,8 @@ public final class MaliciousMachine extends CoinShuffle {
 
             if (areEqual(hashes.values())) {
                 if (mailbox.blame() || errorCase) {
-                    return blameBroadcastShuffleMessages();
+                    blameBroadcastShuffleMessages();
                 }
-
-                return null;
             }
 
             // If the hashes are not equal, enter the blame phase.
@@ -122,7 +123,7 @@ public final class MaliciousMachine extends CoinShuffle {
             Message blameMessage = messages.make().attach(Blame.EquivocationFailure(evidence));
             mailbox.broadcast(blameMessage, machine.phase);
 
-            return fillBlameMatrix(new Matrix());
+            throw fillBlameMatrix();
         }
     }
 
@@ -141,9 +142,9 @@ public final class MaliciousMachine extends CoinShuffle {
         }
 
         @Override
-        Deque<Address> readAndBroadcastNewAddresses(Message shuffled)
+        final Deque<Address> readAndBroadcastNewAddresses(Message shuffled)
                 throws FormatException, InterruptedException,
-                SignatureException, ValueException, BlameException {
+                SignatureException, ValueException, BlameException, TimeoutException {
 
             Deque<Address> newAddresses;
             if (me == N) {
@@ -172,13 +173,13 @@ public final class MaliciousMachine extends CoinShuffle {
         }
 
         @Override
-        Matrix equivocationCheck(
+        final void equivocationCheck(
                 Map<VerificationKey, EncryptionKey> encryptonKeys,
                 Queue<Address> newAddresses,
                 boolean errorCase)
                 throws InterruptedException, ValueException,
                 FormatException, ProtocolException,
-                SignatureException {
+                SignatureException, TimeoutException, Matrix {
 
             Message equivocationCheck = equivocationCheckHash(players, encryptonKeys, newAddresses);
             Message otherCheck = equivocationCheckHash(players, encryptonKeys, otherAddresses);
@@ -195,7 +196,7 @@ public final class MaliciousMachine extends CoinShuffle {
 
             if (areEqual(hashes.values())) {
                 if (mailbox.blame() || errorCase) {
-                    return blameBroadcastShuffleMessages();
+                    blameBroadcastShuffleMessages();
                 }
             }
 
@@ -207,7 +208,7 @@ public final class MaliciousMachine extends CoinShuffle {
             Message blameMessage = messages.make().attach(Blame.EquivocationFailure(evidence));
             mailbox.broadcast(blameMessage, machine.phase);
 
-            return fillBlameMatrix(new Matrix());
+            throw fillBlameMatrix();
         }
     }
 
@@ -326,7 +327,7 @@ public final class MaliciousMachine extends CoinShuffle {
         }
     }
 
-    public class DoubleSpender extends Round {
+    public final class DoubleSpender extends Round {
         final Transaction t;
         boolean spent = false;
 
@@ -341,13 +342,13 @@ public final class MaliciousMachine extends CoinShuffle {
 
         @Override
         // This is when we maliciously double spend the transaction.
-        Matrix equivocationCheck(
+        final void equivocationCheck(
                 Map<VerificationKey, EncryptionKey> encryptonKeys,
                 Queue<Address> newAddresses,
                 boolean errorCase)
                 throws InterruptedException, ValueException,
                 FormatException, ProtocolException,
-                SignatureException {
+                SignatureException, TimeoutException, Matrix {
             if (!spent) {
                 try {
                     t.send();
@@ -357,13 +358,13 @@ public final class MaliciousMachine extends CoinShuffle {
                 }
             }
 
-            return super.equivocationCheck(encryptonKeys, newAddresses, errorCase);
+            super.equivocationCheck(encryptonKeys, newAddresses, errorCase);
         }
 
         @Override
         // We made the double spend transaction so obviously we're not going to check honestly.
-        protected Matrix checkDoubleSpending(Transaction t) {
-            return null;
+        final void checkDoubleSpending(Transaction t) {
+
         }
     }
 
@@ -375,75 +376,94 @@ public final class MaliciousMachine extends CoinShuffle {
     private final Transaction t;
 
     @Override
-    protected Machine run(Machine state, Address change, Network network)  {
+    public Transaction runProtocol(
+            SessionIdentifier session, // Unique session identifier.
+            long amount, // The amount to be shuffled per player.
+            SigningKey sk, // The signing key of the current player.
+            // The set of players, sorted alphabetically by address.
+            SortedSet<VerificationKey> players,
+            Address change, // Change address. (can be null)
+            Network network, // The network that connects us to the other players.
+            // If this is not null, the machine is put in this channel so that another thread can
+            // query the phase as it runs.
+            SendChan<Machine> queue
+    ) throws InterruptedException,
+            InvalidParticipantSetException, FormatException, ValueException,
+            TimeoutException, SignatureException, ProtocolException, Matrix {
+
+        if (amount <= 0) {
+            throw new IllegalArgumentException();
+        }
+        if (session == null || sk == null || players == null || network == null) {
+            throw new NullPointerException();
+        }
+        Machine machine = new Machine(session, amount, sk, players);
+        if (queue != null) {
+            queue.send(machine);
+        }
 
         // Get the initial ordering of the players.
         int i = 1;
         Map<Integer, VerificationKey> numberedPlayers = new TreeMap<>();
-        for (VerificationKey player : state.players) {
+        for (VerificationKey player : machine.players) {
             numberedPlayers.put(i, player);
             i++;
         }
 
         // Make an inbox for the next round.
-        Mailbox mailbox = new Mailbox(state.session, state.sk, numberedPlayers.values(), network);
+        Mailbox mailbox = new Mailbox(
+                machine.session, machine.sk, numberedPlayers.values(), network
+        );
 
-        try {
+        Round round = null;
 
-            Round round = null;
-
-            switch (maliciousPhase) {
-                case Announcement: {
-                    if (equivocate != null) {
-                        round = new AnnouncementEquivocatorRound(
-                                state, numberedPlayers, change, mailbox, equivocate);
-                    }
-                    break;
+        switch (maliciousPhase) {
+            case Announcement: {
+                if (equivocate != null) {
+                    round = new AnnouncementEquivocatorRound(
+                            machine, numberedPlayers, change, mailbox, equivocate);
                 }
-                case Shuffling: {
-                    if (drop != 0) {
-                        if (duplicate != 0) {
-                            round = new DropAddressReplaceDuplicate(
-                                    state, numberedPlayers, change, mailbox, drop, duplicate);
-                        } else if (replaceNew) {
-                            round = new DropAddressReplaceNew(
-                                    state, numberedPlayers, change, mailbox, drop);
-                        } else {
-                            round = new DropAddress(state, numberedPlayers, change, mailbox, drop);
-                        }
-                    }
-                    break;
-                }
-                case BroadcastOutput: {
-                    if (equivocate != null) {
-                        round = new BroadcastEquivocatorRound(
-                                state, numberedPlayers, change, mailbox, equivocate);
-                    }
-                    break;
-                }
-                case VerificationAndSubmission: {
-                    round = new DoubleSpender(state, numberedPlayers, change, mailbox, t);
-                    break;
-                }
-                default: { }
+                break;
             }
-
-            if (round == null) {
-                round = this.new Round(state, numberedPlayers, change, mailbox);
+            case Shuffling: {
+                if (drop != 0) {
+                    if (duplicate != 0) {
+                        round = new DropAddressReplaceDuplicate(
+                                machine, numberedPlayers, change, mailbox, drop, duplicate);
+                    } else if (replaceNew) {
+                        round = new DropAddressReplaceNew(
+                                machine, numberedPlayers, change, mailbox, drop);
+                    } else {
+                        round = new DropAddress(machine, numberedPlayers, change, mailbox, drop);
+                    }
+                }
+                break;
             }
-
-            round.protocolDefinition();
-        } catch (InterruptedException
-                | ProtocolException
-                | FormatException
-                | ValueException
-                | InvalidParticipantSetException
-                | SignatureException
-                | CoinNetworkException e) {
-            state.e = e;
+            case BroadcastOutput: {
+                if (equivocate != null) {
+                    round = new BroadcastEquivocatorRound(
+                            machine, numberedPlayers, change, mailbox, equivocate);
+                }
+                break;
+            }
+            case VerificationAndSubmission: {
+                round = new DoubleSpender(machine, numberedPlayers, change, mailbox, t);
+                break;
+            }
+            default: { }
         }
 
-        return state;
+        if (round == null) {
+            round = this.new Round(machine, numberedPlayers, change, mailbox);
+        }
+
+        try {
+            return round.protocolDefinition();
+        } catch (CoinNetworkException e) {
+            // If we are a double spender, we can try to spend our own transaction and get
+            // an exception as a result, which we catch here.
+            return e.t;
+        }
     }
 
     private MaliciousMachine(MessageFactory messages, Crypto crypto,

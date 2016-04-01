@@ -12,6 +12,7 @@ import com.shuffle.bitcoin.Address;
 import com.shuffle.bitcoin.Coin;
 import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.SigningKey;
+import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.chan.BasicChan;
 import com.shuffle.chan.Chan;
@@ -23,6 +24,8 @@ import com.shuffle.protocol.MessageFactory;
 import com.shuffle.protocol.Network;
 import com.shuffle.protocol.Phase;
 import com.shuffle.protocol.SessionIdentifier;
+import com.shuffle.protocol.TimeoutException;
+import com.shuffle.protocol.blame.Matrix;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
@@ -158,11 +161,16 @@ class Player<Identity, Format> {
             // this round of the protocol.
             // TODO
 
-            Machine machine = shuffle.runProtocol(session,
-                    settings.amount, sk, validPlayers, settings.change, net, chan);
-
-            if (machine.exception() == null && machine.phase() != Phase.Blame) {
+            Transaction t = null;
+            Matrix blame = null;
+            try {
+                t = shuffle.runProtocol(session,
+                        settings.amount, sk, validPlayers, settings.change, net, chan);
                 break;
+            } catch(Matrix m) {
+                blame = m;
+            } catch (Exception e) {
+                e.printStackTrace();
             }
 
             attempt++;

@@ -22,13 +22,13 @@ public class TestDoubleSpend extends TestShuffleMachine {
 
     private void DoubleSpend(int[] views, int[] doubleSpenders) {
         String description = "case " + caseNo + "; Double spend test case.";
-        check(description,
-                new MockTestCase(description).doubleSpendTestCase(views, doubleSpenders));
+        check(new MockTestCase(description).doubleSpendTestCase(views, doubleSpenders));
     }
 
     @Test
     public void testDoubleSpending() {
-        // Tests for players who spend funds while the protocol is going on.
+        // Tests for players who spend funds while
+        // the protocol is going on.
         DoubleSpend(new int[]{0, 0}, new int[]{1});
         DoubleSpend(new int[]{0, 1, 0}, new int[]{1});
         DoubleSpend(new int[]{0, 1, 0}, new int[]{2});

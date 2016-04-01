@@ -44,7 +44,7 @@ public class TestMailbox {
     }
 
     @Test
-    public void testBroadcast() throws InvalidParticipantSetException, InterruptedException {
+    public void testBroadcast() throws InvalidParticipantSetException, InterruptedException, TimeoutException {
         BroadcastTestCase[] tests =
                 new BroadcastTestCase[]{
                         new BroadcastTestCase(1, 1),
@@ -104,7 +104,7 @@ public class TestMailbox {
     }
 
     @Test
-    public void testSend() throws InvalidParticipantSetException, InterruptedException {
+    public void testSend() throws InvalidParticipantSetException, InterruptedException, TimeoutException {
         SendToTestCase[] tests = new SendToTestCase[]{
                 // Case where recipient does not exist.
                 new SendToTestCase(1, 3, 2, false),
@@ -163,32 +163,32 @@ public class TestMailbox {
         public final int requested; // The player that the message was expected from.
         public final Phase phase; // The expected phase.
         public final Packet packet;
-        public final Error e; // If an exception is expected.
+        public final boolean error; // If an exception is expected.
 
         public ReceiveFromTestCase(
                 int[] players,
                 int requested,
                 Phase phase,
                 Packet packet,
-                Error e
+                boolean error
         ) {
             this.players = players;
             this.requested = requested;
             this.packet = packet;
-            this.e = e;
+            this.error = error;
             this.phase = phase;
         }
     }
 
-    @Test(expected = TimeoutError.class)
+    @Test(expected = TimeoutException.class)
     public void testReceiveFrom()
             throws InvalidParticipantSetException, InterruptedException,
-            BlameException, ValueException, FormatException, SignatureException {
+            BlameException, ValueException, FormatException, SignatureException, TimeoutException {
 
         ReceiveFromTestCase[] tests = new ReceiveFromTestCase[]{
                 // time out exception test case.
                 new ReceiveFromTestCase(
-                        new int []{1,2,3}, 2, Phase.Shuffling, null, new TimeoutError()
+                        new int []{1,2,3}, 2, Phase.Shuffling, null, true
                 ),
                 // Various malformed inputs.
                 // TODO
@@ -331,7 +331,7 @@ public class TestMailbox {
 
             try {
                 mailbox.receiveFrom(new MockVerificationKey(1), Phase.Shuffling);
-            } catch (TimeoutError e) {
+            } catch (TimeoutException e) {
                 Assert.fail();
             }
 
@@ -361,7 +361,7 @@ public class TestMailbox {
                 if (test.timeoutExpected) {
                     Assert.fail("Failed to throw TimeoutError in test case " + i);
                 }
-            } catch (TimeoutError e) {
+            } catch (TimeoutException e) {
                 if (!test.timeoutExpected) {
                     Assert.fail();
                 }

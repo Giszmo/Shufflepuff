@@ -189,7 +189,7 @@ public class MockCoin implements com.shuffle.sim.MockCoin {
 
         for (Output output : mt.outputs) available -= output.amountHeld;
 
-        if (available < 0) throw new CoinNetworkException();
+        if (available < 0) throw new CoinNetworkException(t);
 
         // Does the transaction spend from valid outputs?
         for (Output input : mt.inputs)
@@ -202,7 +202,7 @@ public class MockCoin implements com.shuffle.sim.MockCoin {
             if (nt == null) continue;
 
             if (mt.equals(nt)) return;
-            else throw new CoinNetworkException();
+            else throw new CoinNetworkException(nt);
         }
 
         // Register the transaction.

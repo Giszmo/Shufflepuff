@@ -40,24 +40,43 @@ import java.util.TreeSet;
  * Created by Simulator on 2/8/16.
  */
 public class InitialState {
-    // An expected return state that matches any Machine.
+    // An expected return state that matches any blame matrix, even a null one.
     // Used for ensuring a test can't fail no matter what value
     // simulated adversaries return, since we only care about testing the response of the
     // honest players.
-    public static final class ExpectedPatternAny extends Machine.Expected {
+    public static final class ExpectedPatternAny extends Matrix {
 
         public ExpectedPatternAny() {
-            super(null, null, null, null);
+
         }
 
         @Override
-        public boolean match(Machine m) {
+        public boolean match(Matrix m) {
             return true;
         }
 
         @Override
         public String toString() {
             return "Any";
+        }
+    }
+
+
+    // An expected return state that matches any null blame matrix.
+    public static final class ExpectedPatternNull extends Matrix {
+
+        public ExpectedPatternNull() {
+
+        }
+
+        @Override
+        public boolean match(Matrix m) {
+            return m == null;
+        }
+
+        @Override
+        public String toString() {
+            return "Null";
         }
     }
 
@@ -106,7 +125,8 @@ public class InitialState {
         }
     }
 
-    private static final ExpectedPatternAny any = new ExpectedPatternAny();
+    private static final ExpectedPatternAny anyMatrix = new ExpectedPatternAny();
+    private static final ExpectedPatternNull nullMatrix = new ExpectedPatternNull();
 
     private final SessionIdentifier session;
     private final long amount;
@@ -293,11 +313,11 @@ public class InitialState {
         }
 
         // How is the player expected to interpret what happened during the protocol?
-        public Machine.Expected expected() {
+        public Matrix expected() {
             // Malicious players aren't tested, so they can blame anyone.
             Reason mal = maliciousBehavior();
             if (mal != null) {
-                return any;
+                return anyMatrix;
             }
 
             Matrix bm = new Matrix();
@@ -343,7 +363,7 @@ public class InitialState {
                 }
             }
 
-            return new Machine.Expected(session, null, null, bm);
+            return (bm.isEmpty() ? nullMatrix : bm);
         }
     }
 
@@ -478,8 +498,8 @@ public class InitialState {
         return this;
     }
 
-    public Map<SigningKey, Machine.Expected> expected() {
-        Map<SigningKey, Machine.Expected> blame = new HashMap<>();
+    public Map<SigningKey, Matrix> expected() {
+        Map<SigningKey, Matrix> blame = new HashMap<>();
 
         for (PlayerInitialState player : players) {
             if (player.sk != null) {
