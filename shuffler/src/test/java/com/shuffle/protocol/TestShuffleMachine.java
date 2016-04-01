@@ -15,7 +15,8 @@ import com.shuffle.mock.InsecureRandom;
 import com.shuffle.mock.MockCrypto;
 import com.shuffle.mock.MockMessageFactory;
 import com.shuffle.mock.MockSessionIdentifier;
-import com.shuffle.sim.*;
+import com.shuffle.sim.InitialState;
+import com.shuffle.sim.TestCase;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
@@ -102,7 +103,8 @@ public class TestShuffleMachine {
                 System.out.println("Trial " + i + " in progress. ");
             }
 
-            Map<SigningKey, TestCase.Mismatch> mismatch = com.shuffle.sim.TestCase.test(init, new MockMessageFactory());
+            Map<SigningKey, TestCase.Mismatch> mismatch
+                    = com.shuffle.sim.TestCase.test(init, new MockMessageFactory());
             if (mismatch == null || mismatch.isEmpty() ) {
                 success ++;
             } else {
@@ -111,13 +113,14 @@ public class TestShuffleMachine {
             }
         }
 
-        System.out.println("of " + trials + " trials, " + success + " successes and " + fail + " failures. ");
+        System.out.println("of " + trials + " trials, "
+                + success + " successes and " + fail + " failures. ");
 
         reports.add(new Report(trials, fail, success));
     }
 
     @Before
-    public void resetCaseNumber () {
+    public void resetCaseNumber() {
         caseNo = 0;
     }
 
@@ -129,7 +132,8 @@ public class TestShuffleMachine {
         for (Report report : reports) {
             System.out.println("Result for test " + i);
             if (report.fail > 0) success = false;
-            System.out.println("   Trials: " + report.trials + "; success: " + report.success + "; fail: " + report.fail);
+            System.out.println("   Trials: " + report.trials
+                    + "; success: " + report.success + "; fail: " + report.fail);
             i ++;
         }
 

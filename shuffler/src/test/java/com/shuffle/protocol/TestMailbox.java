@@ -45,7 +45,7 @@ public class TestMailbox {
 
     @Test
     public void testBroadcast() throws InvalidParticipantSetException {
-        BroadcastTestCase tests[] =
+        BroadcastTestCase[] tests =
                 new BroadcastTestCase[]{
                         new BroadcastTestCase(1, 1),
                         new BroadcastTestCase(2, 1),
@@ -70,7 +70,9 @@ public class TestMailbox {
 
             MockSigningKey me = new MockSigningKey(test.sender);
 
-            new Mailbox(new MockSessionIdentifier("testBroadcast" + index), me, players, network).broadcast(messages.make(), Phase.Shuffling);
+            new Mailbox(new MockSessionIdentifier(
+                    "testBroadcast" + index), me, players, network
+            ).broadcast(messages.make(), Phase.Shuffling);
 
             for (Map.Entry<SignedPacket, VerificationKey> sent : network.getResponses()) {
                 VerificationKey sentBy = sent.getValue();
@@ -87,13 +89,13 @@ public class TestMailbox {
         }
     }
 
-    static class sendToTestCase {
+    static class SendToTestCase {
         public final int sender;
         public final int recipient;
         public final int players;
         public final boolean success;
 
-        public sendToTestCase(int sender, int recipient, int players, boolean success) {
+        public SendToTestCase(int sender, int recipient, int players, boolean success) {
             this.sender = sender;
             this.recipient = recipient;
             this.players = players;
@@ -103,17 +105,17 @@ public class TestMailbox {
 
     @Test
     public void testSend() throws InvalidParticipantSetException {
-        sendToTestCase tests[] = new sendToTestCase[]{
+        SendToTestCase[] tests = new SendToTestCase[]{
                 // Case where recipient does not exist.
-                new sendToTestCase(1, 3, 2, false),
+                new SendToTestCase(1, 3, 2, false),
                 // Cannot send to myself.
-                new sendToTestCase(1, 1, 2, false),
+                new SendToTestCase(1, 1, 2, false),
                 // Success case.
-                new sendToTestCase(1, 2, 2, true)
+                new SendToTestCase(1, 2, 2, true)
         };
 
         int index = 0;
-        for (sendToTestCase test : tests) {
+        for (SendToTestCase test : tests) {
             // The player sending and inbox.
             MockSigningKey sk = new MockSigningKey(1);
 
@@ -127,7 +129,8 @@ public class TestMailbox {
             }
 
             // Set up the shuffle machine (only used to query for the current phase).
-            MockSessionIdentifier mockSessionIdentifier = new MockSessionIdentifier("testSend" + index);
+            MockSessionIdentifier mockSessionIdentifier
+                    = new MockSessionIdentifier("testSend" + index);
 
             new Mailbox(
                     mockSessionIdentifier, sk, players, network
@@ -148,20 +151,27 @@ public class TestMailbox {
                     responses.size());
 
             for (Map.Entry msg : responses) {
-                Assert.assertTrue("Received response does not equal expected", new MockVerificationKey(test.recipient).equals(msg.getValue()));
+                Assert.assertTrue("Received response does not equal expected",
+                        new MockVerificationKey(test.recipient).equals(msg.getValue()));
             }
             index++;
         }
     }
 
-    static class receiveFromTestCase {
+    static class ReceiveFromTestCase {
         public final int[] players;
         public final int requested; // The player that the message was expected from.
         public final Phase phase; // The expected phase.
         public final Packet packet;
         public final Error e; // If an exception is expected.
 
-        public receiveFromTestCase(int[] players, int requested, Phase phase,Packet packet, Error e) {
+        public ReceiveFromTestCase(
+                int[] players,
+                int requested,
+                Phase phase,
+                Packet packet,
+                Error e
+        ) {
             this.players = players;
             this.requested = requested;
             this.packet = packet;
@@ -171,16 +181,21 @@ public class TestMailbox {
     }
 
     @Test(expected = TimeoutError.class)
-    public void testReceiveFrom() throws InvalidParticipantSetException, InterruptedException, BlameException, ValueException, FormatException, SignatureException {
-        receiveFromTestCase tests[] = new receiveFromTestCase[]{
+    public void testReceiveFrom()
+            throws InvalidParticipantSetException, InterruptedException,
+            BlameException, ValueException, FormatException, SignatureException {
+
+        ReceiveFromTestCase[] tests = new ReceiveFromTestCase[]{
                 // time out exception test case.
-                new receiveFromTestCase(new int []{1,2,3}, 2, Phase.Shuffling, null, new TimeoutError()),
+                new ReceiveFromTestCase(
+                        new int []{1,2,3}, 2, Phase.Shuffling, null, new TimeoutError()
+                ),
                 // Various malformed inputs.
                 // TODO
         };
 
         int index = 0;
-        for (receiveFromTestCase test : tests) {
+        for (ReceiveFromTestCase test : tests) {
             // The player sending and inbox.
             MockSigningKey sk = new MockSigningKey(1);
 
@@ -193,7 +208,8 @@ public class TestMailbox {
                 players.add(new MockVerificationKey(test.players[j - 1]));
             }
 
-            MockSessionIdentifier mockSessionIdentifier = new MockSessionIdentifier("receiveFromTest" + index);
+            MockSessionIdentifier mockSessionIdentifier
+                    = new MockSessionIdentifier("receiveFromTest" + index);
 
             new Mailbox(
                     mockSessionIdentifier, sk, players, network
@@ -202,7 +218,7 @@ public class TestMailbox {
         }
     }
 
-    static class receiveFromMultipleTestCase {
+    static class ReceiveFromMultipleTestCase {
         public final int players;
         public final int me;
         public final int[] receiveFrom; // Who are we expecting?
@@ -210,7 +226,13 @@ public class TestMailbox {
         public final int[] sendAfter; // Send after the function is called.
         public final boolean timeoutExpected;
 
-        public receiveFromMultipleTestCase(int players, int me, int[] receiveFrom, int[] sendBefore, int[] sendAfter) {
+        public ReceiveFromMultipleTestCase(
+                int players,
+                int me,
+                int[] receiveFrom,
+                int[] sendBefore,
+                int[] sendAfter
+        ) {
             this.players = players;
             this.me = me;
             this.receiveFrom = receiveFrom;
@@ -219,7 +241,14 @@ public class TestMailbox {
             timeoutExpected = false;
         }
 
-        public receiveFromMultipleTestCase(int players, int me, int[] receiveFrom, int[] sendBefore, int[] sendAfter, boolean timeoutExpected) {
+        public ReceiveFromMultipleTestCase(
+                int players,
+                int me,
+                int[] receiveFrom,
+                int[] sendBefore,
+                int[] sendAfter,
+                boolean timeoutExpected
+        ) {
             this.players = players;
             this.me = me;
             this.receiveFrom = receiveFrom;
@@ -230,28 +259,30 @@ public class TestMailbox {
     }
 
     @Test
-    public void testReceiveFromMultiple() throws InvalidParticipantSetException, InterruptedException, BlameException, ValueException, FormatException, ProtocolException, SignatureException {
+    public void testReceiveFromMultiple()
+            throws InvalidParticipantSetException, InterruptedException, BlameException,
+            ValueException, FormatException, ProtocolException, SignatureException {
 
-        receiveFromMultipleTestCase tests[] = new receiveFromMultipleTestCase[]{
+        ReceiveFromMultipleTestCase[] tests = new ReceiveFromMultipleTestCase[]{
                 // Very simple test case.
-                new receiveFromMultipleTestCase(3, 2,
+                new ReceiveFromMultipleTestCase(3, 2,
                         new int[]{3},
                         new int[]{},
                         new int[]{3}),
                 // Timeout expected.
-                new receiveFromMultipleTestCase(4, 2,
+                new ReceiveFromMultipleTestCase(4, 2,
                         new int[]{3, 4},
                         new int[]{},
                         new int[]{3}, true),
                 // before and after.
-                new receiveFromMultipleTestCase(4, 2,
+                new ReceiveFromMultipleTestCase(4, 2,
                         new int[]{3, 4},
                         new int[]{4},
                         new int[]{3})
         };
 
         int i = 0;
-        for (receiveFromMultipleTestCase test : tests) {
+        for (ReceiveFromMultipleTestCase test : tests) {
             // The player sending and inbox.
             MockSigningKey sk = new MockSigningKey(test.me);
 
@@ -264,7 +295,8 @@ public class TestMailbox {
                 players.add(new MockVerificationKey(j));
             }
 
-            MockSessionIdentifier mockSessionIdentifier = new MockSessionIdentifier("receiveFromMultiple" + i);
+            MockSessionIdentifier mockSessionIdentifier
+                    = new MockSessionIdentifier("receiveFromMultiple" + i);
 
             // Set up the network operations object.
             Mailbox mailbox = new Mailbox(mockSessionIdentifier, sk, players, network);
@@ -284,7 +316,8 @@ public class TestMailbox {
             }
 
             {
-                // Receive a message from an earlier phase to make sure we flip through the first set of messages.
+                // Receive a message from an earlier phase to make sure we
+                // flip through the first set of messages.
                 MockSigningKey sender = new MockSigningKey(1);
                 network.deliver(
                         sender.makeSignedPacket(

@@ -274,7 +274,7 @@ public class Mailbox {
             }
             VerificationKey sender = packet.payload.signer;
 
-            if(broadcasts.containsKey(sender)) {
+            if (broadcasts.containsKey(sender)) {
                 throw new ProtocolException();
             }
             broadcasts.put(sender, packet);

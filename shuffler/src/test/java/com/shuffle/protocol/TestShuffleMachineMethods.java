@@ -60,24 +60,28 @@ public class TestShuffleMachineMethods {
             Phase phase,
             MockMessageFactory messages,
             Network network) throws InvalidParticipantSetException {
-        long amount = 20l;
+        long amount = 20L;
 
         SortedSet<VerificationKey> playerSet = new TreeSet<>();
         playerSet.addAll(players.values());
-        CoinShuffle shuffle = new CoinShuffle(messages, new MockCrypto(new InsecureRandom(seed)), new MockCoin());
+        CoinShuffle shuffle = new CoinShuffle(
+                messages, new MockCrypto(new InsecureRandom(seed)), new MockCoin()
+        );
         Machine machine = new Machine(session, amount, sk, playerSet);
         machine.phase = phase;
-        return shuffle.new Round(machine, players, null, new Mailbox(session, sk, playerSet, network));
+        return shuffle.new Round(
+                machine, players, null, new Mailbox(session, sk, playerSet, network)
+        );
     }
 
-    static class playerSetTestCase {
+    static class PlayerSetTestCase {
         final int i; // Minimum number blockchain take.
         final int n; // Maximum number blockchain take.
         final int N; // Number of players.
         final int player; // Which player is us.
         final int[] expected; // Which keys should have been returned.
 
-        playerSetTestCase(int i, int n, int N, int player, int[] expected) {
+        PlayerSetTestCase(int i, int n, int N, int player, int[] expected) {
             this.i = i;
             this.n = n;
             this.N = N;
@@ -87,42 +91,43 @@ public class TestShuffleMachineMethods {
 
         @Override
         public String toString() {
-            return "player set test case {" + i + ", " + n + ", " + N + ", " + player + ", " + Arrays.toString(expected) + "}";
+            return "player set test case {" + i + ", " + n + ", "
+                    + N + ", " + player + ", " + Arrays.toString(expected) + "}";
         }
     }
 
     @Test
     public void testPlayerSet() throws InvalidParticipantSetException {
-        playerSetTestCase tests[] =
-                new playerSetTestCase[]{
-                        new playerSetTestCase(
+        PlayerSetTestCase[] tests =
+                new PlayerSetTestCase[]{
+                        new PlayerSetTestCase(
                                 1,5,1,1,
                                 new int[]{1}
                         ),
-                        new playerSetTestCase(
+                        new PlayerSetTestCase(
                                 1,5,5,1,
                                 new int[]{1,2,3,4,5}
                         ),
-                        new playerSetTestCase(
+                        new PlayerSetTestCase(
                                 1,3,5,1,
                                 new int[]{1,2,3}
                         ),
-                        new playerSetTestCase(
+                        new PlayerSetTestCase(
                                 2,4,5,3,
                                 new int[]{2,3,4}
                         ),
-                        new playerSetTestCase(
+                        new PlayerSetTestCase(
                                 -1,7,5,3,
                                 new int[]{1,2,3,4,5}
                         ),
-                        new playerSetTestCase(
+                        new PlayerSetTestCase(
                                 4,7,5,1,
                                 new int[]{4,5}
                         )
                 };
 
         int i = 0;
-        for(playerSetTestCase test : tests) {
+        for (PlayerSetTestCase test : tests) {
             // make the set of players.
             TreeMap<Integer, VerificationKey> players = new TreeMap<>();
             for (int j = 1; j <= test.N; j ++) {
@@ -131,13 +136,21 @@ public class TestShuffleMachineMethods {
 
             Set<VerificationKey> result = null;
             // Set up the network operations object.
-            CoinShuffle.Round netop =
-                    net(234, new MockSessionIdentifier("testPlayerSet" + i), new MockSigningKey(test.player), players,
-                            Phase.Shuffling, new MockMessageFactory(), new MockNetwork());
+            CoinShuffle.Round netop = net(
+                    234,
+                    new MockSessionIdentifier("testPlayerSet" + i),
+                    new MockSigningKey(test.player),
+                    players,
+                    Phase.Shuffling,
+                    new MockMessageFactory(),
+                    new MockNetwork()
+            );
             result = netop.playerSet(test.i, test.n);
 
             for (int expect : test.expected) {
-                Assert.assertTrue(String.format("Unable to remove expected player %d",expect),result.remove(new MockVerificationKey(expect)));
+                Assert.assertTrue(String.format(
+                        "Unable to remove expected player %d",expect),result.remove(
+                            new MockVerificationKey(expect)));
             }
 
             Assert.assertTrue("Not every expected player was removed.",result.isEmpty());
@@ -145,19 +158,19 @@ public class TestShuffleMachineMethods {
         }
     }
 
-    private class shuffleTestCase {
+    private class ShuffleTestCase {
         final int[] randomSequence;
         final int[] input;
         final int[] expected;
 
-        shuffleTestCase(int[] randomSequence, int[] input, int[] expected) {
+        ShuffleTestCase(int[] randomSequence, int[] input, int[] expected) {
             this.randomSequence = randomSequence;
             this.input = input;
             this.expected = expected;
         }
     }
 
-    private CoinShuffle shuffleTestInitialization(int rand[]) {
+    private CoinShuffle shuffleTestInitialization(int[] rand) {
         return new CoinShuffle(
                 new MockMessageFactory(),
                 new MockCrypto(
@@ -168,70 +181,70 @@ public class TestShuffleMachineMethods {
     @Test
     // This tests some cases for the function that randomly shuffles a message.
     public void shuffleTest() {
-        shuffleTestCase tests[] = new shuffleTestCase[]{
+        ShuffleTestCase[] tests = new ShuffleTestCase[]{
                 // The empty case, of course!
-                new shuffleTestCase(
+                new ShuffleTestCase(
                         new int[]{},
                         new int[]{},
                         new int[]{}
                 ),
                 // One element.
-                new shuffleTestCase(
+                new ShuffleTestCase(
                         new int[]{0},
                         new int[]{1},
                         new int[]{1}
                 ),
                 // All possibilities for two elements.
-                new shuffleTestCase(
+                new ShuffleTestCase(
                         new int[]{1, 0},
                         new int[]{1, 2},
                         new int[]{2, 1}
                 ),
-                new shuffleTestCase(
+                new ShuffleTestCase(
                         new int[]{0, 0},
                         new int[]{1, 2},
                         new int[]{1, 2}
                 ),
                 // Most possibilities for three elements.
-                new shuffleTestCase(
+                new ShuffleTestCase(
                         new int[]{2, 0, 0},
                         new int[]{1, 2, 3},
                         new int[]{3, 1, 2}
                 ),
-                new shuffleTestCase(
+                new ShuffleTestCase(
                         new int[]{2, 1, 0},
                         new int[]{1, 2, 3},
                         new int[]{3, 2, 1}
                 ),
-                new shuffleTestCase(
+                new ShuffleTestCase(
                         new int[]{1, 1, 0},
                         new int[]{1, 2, 3},
                         new int[]{2, 1, 3}
                 ),
-                new shuffleTestCase(
+                new ShuffleTestCase(
                         new int[]{0, 1, 0},
                         new int[]{1, 2, 3},
                         new int[]{1, 3, 2}
                 ),
                 // Some randomly generated larger cases.
-                new shuffleTestCase(
+                new ShuffleTestCase(
                         new int[]{1, 0, 1, 0},
                         new int[]{1, 2, 3, 4},
                         new int[]{2, 3, 1, 4}
                 ),
-                new shuffleTestCase(
+                new ShuffleTestCase(
                         new int[]{2, 3, 1, 0, 0},
                         new int[]{1, 2, 3, 4, 5},
                         new int[]{3, 2, 5, 1, 4}
                 ),
-                new shuffleTestCase(
+                new ShuffleTestCase(
                         new int[]{3, 2, 0, 0, 1, 0},
                         new int[]{1, 2, 3, 4, 5, 6},
                         new int[]{4, 1, 2, 3, 6, 5}
                 ),
         };
 
-        for(shuffleTestCase test : tests) {
+        for (ShuffleTestCase test : tests) {
             CoinShuffle machine = shuffleTestInitialization(test.randomSequence);
 
             Message input = new MockMessage();
@@ -257,22 +270,22 @@ public class TestShuffleMachineMethods {
         }
     }
 
-    private class areEqualTestCase {
+    private class AreEqualTestCase {
         final List<Message> input = new LinkedList<>();
         final boolean expected;
 
-        areEqualTestCase(int[] input, boolean expected) {
+        AreEqualTestCase(int[] input, boolean expected) {
 
-            for(int i : input) {
+            for (int i : input) {
                 this.input.add(new MockMessage().attach(new MockAddress(i)));
             }
 
             this.expected = expected;
         }
 
-        areEqualTestCase(int[][] input, boolean expected) {
+        AreEqualTestCase(int[][] input, boolean expected) {
 
-            for(int[] in : input) {
+            for (int[] in : input) {
                 Message queue = new MockMessage();
                 for (int i : in) {
                     queue = queue.attach(new MockAddress(i));
@@ -287,52 +300,53 @@ public class TestShuffleMachineMethods {
 
     @Test
     public void testAreEqual() {
-        areEqualTestCase tests[] = new areEqualTestCase[]{
+        AreEqualTestCase[] tests = new AreEqualTestCase[]{
                 // The empty case, of course!
-                new areEqualTestCase(
+                new AreEqualTestCase(
                         new int[]{},
                         true
                 ),
-                new areEqualTestCase(
+                new AreEqualTestCase(
                         new int[]{1},
                         true
                 ),
-                new areEqualTestCase(
+                new AreEqualTestCase(
                         new int[]{1, 1},
                         true
                 ),
-                new areEqualTestCase(
+                new AreEqualTestCase(
                         new int[]{1, 2},
                         false
                 ),
-                new areEqualTestCase(
+                new AreEqualTestCase(
                         new int[]{2, 2, 2},
                         true
                 ),
-                new areEqualTestCase(
+                new AreEqualTestCase(
                         new int[]{2, 3, 2},
                         false
                 ),
-                new areEqualTestCase(
+                new AreEqualTestCase(
                         new int[]{3, 2, 2},
                         false
                 ),
-                new areEqualTestCase(
+                new AreEqualTestCase(
                         new int[]{2, 2, 3},
                         false
                 ),
-                new areEqualTestCase(
+                new AreEqualTestCase(
                         new int[][]{new int[]{2, 3}, new int[]{2, 3}, new int[]{1, 3}},
                         false
                 )
         };
 
         int i = 0;
-        for(areEqualTestCase testCase : tests) {
+        for (AreEqualTestCase testCase : tests) {
             i++;
             try {
                 System.out.println("test case... input " + testCase.input.toString());
-                Assert.assertEquals("Failure in test case " + i, testCase.expected, CoinShuffle.areEqual(testCase.input));
+                Assert.assertEquals("Failure in test case " + i,
+                        testCase.expected, CoinShuffle.areEqual(testCase.input));
             } catch (InvalidImplementationError e) {
                 Assert.fail("Tests have failed due blockchain error in test class.");
             } catch (CryptographyError e) {
@@ -342,7 +356,10 @@ public class TestShuffleMachineMethods {
     }
 
     private CoinShuffle.Round standardTestInitialization(
-            SessionIdentifier session, SigningKey sk, SortedSet<VerificationKey> playerSet, Crypto crypto, Mailbox mailbox) throws InvalidParticipantSetException {
+            SessionIdentifier session,
+            SigningKey sk,
+            SortedSet<VerificationKey> playerSet,
+            Crypto crypto, Mailbox mailbox) throws InvalidParticipantSetException {
 
         int i = 1;
         Map<Integer, VerificationKey> players = new HashMap<>();
@@ -351,7 +368,7 @@ public class TestShuffleMachineMethods {
             i++;
         }
 
-        long amount = 20l;
+        long amount = 20L;
 
         CoinShuffle shuffle = new CoinShuffle(new MockMessageFactory(), crypto, new MockCoin());
 
@@ -366,7 +383,7 @@ public class TestShuffleMachineMethods {
 
         // Success cases.
         try {
-            for(int i = 0; i <= 5; i++) {
+            for (int i = 0; i <= 5; i++) {
                 Message input = messages.make();
                 Message output = messages.make();
                 DecryptionKey dk = crypto.makeDecryptionKey();
@@ -381,11 +398,15 @@ public class TestShuffleMachineMethods {
                     input = input.attach(new MockEncryptedAddress(addr, dk.EncryptionKey()));
                 }
 
-                SessionIdentifier mockSessionIdentifier = new MockSessionIdentifier("testDecryptAll" + i);
+                SessionIdentifier mockSessionIdentifier
+                        = new MockSessionIdentifier("testDecryptAll" + i);
                 SigningKey sk = new MockSigningKey(1);
-                Mailbox mailbox = new Mailbox(mockSessionIdentifier, sk, playerSet, new MockNetwork());
-                CoinShuffle.Round round =
-                        standardTestInitialization(mockSessionIdentifier, sk, playerSet, crypto, mailbox);
+                Mailbox mailbox
+                        = new Mailbox(mockSessionIdentifier, sk, playerSet, new MockNetwork());
+
+                CoinShuffle.Round round = standardTestInitialization(
+                        mockSessionIdentifier, sk, playerSet, crypto, mailbox
+                );
 
                 Message result = round.decryptAll(input, dk, i + 1);
 
@@ -402,47 +423,6 @@ public class TestShuffleMachineMethods {
         } catch (InvalidParticipantSetException e) {
             Assert.fail("Unexpected InvalidParticipantSetException");
         }
-
-        // Fail cases.
-        // TODO: include fail cases that lead blockchain blame cases.
-        /*try {
-            for(int i = 0; i <= 5; i++) {
-                MockSessionIdentifier mockSessionIdentifier = new MockSessionIdentifier("testDecryptAllfail" + i);
-                Message input = new MockMessage();
-                DecryptionKey dk = null;
-                SortedSet<VerificationKey> playerSet = new TreeSet<>();
-                try {
-                    dk = crypto.makeDecryptionKey();
-
-                    for (int j = 0; j <= i; j++) {
-                        VerificationKey vk = new MockSigningKey(j + 1).VerificationKey();
-                        playerSet.add(vk);
-
-                        input = input.attach(new MockEncryptedAddress(vk.address(), dk.EncryptionKey()));
-                    }
-
-                    input = input.attach(crypto.makeSigningKey().VerificationKey().address());
-                } catch (CryptographyError e) {
-                    Assert.fail();
-                }
-
-                SigningKey sk = new MockSigningKey(1);
-                Mailbox mailbox = new Mailbox(mockSessionIdentifier, sk, playerSet, new MockNetwork());
-                CoinShuffle.Round round =
-                        standardTestInitialization(mockSessionIdentifier, sk, playerSet, crypto, mailbox);
-
-                try {
-                    round.decryptAll(input, dk, i);
-                    Assert.fail("Exception should have been thrown.");
-                } catch (FormatException | CryptographyError e) {
-                }
-            }
-        } catch (InvalidImplementationError e) {
-            e.printStackTrace();
-            Assert.fail();
-        } catch (InvalidParticipantSetException e) {
-            Assert.fail();
-        }*/
     }
 
     @Test
@@ -465,17 +445,21 @@ public class TestShuffleMachineMethods {
                     input = input.attach(addr);
                 }
 
-                SessionIdentifier mockSessionIdentifier = new MockSessionIdentifier("testReadNewAddresses" + i);
+                SessionIdentifier mockSessionIdentifier
+                        = new MockSessionIdentifier("testReadNewAddresses" + i);
                 SigningKey sk = new MockSigningKey(1);
-                Mailbox mailbox = new Mailbox(mockSessionIdentifier, sk, playerSet, new MockNetwork());
-                CoinShuffle.Round round =
-                        standardTestInitialization(mockSessionIdentifier, sk, playerSet, crypto, mailbox);
+                Mailbox mailbox
+                        = new Mailbox(mockSessionIdentifier, sk, playerSet, new MockNetwork());
+                CoinShuffle.Round round = standardTestInitialization(
+                                mockSessionIdentifier, sk, playerSet, crypto, mailbox
+                );
 
                 Deque<Address> result = round.readNewAddresses(input);
 
                 Assert.assertTrue(expected.equals(new MockMessage().attachAddrs(result)));
             }
-        } catch (CryptographyError | FormatException | InvalidImplementationError | InvalidParticipantSetException e) {
+        } catch (CryptographyError | FormatException | InvalidImplementationError
+                | InvalidParticipantSetException e) {
             e.printStackTrace();
             Assert.fail();
         }
@@ -493,11 +477,16 @@ public class TestShuffleMachineMethods {
                 }
 
                 input = input.attach(new MockEncryptionKey(14));
-                SessionIdentifier mockSessionIdentifier = new MockSessionIdentifier("testReadNewAddressesfail" + i);
+                SessionIdentifier mockSessionIdentifier
+                        = new MockSessionIdentifier("testReadNewAddressesfail" + i);
                 SigningKey sk = new MockSigningKey(1);
-                Mailbox mailbox = new Mailbox(mockSessionIdentifier, sk, playerSet, new MockNetwork());
-                CoinShuffle.Round round =
-                        standardTestInitialization(mockSessionIdentifier, sk, playerSet, crypto, mailbox);
+                Mailbox mailbox = new Mailbox(
+                        mockSessionIdentifier, sk, playerSet, new MockNetwork()
+                );
+
+                CoinShuffle.Round round = standardTestInitialization(
+                        mockSessionIdentifier, sk, playerSet, crypto, mailbox
+                );
 
                 try {
                     round.readNewAddresses(input);
@@ -505,7 +494,8 @@ public class TestShuffleMachineMethods {
                 } catch (FormatException ignored) {
                 }
             }
-        } catch (CryptographyError | InvalidParticipantSetException | InvalidImplementationError e) {
+        } catch (CryptographyError | InvalidParticipantSetException
+                | InvalidImplementationError e) {
             Assert.fail();
         }
     }
