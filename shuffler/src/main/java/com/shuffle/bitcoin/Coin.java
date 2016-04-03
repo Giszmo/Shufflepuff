@@ -8,6 +8,11 @@
 
 package com.shuffle.bitcoin;
 
+ import com.shuffle.bitcoin.Address;
+ import com.shuffle.bitcoin.CoinNetworkException;
+ import com.shuffle.bitcoin.Transaction;
+ import com.shuffle.bitcoin.VerificationKey;
+
  import java.util.List;
  import java.util.Map;
  import java.util.Queue;

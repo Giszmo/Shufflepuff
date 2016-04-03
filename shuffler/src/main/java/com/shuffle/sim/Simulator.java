@@ -120,9 +120,10 @@ public final class Simulator {
             Map<SigningKey, Adversary> machines)  {
 
         // Create a future for the set of entries.
-        SummableFuture<Map<SigningKey, Either<Transaction, Matrix>>> wait = new SummableFutureZero<>(
-                new SummableMaps<SigningKey, Either<Transaction, Matrix>>()
-        );
+        SummableFuture<Map<SigningKey, Either<Transaction, Matrix>>> wait
+                = new SummableFutureZero<>(
+                        new SummableMaps<SigningKey, Either<Transaction, Matrix>>()
+                );
 
         // Start the simulations.
         for (Adversary in : machines.values()) {

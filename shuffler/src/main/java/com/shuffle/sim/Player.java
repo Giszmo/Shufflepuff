@@ -14,6 +14,8 @@ import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.chan.BasicChan;
 import com.shuffle.chan.Chan;
+import com.shuffle.chan.ReceiveChan;
+import com.shuffle.chan.SendChan;
 import com.shuffle.mock.InsecureRandom;
 import com.shuffle.mock.MockCrypto;
 import com.shuffle.mock.MockMarshaller;
@@ -26,7 +28,7 @@ import com.shuffle.player.Connect;
 import com.shuffle.protocol.CoinShuffle;
 import com.shuffle.protocol.FormatException;
 import com.shuffle.protocol.InvalidParticipantSetException;
-import com.shuffle.protocol.Machine;
+import com.shuffle.protocol.Network;
 import com.shuffle.protocol.Phase;
 import com.shuffle.protocol.SignatureException;
 import com.shuffle.protocol.TimeoutException;
@@ -37,6 +39,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.ProtocolException;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -70,15 +73,14 @@ class Player implements Runnable {
         }
     }
 
-    private final Chan<Machine> msg = new BasicChan<>();
+    private final SendChan<Phase> msg ;
     private final Executor exec;
     private final Parameters param;
-    private final PrintStream stream;
 
-    private Player(Parameters param, PrintStream stream) {
+    private Player(Parameters param, SendChan<Phase> msg, Executor exec) {
         this.param = param;
-        this.exec = Executors.newFixedThreadPool(param.threads);
-        this.stream = stream;
+        this.exec = exec;
+        this.msg = msg;
     }
 
     static String readFile(String path, Charset encoding)
@@ -179,64 +181,73 @@ class Player implements Runnable {
     }
 
     public static void main(String[] args) {
+        Parameters param;
+
         try {
-            Player player = new Player(readParameters(args), System.out);
-            Thread thread = new Thread(player);
-
-            thread.start();
-
-            player.report();
+            param = readParameters(args);
         } catch (IllegalArgumentException e) {
             System.out.println("Invalid arguments.");
+            return;
         }
 
+        final Chan<Phase> msg = new BasicChan<>();
+        Player player = new Player(param, msg, Executors.newFixedThreadPool(param.threads));
+        Thread thread = new Thread(player);
+
+        thread.start();
+
+        report(msg, System.out);
     }
 
-    private void report() {
-        try {
-            Machine machine = msg.receive();
-            stream.println("Protocol has started.");
-            Phase phase = Phase.Uninitiated;
+    private static void report(ReceiveChan<Phase> msg, PrintStream stream) {
 
-            while (true) {
-                Phase next = machine.phase();
-                if (next != phase) {
-                    stream.println("Protocol enters phase " + next.toString());
-                    phase = next;
-
-                    if (phase == Phase.Completed || phase == Phase.Blame) {
-                        break;
-                    }
-                }
+        while (true) {
+            Phase next = null;
+            try {
+                next = msg.receive();
+            } catch (InterruptedException e) {
+                return; // Should not happen, but whatever.
             }
 
-            // Wait until the other thread signals us to finish.
-            msg.receive();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+            if (next == null) return;
+
+            stream.println("Protocol enters phase " + next.toString());
         }
     }
+    
+    private static Transaction play(Parameters param, SendChan<Phase> msg, Executor exec)
+            throws InterruptedException {
 
-    private Transaction play() {
         Channel<InetSocketAddress, Bytestring> tcp =
                 new TcpChannel(InetSocketAddress.createUnresolved("localhost", param.port), exec);
 
-        Connect<InetSocketAddress> connect = new Connect<>(param.init.crypto());
+        Connect<InetSocketAddress> conn = null;
+        Network network = null;
+        try {
+            conn = new Connect<>(param.init.crypto());
+            network = conn.connect(tcp, param.identities, new MockMarshaller(), 1, 3);
+        } catch (IOException e) {
+            // Indicates that something has gone wrong with the initial connection.
+            return null;
+        } finally {
+            if (conn != null) {
+                conn.shutdown();
+            }
+        }
 
         try {
             return new CoinShuffle(
-                    new MockMessageFactory(), param.init.crypto(), param.init.coin()).runProtocol(
-
+                    new MockMessageFactory(), param.init.crypto(), param.init.coin()
+            ).runProtocol(
                     param.init.getSession(),
                     param.init.getAmount(),
                     param.init.sk,
                     param.init.keys,
                     null,
-                    connect.connect(tcp, param.identities, new MockMarshaller(), 1, 3),
+                    network,
                     msg
             );
-        } catch (IOException
-                | InterruptedException
+        } catch (ProtocolException
                 | CoinNetworkException
                 | TimeoutException
                 | SignatureException
@@ -246,17 +257,22 @@ class Player implements Runnable {
             // TODO handle these problems appropriately.
             return null;
         } catch (Matrix matrix) {
+            // Indicates that someone acted maliciously.
             matrix.printStackTrace();
             return null;
         } finally {
-            connect.shutdown();
+            conn.shutdown();
         }
     }
 
     @Override
     public void run() {
         // Run the protocol and signal to the other thread when it's done.
-        play();
-        msg.close();
+        try {
+            play(param, msg, exec);
+        } catch (InterruptedException e) {
+        } finally {
+            msg.close();
+        }
     }
 }

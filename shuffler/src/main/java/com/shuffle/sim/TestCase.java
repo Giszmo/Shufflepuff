@@ -12,7 +12,6 @@ import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.monad.Either;
-import com.shuffle.protocol.Machine;
 import com.shuffle.protocol.MessageFactory;
 import com.shuffle.protocol.SessionIdentifier;
 import com.shuffle.protocol.blame.Matrix;
@@ -66,7 +65,13 @@ public abstract class TestCase {
         // Check that the map of error states returned matches that which was expected.
         for (Map.Entry<SigningKey, Matrix> ex : expected.entrySet()) {
             SigningKey key = ex.getKey();
-            Matrix result = results.get(key).second;
+            Either<Transaction, Matrix> er = results.get(key);
+
+            if (er == null) {
+                return null;
+            }
+
+            Matrix result = er.second;
             Matrix expect = ex.getValue();
 
             if (!expect.match(result)) {

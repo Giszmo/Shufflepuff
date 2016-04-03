@@ -14,7 +14,6 @@ import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.protocol.CoinShuffle;
-import com.shuffle.protocol.Machine;
 import com.shuffle.protocol.MaliciousMachine;
 import com.shuffle.protocol.MessageFactory;
 import com.shuffle.protocol.Network;

@@ -21,7 +21,6 @@ import com.shuffle.p2p.Session;
 import com.shuffle.protocol.FormatException;
 import com.shuffle.protocol.InvalidImplementationError;
 import com.shuffle.protocol.SignedPacket;
-import com.shuffle.protocol.TimeoutException;
 
 import java.io.IOException;
 import java.util.HashMap;

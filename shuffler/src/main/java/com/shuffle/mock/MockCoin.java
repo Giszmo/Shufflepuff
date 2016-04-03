@@ -9,6 +9,7 @@
 package com.shuffle.mock;
 
 import com.shuffle.bitcoin.Address;
+import com.shuffle.bitcoin.Coin;
 import com.shuffle.bitcoin.CoinNetworkException;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
@@ -150,7 +151,7 @@ public class MockCoin implements com.shuffle.sim.MockCoin {
     }
 
     @Override
-    public com.shuffle.bitcoin.Coin mutated() {
+    public Coin mutated() {
         return new TransactionMutator(this);
     }
 

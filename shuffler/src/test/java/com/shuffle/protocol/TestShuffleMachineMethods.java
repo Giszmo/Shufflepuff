@@ -57,7 +57,6 @@ public class TestShuffleMachineMethods {
             MockSessionIdentifier session,
             MockSigningKey sk,
             Map<Integer, VerificationKey> players,
-            Phase phase,
             MockMessageFactory messages,
             Network network) throws InvalidParticipantSetException {
         long amount = 20L;
@@ -67,10 +66,9 @@ public class TestShuffleMachineMethods {
         CoinShuffle shuffle = new CoinShuffle(
                 messages, new MockCrypto(new InsecureRandom(seed)), new MockCoin()
         );
-        Machine machine = new Machine(session, amount, sk, playerSet);
-        machine.phase = phase;
+        CoinShuffle.CurrentPhase machine = new CoinShuffle.CurrentPhase();
         return shuffle.new Round(
-                machine, players, null, new Mailbox(session, sk, playerSet, network)
+                machine, session, amount, sk, players, null, new Mailbox(session, sk, playerSet, network)
         );
     }
 
@@ -141,7 +139,6 @@ public class TestShuffleMachineMethods {
                     new MockSessionIdentifier("testPlayerSet" + i),
                     new MockSigningKey(test.player),
                     players,
-                    Phase.Shuffling,
                     new MockMessageFactory(),
                     new MockNetwork()
             );
@@ -372,8 +369,9 @@ public class TestShuffleMachineMethods {
 
         CoinShuffle shuffle = new CoinShuffle(new MockMessageFactory(), crypto, new MockCoin());
 
-        return shuffle.new Round(new Machine(
-                session, amount, sk, playerSet), players, null, mailbox);
+        return shuffle.new Round(
+                new CoinShuffle.CurrentPhase(), session, amount, sk, players, null, mailbox
+        );
     }
 
     @Test

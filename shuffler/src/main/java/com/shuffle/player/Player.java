@@ -18,21 +18,17 @@ import com.shuffle.chan.BasicChan;
 import com.shuffle.chan.Chan;
 import com.shuffle.p2p.Channel;
 import com.shuffle.protocol.CoinShuffle;
-import com.shuffle.protocol.Machine;
 import com.shuffle.protocol.Mailbox;
 import com.shuffle.protocol.MessageFactory;
 import com.shuffle.protocol.Network;
 import com.shuffle.protocol.Phase;
 import com.shuffle.protocol.SessionIdentifier;
-import com.shuffle.protocol.TimeoutException;
 import com.shuffle.protocol.blame.Matrix;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 
 import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
@@ -98,14 +94,14 @@ class Player<Identity, Format> {
 
     }
 
-    public List<Machine> coinShuffle(
+    public Transaction coinShuffle(
             Set<Identity> identities,
             Channel<Identity, Format> channel,
             Marshaller<Format> marshaller,
             Map<Identity, VerificationKey> keys, // Can be null.
             Settings settings,
-            Chan<Machine> chan
-    ) throws InterruptedException {
+            Chan<Phase> chan
+    ) {
         SessionIdentifier session = settings.session;
 
         // TODO make this work.
@@ -129,7 +125,6 @@ class Player<Identity, Format> {
         }
 
         // Try the protocol.
-        List<Machine> list = new LinkedList<>();
         int attempt = 0;
 
         // The eliminated players. A player is eliminated when there is a subset of players
@@ -141,7 +136,7 @@ class Player<Identity, Format> {
         while (true) {
 
             if (players.size() - eliminated.size() < settings.minPlayers) {
-                break;
+                return null;
             }
 
             // Get the initial ordering of the players.
@@ -161,13 +156,11 @@ class Player<Identity, Format> {
             // this round of the protocol.
             // TODO
 
-            Transaction t = null;
             Matrix blame = null;
             try {
-                t = shuffle.runProtocol(session,
+                return shuffle.runProtocol(session,
                         settings.amount, sk, validPlayers, settings.change, net, chan);
-                break;
-            } catch(Matrix m) {
+            } catch (Matrix m) {
                 blame = m;
             } catch (Exception e) {
                 e.printStackTrace();
@@ -176,10 +169,9 @@ class Player<Identity, Format> {
             attempt++;
 
             if (attempt > settings.maxRetries) {
-                break;
+                return null;
             }
 
-            break; // TODO remove this line.
             // TODO
             // Determine if the protocol can be restarted with some players eliminated.
 
@@ -196,7 +188,5 @@ class Player<Identity, Format> {
             // similar message from the remaining players.
 
         }
-
-        return list;
     }
 }
