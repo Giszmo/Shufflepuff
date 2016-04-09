@@ -101,7 +101,7 @@ public class WebsocketChannel implements Channel<URI, Bytestring> {
 
             WebsocketPeer.WebsocketSession openSession = openSessions.get(identity);
             if (openSession != null) {
-                if (!openSession.closed()) {
+                if (openSession.session.isOpen()) {
                     return null;
                 }
 
@@ -134,7 +134,7 @@ public class WebsocketChannel implements Channel<URI, Bytestring> {
 
     }
 
-    OpenSessions openSessions = null;
+    private OpenSessions openSessions = null;
 
     // Class definition for representation of a particular websocket peer.
     public class WebsocketPeer extends FundamentalPeer<URI, Bytestring> {
