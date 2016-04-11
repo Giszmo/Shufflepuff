@@ -88,7 +88,9 @@ public class TestConnect {
         }
     }
 
-    public static class ConnectFuture implements Future<Summable.SummableElement<Map<Integer, Network>>> {
+    public static class ConnectFuture
+            implements Future<Summable.SummableElement<Map<Integer, Network>>> {
+        
         final ReceiveChan<Network> netChan;
         SummableMap<Integer, Network> net = null;
         final int me;
@@ -216,7 +218,7 @@ public class TestConnect {
     @Test
     public void testConnect() {
         int seed = 245;
-        for(int i = 2; i < 10; i ++) {
+        for (int i = 2; i < 10; i ++) {
             Assert.assertTrue(simulation(i, seed + i));
         }
     }

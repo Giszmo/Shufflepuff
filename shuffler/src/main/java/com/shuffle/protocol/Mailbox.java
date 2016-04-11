@@ -65,7 +65,7 @@ public class Mailbox {
     }
 
     public void broadcast(Message message, Phase phase)
-            throws TimeoutError, CryptographyError, InvalidImplementationError {
+            throws TimeoutError, CryptographyError, InvalidImplementationError, InterruptedException {
 
         for (VerificationKey to : players) {
             send(new Packet(message, session, phase, sk.VerificationKey(), to));
@@ -74,7 +74,7 @@ public class Mailbox {
 
     // Send a message into the network.
     public void send(Packet packet)
-            throws TimeoutError, CryptographyError, InvalidImplementationError {
+            throws TimeoutError, CryptographyError, InvalidImplementationError, InterruptedException {
 
         SignedPacket signed = new SignedPacket(packet, sk.makeSignature(packet));
 
@@ -274,7 +274,7 @@ public class Mailbox {
             }
             VerificationKey sender = packet.payload.signer;
 
-            if(broadcasts.containsKey(sender)) {
+            if (broadcasts.containsKey(sender)) {
                 throw new ProtocolException();
             }
             broadcasts.put(sender, packet);

@@ -19,6 +19,8 @@ import java.util.concurrent.TimeUnit;
  * Created by Daniel Krawisz on 3/3/16.
  */
 public class Chan<X> implements ReceiveChan<X>, SendChan<X> {
+
+    // Need a kind of message to indicate that a channel has been closed.
     private class Message {
         public X x;
 
@@ -36,9 +38,24 @@ public class Chan<X> implements ReceiveChan<X>, SendChan<X> {
 
     private boolean sendClosed = false;
     private boolean receiveClosed = false;
-    private final LinkedBlockingQueue<Message> queue = new LinkedBlockingQueue<>();
+    private boolean closeSent = false;
+    private final LinkedBlockingQueue<Message> queue;
+
+    public Chan(int n) {
+        queue = new LinkedBlockingQueue<>(n);
+    }
+
+    public Chan() {
+        queue = new LinkedBlockingQueue<>(1);
+    }
 
     private X receiveMessage(Message m) {
+        if (sendClosed && !closeSent) {
+            // There is definitely room in the queue at this point for this.
+            queue.offer(new Message());
+            closeSent = true;
+        }
+
         if (m.x == null) {
             receiveClosed = true;
         }
@@ -68,33 +85,24 @@ public class Chan<X> implements ReceiveChan<X>, SendChan<X> {
         return receiveMessage(m);
     }
 
-    private boolean sendMessage(Message x) {
-        boolean sent = queue.offer(x);
-
-        if (!sent) {
-            receiveClosed = true;
-            sendClosed = true;
-            return false;
-        }
-
-        return true;
-    }
-
     @Override
-    public boolean send(X x) {
+    public boolean send(X x) throws InterruptedException {
         if (x == null) {
             throw new NullPointerException();
         }
 
-        return !sendClosed && sendMessage(new Message(x));
+        if (sendClosed) return false;
 
+        queue.put(new Message(x));
+
+        return true;
     }
 
     @Override
     public void close() {
         sendClosed = true;
 
-        sendMessage(new Message());
+        closeSent = queue.offer(new Message());
     }
 
     @Override

@@ -14,5 +14,5 @@ package com.shuffle.p2p;
  * Created by Daniel Krawisz on 1/30/16.
  */
 public interface Receiver<Message> {
-    void receive(Message message);
+    void receive(Message message) throws InterruptedException;
 }

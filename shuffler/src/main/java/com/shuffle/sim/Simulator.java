@@ -45,7 +45,7 @@ public final class Simulator {
      * Created by Daniel Krawisz on 2/8/16.
      */
     private static class NetworkSim implements Network {
-        final Chan<SignedPacket> inbox = new Chan<>();
+        final Chan<SignedPacket> inbox;
         final Map<VerificationKey, NetworkSim> networks;
 
         NetworkSim(Map<VerificationKey, NetworkSim> networks) {
@@ -53,6 +53,8 @@ public final class Simulator {
                 throw new NullPointerException();
             }
             this.networks = networks;
+
+            inbox = new Chan<>(2 * (1 + networks.size()));
         }
 
         @Override

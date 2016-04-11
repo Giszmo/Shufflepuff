@@ -17,7 +17,7 @@ package com.shuffle.chan;
  */
 public interface SendChan<X> {
     // Send an X.
-    boolean send(X x) ;
+    boolean send(X x) throws InterruptedException;
 
     // Close the chan.
     void close();

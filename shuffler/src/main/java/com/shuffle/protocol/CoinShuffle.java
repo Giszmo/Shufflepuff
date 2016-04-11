@@ -314,7 +314,7 @@ public class CoinShuffle {
         }
 
         // Everyone except player 1 creates a new keypair and sends it around to everyone else.
-        DecryptionKey newDecryptionKey(Map<VerificationKey, Address> changeAddresses) {
+        DecryptionKey newDecryptionKey(Map<VerificationKey, Address> changeAddresses) throws InterruptedException {
             DecryptionKey dk = null;
             if (me != 1) {
                 dk = crypto.makeDecryptionKey();
@@ -383,7 +383,7 @@ public class CoinShuffle {
         // In the shuffle phase, we have to receive a set of strings from the previous player and
         // decrypt them all.
         final Message decryptAll(Message message, DecryptionKey key, int expected)
-                throws InvalidImplementationError, FormatException {
+                throws InvalidImplementationError, FormatException, InterruptedException {
 
             Message decrypted = messages.make();
 
@@ -1146,7 +1146,7 @@ public class CoinShuffle {
             // If this is not null, the machine is put in this channel so that another thread can
             // query the phase as it runs.
             SendChan<Machine> queue
-    ) {
+    ) throws InterruptedException {
         if (amount <= 0) {
             throw new IllegalArgumentException();
         }

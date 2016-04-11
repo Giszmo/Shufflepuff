@@ -60,13 +60,11 @@ public class WebsocketChannel implements Channel<URI, Bytestring> {
 
         @OnOpen
         public void onOpen(Session userSession) {
-            System.out.println("opening websocket");
             this.userSession = userSession;
         }
 
         @OnClose
         public void onClose(Session userSession, CloseReason reason) {
-            System.out.println("closing websocket");
             this.userSession = null;
         }
     }
@@ -95,9 +93,9 @@ public class WebsocketChannel implements Channel<URI, Bytestring> {
 
         // We don't want to overwrite a session that already exists, so this is in a synchronized
         // function. This is for creating new sessions.
-        public synchronized WebsocketPeer.WebsocketSession putNewSession(URI identity,
-                                                                         WebsocketPeer peer)
-                throws Exception {
+        public synchronized WebsocketPeer.WebsocketSession putNewSession(
+                URI identity,
+                WebsocketPeer peer) {
             WebsocketPeer.WebsocketSession openSession = openSessions.get(identity);
             if (openSession != null) {
                 if (!openSession.closed()) {
@@ -107,7 +105,12 @@ public class WebsocketChannel implements Channel<URI, Bytestring> {
                 openSessions.remove(identity);
             }
 
-            WebsocketPeer.WebsocketSession session = peer.newSession();
+            WebsocketPeer.WebsocketSession session = null;
+            try {
+                session = peer.newSession();
+            } catch (DeploymentException e) {
+                return null;
+            }
 
             return openSessions.put(identity, session);
         }
@@ -148,10 +151,8 @@ public class WebsocketChannel implements Channel<URI, Bytestring> {
         WebsocketPeer.WebsocketSession newSession() throws DeploymentException {
             URI identity = identity();
             try {
-                WebsocketClientEndpoint clientEndPoint = new WebsocketClientEndpoint(identity);
-                WebsocketPeer.WebsocketSession session = new WebsocketPeer(identity).new
-                        WebsocketSession(clientEndPoint.newSession());
-                return session;
+                return new WebsocketPeer(identity).new
+                        WebsocketSession(new WebsocketClientEndpoint(identity).newSession());
             } catch (IOException e) {
                 return null;
             }
@@ -171,25 +172,24 @@ public class WebsocketChannel implements Channel<URI, Bytestring> {
                 return null;
             }
 
-            WebsocketSession session;
+            final WebsocketSession session = openSessions.putNewSession(identity(), this);
 
-            try {
-                session = openSessions.putNewSession(identity(), this);
-                if (session == null) {
-                    return null;
-                }
-
-                // if the session receives a message, it is passed to the receiver.
-                session.session.addMessageHandler(new MessageHandler.Whole<byte[]>() {
-                    public void onMessage(byte[] message) {
-                        receiver.receive(new Bytestring(message));
-                    }
-                });
-
-                return session;
-            } catch (Exception e) {
+            if (session == null) {
                 return null;
             }
+
+            // if the session receives a message, it is passed to the receiver.
+            session.session.addMessageHandler(new MessageHandler.Whole<byte[]>() {
+                public void onMessage(byte[] message) {
+                    try {
+                        receiver.receive(new Bytestring(message));
+                    } catch (InterruptedException e) {
+                        session.close();
+                    }
+                }
+            });
+
+            return session;
 
         }
 

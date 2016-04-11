@@ -277,7 +277,7 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
 
                     receiver.receive(new Bytestring(msg));
 
-                } catch (IOException e) {
+                } catch (IOException | InterruptedException e) {
                     session.close();
                     return;
                 }
