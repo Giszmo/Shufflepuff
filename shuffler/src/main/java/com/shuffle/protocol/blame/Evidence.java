@@ -13,7 +13,7 @@ import com.shuffle.bitcoin.EncryptionKey;
 import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
-import com.shuffle.protocol.SignedPacket;
+import com.shuffle.protocol.message.Packet;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
@@ -33,10 +33,10 @@ public class Evidence {
     public final Reason reason;
     public final Transaction t;
     public final Signature signature;
-    public final Map<VerificationKey, SignedPacket> output;
+    public final Map<VerificationKey, Packet> output;
     public final Map<VerificationKey, EncryptionKey> sent;
-    public final Map<VerificationKey, SignedPacket> shuffle;
-    public final Map<VerificationKey, SignedPacket> broadcast;
+    public final Map<VerificationKey, Packet> shuffle;
+    public final Map<VerificationKey, Packet> broadcast;
     public final Map<VerificationKey, DecryptionKey> keys;
 
     protected Evidence(
@@ -44,10 +44,10 @@ public class Evidence {
             Reason reason,
             Transaction t,
             Signature signature,
-            Map<VerificationKey, SignedPacket> output,
+            Map<VerificationKey, Packet> output,
             Map<VerificationKey, EncryptionKey> sent,
-            Map<VerificationKey, SignedPacket> shuffle,
-            Map<VerificationKey, SignedPacket> broadcast,
+            Map<VerificationKey, Packet> shuffle,
+            Map<VerificationKey, Packet> broadcast,
             Map<VerificationKey, DecryptionKey> keys) {
 
         if (reason == null) {
@@ -190,7 +190,7 @@ public class Evidence {
 
     public static Evidence EquivocationFailureBroadcast(
             VerificationKey accused,
-            Map<VerificationKey, SignedPacket> output
+            Map<VerificationKey, Packet> output
     ) {
         return new Evidence(accused,
                 Reason.EquivocationFailure, null, null, output, null, null, null, null);
@@ -199,8 +199,8 @@ public class Evidence {
     public static Evidence ShuffleMisbehaviorDropAddress(
             VerificationKey accused,
             Map<VerificationKey, DecryptionKey> keys,
-            Map<VerificationKey, SignedPacket> shuffleMessages,
-            Map<VerificationKey, SignedPacket> broadcastMessages
+            Map<VerificationKey, Packet> shuffleMessages,
+            Map<VerificationKey, Packet> broadcastMessages
     ) {
         return new Evidence(accused, Reason.ShuffleFailure,
                 null, null, null, null, shuffleMessages, broadcastMessages, keys);

@@ -20,10 +20,10 @@ import com.shuffle.monad.SummableFuture;
 import com.shuffle.monad.SummableFutureZero;
 import com.shuffle.monad.SummableMaps;
 import com.shuffle.protocol.InvalidImplementationError;
-import com.shuffle.protocol.MessageFactory;
+import com.shuffle.protocol.message.MessageFactory;
 import com.shuffle.protocol.Network;
-import com.shuffle.protocol.SignedPacket;
 import com.shuffle.protocol.blame.Matrix;
+import com.shuffle.protocol.message.Packet;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
@@ -47,7 +47,7 @@ public final class Simulator {
      * Created by Daniel Krawisz on 2/8/16.
      */
     private static class NetworkSim implements Network {
-        final Chan<SignedPacket> inbox;
+        final Chan<Packet> inbox;
         final Map<VerificationKey, NetworkSim> networks;
 
         NetworkSim(Map<VerificationKey, NetworkSim> networks) {
@@ -62,27 +62,19 @@ public final class Simulator {
         @Override
         public void sendTo(
                 VerificationKey to,
-                SignedPacket packet
+                Packet packet
         ) throws InvalidImplementationError, InterruptedException {
 
             networks.get(to).deliver(packet);
         }
 
         @Override
-        public SignedPacket receive() throws InterruptedException {
-            for (int i = 0; i < 2; i++) {
-                SignedPacket next = inbox.receive(300, TimeUnit.MILLISECONDS);
-
-                if (next != null) {
-                    return next;
-                }
-            }
-
-            return null;
+        public Packet receive() throws InterruptedException {
+            return inbox.receive(1000, TimeUnit.MILLISECONDS);
         }
 
-        public void deliver(SignedPacket packet) throws InterruptedException {
-            boolean sent = inbox.send(packet);
+        public void deliver(Packet packet) throws InterruptedException {
+            inbox.send(packet);
         }
     }
 

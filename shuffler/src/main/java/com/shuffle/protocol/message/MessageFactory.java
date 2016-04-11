@@ -6,7 +6,9 @@
  *
  */
 
-package com.shuffle.protocol;
+package com.shuffle.protocol.message;
+
+import com.shuffle.protocol.message.Message;
 
 /**
  * Created by Daniel Krawisz on 12/6/15.

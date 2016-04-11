@@ -21,7 +21,12 @@ import com.shuffle.chan.SendChan;
 import com.shuffle.protocol.blame.Blame;
 import com.shuffle.protocol.blame.BlameException;
 import com.shuffle.protocol.blame.Matrix;
+import com.shuffle.protocol.message.Message;
+import com.shuffle.protocol.message.MessageFactory;
+import com.shuffle.protocol.message.Packet;
+import com.shuffle.protocol.message.Phase;
 
+import java.io.IOException;
 import java.net.ProtocolException;
 import java.util.Deque;
 import java.util.HashMap;
@@ -58,7 +63,8 @@ public final class MaliciousMachine extends CoinShuffle {
         }
 
         @Override
-        DecryptionKey newDecryptionKey(Map<VerificationKey, Address> changeAddresses) throws InterruptedException, TimeoutException {
+        final DecryptionKey newDecryptionKey(Map<VerificationKey, Address> changeAddresses) throws IOException, InterruptedException {
+
             DecryptionKey dk = null;
             if (me != 1) {
                 dk = crypto.makeDecryptionKey();
@@ -88,9 +94,7 @@ public final class MaliciousMachine extends CoinShuffle {
                 Map<VerificationKey, EncryptionKey> encryptonKeys,
                 Queue<Address> newAddresses,
                 boolean errorCase)
-                throws InterruptedException, ValueException,
-                FormatException, ProtocolException,
-                SignatureException, TimeoutException, Matrix {
+                throws WaitingException, Matrix, InterruptedException, FormatException, IOException {
 
             Map<VerificationKey, EncryptionKey> otherKeys = new HashMap<>();
             otherKeys.putAll(encryptonKeys);
@@ -121,7 +125,7 @@ public final class MaliciousMachine extends CoinShuffle {
             // If the hashes are not equal, enter the blame phase.
             // Collect all packets from phase 1 and 3.
             phase.set(Phase.Blame);
-            Queue<SignedPacket> evidence = mailbox.getPacketsByPhase(Phase.Announcement);
+            Queue<Packet> evidence = mailbox.getPacketsByPhase(Phase.Announcement);
             evidence.addAll(mailbox.getPacketsByPhase(Phase.BroadcastOutput));
             Message blameMessage = messages.make().attach(Blame.EquivocationFailure(evidence));
             mailbox.broadcast(blameMessage, phase.get());
@@ -150,7 +154,7 @@ public final class MaliciousMachine extends CoinShuffle {
         @Override
         final Deque<Address> readAndBroadcastNewAddresses(Message shuffled)
                 throws FormatException, InterruptedException,
-                SignatureException, ValueException, BlameException, TimeoutException {
+                BlameException, WaitingException, IOException {
 
             Deque<Address> newAddresses;
             if (me == N) {
@@ -183,9 +187,9 @@ public final class MaliciousMachine extends CoinShuffle {
                 Map<VerificationKey, EncryptionKey> encryptonKeys,
                 Queue<Address> newAddresses,
                 boolean errorCase)
-                throws InterruptedException, ValueException,
-                FormatException, ProtocolException,
-                SignatureException, TimeoutException, Matrix {
+                throws InterruptedException,
+                FormatException, IOException,
+                WaitingException, Matrix {
 
             Message equivocationCheck = equivocationCheckHash(players, encryptonKeys, newAddresses);
             Message otherCheck = equivocationCheckHash(players, encryptonKeys, otherAddresses);
@@ -209,7 +213,7 @@ public final class MaliciousMachine extends CoinShuffle {
             // If the hashes are not equal, enter the blame phase.
             // Collect all packets from phase 1 and 3.
             phase.set(Phase.Blame);
-            Queue<SignedPacket> evidence = mailbox.getPacketsByPhase(Phase.Announcement);
+            Queue<Packet> evidence = mailbox.getPacketsByPhase(Phase.Announcement);
             evidence.addAll(mailbox.getPacketsByPhase(Phase.BroadcastOutput));
             Message blameMessage = messages.make().attach(Blame.EquivocationFailure(evidence));
             mailbox.broadcast(blameMessage, phase.get());
@@ -235,8 +239,7 @@ public final class MaliciousMachine extends CoinShuffle {
 
         @Override
         Message shufflePhase(Message shuffled, Address addrNew)
-                throws InterruptedException, BlameException,
-                SignatureException, ValueException, FormatException {
+                throws FormatException {
             Message dropped = messages.make();
 
             int i = 1;
@@ -272,8 +275,7 @@ public final class MaliciousMachine extends CoinShuffle {
 
         @Override
         Message shufflePhase(Message shuffled, Address addrNew)
-                throws InterruptedException, BlameException,
-                SignatureException, ValueException, FormatException {
+                throws FormatException {
             Message findDuplcate = shuffled;
             shuffled = messages.make();
             Address duplicate = null;
@@ -324,8 +326,7 @@ public final class MaliciousMachine extends CoinShuffle {
 
         @Override
         Message shufflePhase(Message shuffled, Address addrNew)
-                throws InterruptedException, BlameException,
-                SignatureException, ValueException, FormatException {
+                throws FormatException {
             Message dropped = messages.make();
 
             int i = 1;
@@ -365,9 +366,10 @@ public final class MaliciousMachine extends CoinShuffle {
                 Map<VerificationKey, EncryptionKey> encryptonKeys,
                 Queue<Address> newAddresses,
                 boolean errorCase)
-                throws InterruptedException, ValueException,
-                FormatException, ProtocolException,
-                SignatureException, TimeoutException, Matrix {
+                throws InterruptedException,
+                FormatException, IOException,
+                WaitingException, Matrix {
+
             if (!spent) {
                 try {
                     t.send();
@@ -406,9 +408,10 @@ public final class MaliciousMachine extends CoinShuffle {
             // If this is not null, the machine is put in this channel so that another thread can
             // query the phase as it runs.
             SendChan<Phase> chan
-    ) throws InterruptedException, InvalidParticipantSetException,
-            CoinNetworkException, FormatException, ValueException,
-            TimeoutException, SignatureException, ProtocolException, Matrix {
+    ) throws WaitingException,
+            InvalidParticipantSetException,
+            InterruptedException, FormatException,
+            IOException, CoinNetworkException, Matrix {
 
         if (amount <= 0) {
             throw new IllegalArgumentException();

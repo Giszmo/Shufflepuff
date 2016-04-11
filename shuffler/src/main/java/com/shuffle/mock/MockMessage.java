@@ -15,9 +15,8 @@ import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.protocol.FormatException;
 import com.shuffle.protocol.InvalidImplementationError;
-import com.shuffle.protocol.Message;
-import com.shuffle.protocol.Packet;
-import com.shuffle.protocol.SignedPacket;
+import com.shuffle.protocol.message.Message;
+import com.shuffle.protocol.message.Packet;
 import com.shuffle.protocol.blame.Blame;
 
 import org.apache.logging.log4j.Logger;
@@ -336,15 +335,6 @@ public class MockMessage implements Message, Serializable {
         if (atoms == null || atoms.blame == null) throw new FormatException();
 
         Blame blame = atoms.blame;
-
-        if (blame.packets != null) {
-            for (SignedPacket packet : blame.packets) {
-                if (!packet.verify()) {
-                    log.warn("packet failed verification: " + packet.toString());
-                    throw new CryptographyError();
-                }
-            }
-        }
 
         return blame;
     }

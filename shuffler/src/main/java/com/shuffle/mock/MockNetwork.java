@@ -10,8 +10,7 @@ package com.shuffle.mock;
 
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.protocol.Network;
-import com.shuffle.protocol.SignedPacket;
-import com.shuffle.protocol.TimeoutException;
+import com.shuffle.protocol.message.Packet;
 
 import java.util.LinkedList;
 import java.util.Map;
@@ -23,17 +22,17 @@ import java.util.Queue;
  * Created by Daniel Krawisz on 12/5/15.
  */
 public class MockNetwork implements Network {
-    public static class SentMessage implements Map.Entry<SignedPacket, VerificationKey> {
-        private final SignedPacket packet;
+    public static class SentMessage implements Map.Entry<Packet, VerificationKey> {
+        private final Packet packet;
         private VerificationKey to;
 
-        public SentMessage(SignedPacket packet, VerificationKey to) {
+        public SentMessage(Packet packet, VerificationKey to) {
             this.to = to;
             this.packet = packet;
         }
 
         @Override
-        public SignedPacket getKey() {
+        public Packet getKey() {
             return packet;
         }
 
@@ -71,31 +70,31 @@ public class MockNetwork implements Network {
         }
     }
 
-    final Queue<Map.Entry<SignedPacket, VerificationKey>> responses;
-    final Queue<SignedPacket> sent;
+    final Queue<Map.Entry<Packet, VerificationKey>> responses;
+    final Queue<Packet> sent;
 
     public MockNetwork() {
         this.sent = new LinkedList<>();
         this.responses = new LinkedList<>();
     }
 
-    MockNetwork(Queue<SignedPacket> sent) {
+    MockNetwork(Queue<Packet> sent) {
         this.sent = sent;
         this.responses = new LinkedList<>();
     }
 
-    public Queue<Map.Entry<SignedPacket, VerificationKey>> getResponses() {
+    public Queue<Map.Entry<Packet, VerificationKey>> getResponses() {
         return responses;
     }
 
     @Override
-    public void sendTo(VerificationKey to, SignedPacket packet) {
+    public void sendTo(VerificationKey to, Packet packet) {
 
         responses.add(new SentMessage(packet, to));
     }
 
     @Override
-    public SignedPacket receive() {
+    public Packet receive() {
         if (sent.size() == 0) {
             return null;
         }
@@ -103,7 +102,7 @@ public class MockNetwork implements Network {
         return sent.remove();
     }
 
-    public void deliver(SignedPacket packet) {
+    public void deliver(Packet packet) {
         sent.add(packet);
     }
 }

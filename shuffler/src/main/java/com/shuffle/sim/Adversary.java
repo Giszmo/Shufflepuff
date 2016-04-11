@@ -26,10 +26,10 @@ import com.shuffle.protocol.InvalidParticipantSetException;
 import com.shuffle.protocol.Network;
 import com.shuffle.protocol.SessionIdentifier;
 import com.shuffle.protocol.SignatureException;
-import com.shuffle.protocol.ValueException;
+import com.shuffle.protocol.WaitingException;
 import com.shuffle.protocol.blame.Matrix;
 
-import java.net.ProtocolException;
+import java.io.IOException;
 import java.util.Map;
 import java.util.SortedSet;
 import java.util.concurrent.ExecutionException;
@@ -102,17 +102,17 @@ public class Adversary {
                         q.send(new Either<Transaction, Matrix>(null, m));
                     }
 
-                } catch (InterruptedException
-                        | ProtocolException
-                        | SignatureException
-                        | com.shuffle.protocol.TimeoutException
-                        | ValueException
+                } catch (IOException
+                        | WaitingException
                         | FormatException
                         | CoinNetworkException
                         | InvalidParticipantSetException e) {
 
                     e.printStackTrace();
                     System.out.println("Exception returned by " + sk + ": " + e.getMessage());
+                    
+                } catch (InterruptedException e) {
+                    // Ignore and we'll just return nothing.
                 }
 
                 q.close();

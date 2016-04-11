@@ -10,10 +10,10 @@ package com.shuffle.mock;
 
 import com.shuffle.bitcoin.CryptographyError;
 import com.shuffle.bitcoin.Signature;
-import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
-import com.shuffle.protocol.Packet;
+import com.shuffle.player.SigningKey;
+import com.shuffle.protocol.message.Packet;
 
 /**
  * Created by Daniel Krawisz on 12/9/15.

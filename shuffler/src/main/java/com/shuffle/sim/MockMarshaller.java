@@ -6,12 +6,12 @@
  *
  */
 
-package com.shuffle.mock;
+package com.shuffle.sim;
 
 import com.shuffle.p2p.Bytestring;
 import com.shuffle.player.Marshaller;
 import com.shuffle.protocol.FormatException;
-import com.shuffle.protocol.SignedPacket;
+import com.shuffle.player.SignedPacket;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -46,18 +46,18 @@ public class MockMarshaller implements Marshaller<Bytestring> {
     }
 
     @Override
-    public SignedPacket unmarshall(Bytestring string) throws FormatException {
+    public SignedPacket unmarshall(Bytestring string) {
         ByteArrayInputStream b = new ByteArrayInputStream(string.bytes);
         Object obj = null;
         try {
             ObjectInputStream o = new ObjectInputStream(b);
             obj = o.readObject();
         } catch (ClassNotFoundException | IOException e) {
-            throw new FormatException();
+            return null;
         }
 
         if (!(obj instanceof SignedPacket)) {
-            throw new FormatException();
+            return null;
         }
 
         return (SignedPacket)obj;

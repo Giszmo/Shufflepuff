@@ -12,7 +12,7 @@ import com.shuffle.bitcoin.DecryptionKey;
 import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
-import com.shuffle.protocol.SignedPacket;
+import com.shuffle.protocol.message.Packet;
 
 import java.io.Serializable;
 import java.util.Queue;
@@ -27,7 +27,7 @@ public class Blame implements Serializable {
     public final Reason reason;
     public final VerificationKey accused; // Can be null if we don't know who to accuse yet.
     public final Transaction t;
-    public final Queue<SignedPacket> packets;
+    public final Queue<Packet> packets;
     public final DecryptionKey privateKey;
     public final Signature invalid;
 
@@ -35,7 +35,7 @@ public class Blame implements Serializable {
           VerificationKey accused,
           Transaction t,
           DecryptionKey privateKey,
-          Queue<SignedPacket> packets,
+          Queue<Packet> packets,
           Signature invalid) {
 
         if (reason == null) {
@@ -142,7 +142,7 @@ public class Blame implements Serializable {
     }
 
     // Sent when something goes wrong in phase 4.
-    public static Blame EquivocationFailure(Queue<SignedPacket> packets) {
+    public static Blame EquivocationFailure(Queue<Packet> packets) {
         return new Blame(Reason.EquivocationFailure, null, null, null, packets, null);
     }
 
@@ -159,7 +159,7 @@ public class Blame implements Serializable {
     // Sent when there is a failure in phase two and in the subsequent equivocation check.
     public static Blame ShuffleAndEquivocationFailure(
             DecryptionKey privateKey,
-            Queue<SignedPacket> packets
+            Queue<Packet> packets
     ) {
         return new Blame(
                 Reason.ShuffleAndEquivocationFailure, null, null, privateKey, packets, null);

@@ -8,9 +8,8 @@
 
 package com.shuffle.mock;
 
-import com.shuffle.mock.MockMessage;
-import com.shuffle.protocol.Message;
-import com.shuffle.protocol.MessageFactory;
+import com.shuffle.protocol.message.Message;
+import com.shuffle.protocol.message.MessageFactory;
 
 /**
  * Created by Daniel Krawisz on 12/9/15.

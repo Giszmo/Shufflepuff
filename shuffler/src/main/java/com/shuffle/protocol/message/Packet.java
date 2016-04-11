@@ -6,9 +6,10 @@
  *
  */
 
-package com.shuffle.protocol;
+package com.shuffle.protocol.message;
 
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.protocol.SessionIdentifier;
 
 import java.io.Serializable;
 

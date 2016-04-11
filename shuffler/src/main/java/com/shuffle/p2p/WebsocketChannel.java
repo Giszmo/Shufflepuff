@@ -98,6 +98,7 @@ public class WebsocketChannel implements Channel<URI, Bytestring> {
         public synchronized WebsocketPeer.WebsocketSession putNewSession(
                 URI identity,
                 WebsocketPeer peer) {
+
             WebsocketPeer.WebsocketSession openSession = openSessions.get(identity);
             if (openSession != null) {
                 if (!openSession.closed()) {
@@ -175,7 +176,6 @@ public class WebsocketChannel implements Channel<URI, Bytestring> {
             }
 
             final WebsocketSession session = openSessions.putNewSession(identity(), this);
-
             if (session == null) {
                 return null;
             }

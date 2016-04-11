@@ -27,12 +27,15 @@ import com.shuffle.mock.MockSessionIdentifier;
 import com.shuffle.mock.MockSigningKey;
 import com.shuffle.mock.MockVerificationKey;
 import com.shuffle.mock.RandomSequence;
+import com.shuffle.protocol.message.Message;
+import com.shuffle.protocol.message.MessageFactory;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashMap;
@@ -375,7 +378,8 @@ public class TestShuffleMachineMethods {
     }
 
     @Test
-    public void testDecryptAll() throws InterruptedException, TimeoutException {
+    public void testDecryptAll() throws WaitingException, InterruptedException, IOException {
+
         MockCrypto crypto = new MockCrypto(new InsecureRandom(56));
         MessageFactory messages = new MockMessageFactory();
 

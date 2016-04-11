@@ -15,18 +15,19 @@ import java.util.LinkedList;
 import java.util.Queue;
 
 /**
- * To be called when the network times out.
+ * To be called when we have been unable to receive messages from players from
+ * whom we have been expecting them.
  *
  * Created by Daniel Krawisz on 12/4/15.
  */
-public class TimeoutException extends Exception {
+public class WaitingException extends Exception {
     public final Queue<VerificationKey> waitingOn = new LinkedList<>();
 
-    public TimeoutException(Collection<VerificationKey> w) {
+    public WaitingException(Collection<VerificationKey> w) {
         waitingOn.addAll(w);
     }
 
-    public TimeoutException(VerificationKey v) {
+    public WaitingException(VerificationKey v) {
         waitingOn.add(v);
     }
 

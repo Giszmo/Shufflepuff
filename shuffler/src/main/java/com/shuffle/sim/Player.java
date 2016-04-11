@@ -18,28 +18,26 @@ import com.shuffle.chan.ReceiveChan;
 import com.shuffle.chan.SendChan;
 import com.shuffle.mock.InsecureRandom;
 import com.shuffle.mock.MockCrypto;
-import com.shuffle.mock.MockMarshaller;
 import com.shuffle.mock.MockMessageFactory;
 import com.shuffle.mock.MockSessionIdentifier;
+import com.shuffle.mock.MockSigningKey;
 import com.shuffle.p2p.Bytestring;
 import com.shuffle.p2p.Channel;
 import com.shuffle.p2p.TcpChannel;
 import com.shuffle.player.Connect;
+import com.shuffle.player.SigningKey;
 import com.shuffle.protocol.CoinShuffle;
 import com.shuffle.protocol.FormatException;
 import com.shuffle.protocol.InvalidParticipantSetException;
 import com.shuffle.protocol.Network;
-import com.shuffle.protocol.Phase;
-import com.shuffle.protocol.SignatureException;
-import com.shuffle.protocol.TimeoutException;
-import com.shuffle.protocol.ValueException;
+import com.shuffle.protocol.message.Phase;
+import com.shuffle.protocol.WaitingException;
 import com.shuffle.protocol.blame.Matrix;
 
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.ProtocolException;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -58,14 +56,17 @@ import java.util.regex.Pattern;
  */
 class Player implements Runnable {
     private static class Parameters {
+        public final SigningKey me;
         public final int port;
         public final int threads;
         public final InitialState.PlayerInitialState init;
         public final Map<InetSocketAddress, VerificationKey> identities;
 
-        public Parameters(int port, int threads, InitialState.PlayerInitialState init,
+        public Parameters(SigningKey me, int port, int threads,
+                          InitialState.PlayerInitialState init,
                           Map<InetSocketAddress, VerificationKey> identities) {
 
+            this.me = me;
             this.port = port;
             this.threads = threads;
             this.init = init;
@@ -175,6 +176,7 @@ class Player implements Runnable {
         InitialState.PlayerInitialState pinit = init.getPlayer(i);
 
         return new Parameters(
+                new MockSigningKey(options.get("-key")),
                 options.get("-minport") + i,
                 options.get("-threads"),
                 pinit, identities);
@@ -225,7 +227,7 @@ class Player implements Runnable {
         Network network = null;
         try {
             conn = new Connect<>(param.init.crypto());
-            network = conn.connect(tcp, param.identities, new MockMarshaller(), 1, 3);
+            network = conn.connect(param.me, tcp, param.identities, new MockMarshaller(), 1, 3);
         } catch (IOException e) {
             // Indicates that something has gone wrong with the initial connection.
             return null;
@@ -247,12 +249,10 @@ class Player implements Runnable {
                     network,
                     msg
             );
-        } catch (ProtocolException
-                | CoinNetworkException
-                | TimeoutException
-                | SignatureException
-                | FormatException
-                | ValueException
+        } catch (IOException // TODO there should be an exception which says that the internet connection failed.
+                | CoinNetworkException // Indicates a problem with the Bitcoin network.
+                | WaitingException // Indicates a lost
+                | FormatException // TODO also all improperly formatted messages are ignored.
                 | InvalidParticipantSetException e) {
             // TODO handle these problems appropriately.
             return null;

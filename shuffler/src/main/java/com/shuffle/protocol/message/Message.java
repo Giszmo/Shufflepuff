@@ -6,12 +6,14 @@
  *
  */
 
-package com.shuffle.protocol;
+package com.shuffle.protocol.message;
 
 import com.shuffle.bitcoin.Address;
 import com.shuffle.bitcoin.CryptographyError;
 import com.shuffle.bitcoin.EncryptionKey;
 import com.shuffle.bitcoin.Signature;
+import com.shuffle.protocol.FormatException;
+import com.shuffle.protocol.InvalidImplementationError;
 import com.shuffle.protocol.blame.Blame;
 
 /**

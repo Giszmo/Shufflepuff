@@ -12,7 +12,7 @@ import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.monad.Either;
-import com.shuffle.protocol.MessageFactory;
+import com.shuffle.protocol.message.MessageFactory;
 import com.shuffle.protocol.SessionIdentifier;
 import com.shuffle.protocol.blame.Matrix;
 

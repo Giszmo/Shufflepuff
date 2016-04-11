@@ -6,7 +6,7 @@
  *
  */
 
-package com.shuffle.protocol;
+package com.shuffle.protocol.message;
 
 /**
  * The phases of the shuffle protocol.

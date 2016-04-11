@@ -17,7 +17,7 @@ import com.shuffle.chan.SendChan;
 import com.shuffle.mock.InsecureRandom;
 import com.shuffle.mock.MockChannel;
 import com.shuffle.mock.MockCrypto;
-import com.shuffle.mock.MockMarshaller;
+import com.shuffle.mock.MockSigningKey;
 import com.shuffle.monad.NaturalSummableFuture;
 import com.shuffle.monad.Summable;
 import com.shuffle.monad.SummableFuture;
@@ -27,6 +27,7 @@ import com.shuffle.monad.SummableMaps;
 import com.shuffle.p2p.Bytestring;
 import com.shuffle.p2p.Channel;
 import com.shuffle.protocol.Network;
+import com.shuffle.sim.MockMarshaller;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -56,12 +57,18 @@ public class TestConnect {
         private final int timeout;
         private final int maxRetries;
 
+        private final SigningKey me;
+
         public ConnectRun(
+                SigningKey me,
                 Connect<Integer> connect,
                 Channel<Integer, Bytestring> channel,
                 Map<Integer, VerificationKey> keys,
                 int timeout, int maxRetries,
                 SendChan<Network> net) {
+
+            this.me = me;
+
             this.channel = channel;
             this.connect = connect;
             this.keys = keys;
@@ -75,7 +82,7 @@ public class TestConnect {
         public void run() {
             try {
                 Network network = connect.connect(
-                    channel, keys,
+                    me, channel, keys,
                     new MockMarshaller(), timeout, maxRetries);
                 if (network != null) {
                     net.send(network);
@@ -108,7 +115,7 @@ public class TestConnect {
             Chan<Network> netChan = new BasicChan<>();
             this.netChan = netChan;
 
-            new Thread(new ConnectRun(connect, channel, keys, 1, 3, netChan)).start();
+            new Thread(new ConnectRun(new MockSigningKey(i), connect, channel, keys, 1, 3, netChan)).start();
         }
 
         @Override

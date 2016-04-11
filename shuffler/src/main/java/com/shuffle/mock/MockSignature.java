@@ -10,7 +10,7 @@ package com.shuffle.mock;
 
 import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.Transaction;
-import com.shuffle.protocol.Packet;
+import com.shuffle.protocol.message.Packet;
 
 import java.io.Serializable;
 

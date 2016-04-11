@@ -15,11 +15,16 @@ import com.shuffle.mock.MockNetwork;
 import com.shuffle.mock.MockSessionIdentifier;
 import com.shuffle.mock.MockSigningKey;
 import com.shuffle.mock.MockVerificationKey;
+import com.shuffle.player.SignedPacket;
 import com.shuffle.protocol.blame.BlameException;
+import com.shuffle.protocol.message.Message;
+import com.shuffle.protocol.message.Packet;
+import com.shuffle.protocol.message.Phase;
 
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.net.ProtocolException;
 import java.util.HashSet;
 import java.util.Map;
@@ -44,7 +49,7 @@ public class TestMailbox {
     }
 
     @Test
-    public void testBroadcast() throws InvalidParticipantSetException, InterruptedException, TimeoutException {
+    public void testBroadcast() throws InvalidParticipantSetException, InterruptedException, IOException {
         BroadcastTestCase[] tests =
                 new BroadcastTestCase[]{
                         new BroadcastTestCase(1, 1),
@@ -74,7 +79,7 @@ public class TestMailbox {
                     "testBroadcast" + index), me, players, network
             ).broadcast(messages.make(), Phase.Shuffling);
 
-            for (Map.Entry<SignedPacket, VerificationKey> sent : network.getResponses()) {
+            for (Map.Entry<Packet, VerificationKey> sent : network.getResponses()) {
                 VerificationKey sentBy = sent.getValue();
                 Assert.assertTrue(players.contains(sentBy));
                 players.remove(sentBy);
@@ -104,7 +109,7 @@ public class TestMailbox {
     }
 
     @Test
-    public void testSend() throws InvalidParticipantSetException, InterruptedException, TimeoutException {
+    public void testSend() throws InvalidParticipantSetException, InterruptedException, IOException {
         SendToTestCase[] tests = new SendToTestCase[]{
                 // Case where recipient does not exist.
                 new SendToTestCase(1, 3, 2, false),
@@ -142,7 +147,7 @@ public class TestMailbox {
 
             int expected = (test.success ? 1 : 0);
 
-            Queue<Map.Entry<SignedPacket, VerificationKey>> responses = network.getResponses();
+            Queue<Map.Entry<Packet, VerificationKey>> responses = network.getResponses();
             Assert.assertEquals(
                     String.format(
                             "Recieved %d responses when only expected %d in test case %d",
@@ -180,10 +185,10 @@ public class TestMailbox {
         }
     }
 
-    @Test(expected = TimeoutException.class)
+    @Test(expected = WaitingException.class)
     public void testReceiveFrom()
             throws InvalidParticipantSetException, InterruptedException,
-            BlameException, ValueException, FormatException, SignatureException, TimeoutException {
+            BlameException, FormatException, WaitingException, IOException {
 
         ReceiveFromTestCase[] tests = new ReceiveFromTestCase[]{
                 // time out exception test case.
@@ -261,7 +266,7 @@ public class TestMailbox {
     @Test
     public void testReceiveFromMultiple()
             throws InvalidParticipantSetException, InterruptedException, BlameException,
-            ValueException, FormatException, ProtocolException, SignatureException {
+            FormatException, IOException {
 
         ReceiveFromMultipleTestCase[] tests = new ReceiveFromMultipleTestCase[]{
                 // Very simple test case.
@@ -306,13 +311,12 @@ public class TestMailbox {
                 MockSigningKey sender = new MockSigningKey(from);
 
                 network.deliver(
-                        sender.makeSignedPacket(
                             new Packet(
                                 new MockMessage(),
                                 mockSessionIdentifier,
                                 Phase.BroadcastOutput,
                                 sender.VerificationKey(),
-                                new MockVerificationKey(test.me))));
+                                new MockVerificationKey(test.me)));
             }
 
             {
@@ -320,18 +324,17 @@ public class TestMailbox {
                 // flip through the first set of messages.
                 MockSigningKey sender = new MockSigningKey(1);
                 network.deliver(
-                        sender.makeSignedPacket(
                                 new Packet(
                                         new MockMessage(),
                                         mockSessionIdentifier,
                                         Phase.Shuffling,
                                         sender.VerificationKey(),
-                                        new MockVerificationKey(test.me))));
+                                        new MockVerificationKey(test.me)));
             }
 
             try {
                 mailbox.receiveFrom(new MockVerificationKey(1), Phase.Shuffling);
-            } catch (TimeoutException e) {
+            } catch (WaitingException e) {
                 Assert.fail();
             }
 
@@ -340,13 +343,12 @@ public class TestMailbox {
                 MockSigningKey sender = new MockSigningKey(from);
 
                 network.deliver(
-                        sender.makeSignedPacket(
                                 new Packet(
                                         new MockMessage(),
                                         mockSessionIdentifier,
                                         Phase.BroadcastOutput,
                                         sender.VerificationKey(),
-                                        new MockVerificationKey(test.me))));
+                                        new MockVerificationKey(test.me)));
             }
 
             Set<VerificationKey> receiveFrom = new HashSet<>();
@@ -361,7 +363,7 @@ public class TestMailbox {
                 if (test.timeoutExpected) {
                     Assert.fail("Failed to throw TimeoutError in test case " + i);
                 }
-            } catch (TimeoutException e) {
+            } catch (WaitingException e) {
                 if (!test.timeoutExpected) {
                     Assert.fail();
                 }

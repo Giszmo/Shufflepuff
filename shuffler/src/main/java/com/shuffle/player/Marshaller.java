@@ -9,7 +9,7 @@
 package com.shuffle.player;
 
 import com.shuffle.protocol.FormatException;
-import com.shuffle.protocol.SignedPacket;
+import com.shuffle.protocol.message.Packet;
 
 /**
  * Represents a way of serializing a class.
@@ -19,5 +19,5 @@ import com.shuffle.protocol.SignedPacket;
 public interface Marshaller<Format> {
     Format marshall(SignedPacket packet);
 
-    SignedPacket unmarshall(Format string) throws FormatException;
+    SignedPacket unmarshall(Format string);
 }

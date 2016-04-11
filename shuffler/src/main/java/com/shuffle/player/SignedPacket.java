@@ -6,9 +6,10 @@
  *
  */
 
-package com.shuffle.protocol;
+package com.shuffle.player;
 
 import com.shuffle.bitcoin.Signature;
+import com.shuffle.protocol.message.Packet;
 
 import java.io.Serializable;
 

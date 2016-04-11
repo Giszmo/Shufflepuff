@@ -13,7 +13,7 @@ import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.protocol.InvalidImplementationError;
-import com.shuffle.protocol.Packet;
+import com.shuffle.protocol.message.Packet;
 
 import java.io.Serializable;
 

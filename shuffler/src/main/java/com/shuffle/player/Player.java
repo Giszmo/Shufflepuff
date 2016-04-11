@@ -19,9 +19,9 @@ import com.shuffle.chan.Chan;
 import com.shuffle.p2p.Channel;
 import com.shuffle.protocol.CoinShuffle;
 import com.shuffle.protocol.Mailbox;
-import com.shuffle.protocol.MessageFactory;
+import com.shuffle.protocol.message.MessageFactory;
 import com.shuffle.protocol.Network;
-import com.shuffle.protocol.Phase;
+import com.shuffle.protocol.message.Phase;
 import com.shuffle.protocol.SessionIdentifier;
 import com.shuffle.protocol.blame.Matrix;
 

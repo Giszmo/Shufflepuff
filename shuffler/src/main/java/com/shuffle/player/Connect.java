@@ -18,9 +18,9 @@ import com.shuffle.p2p.Connection;
 import com.shuffle.p2p.Peer;
 import com.shuffle.p2p.Receiver;
 import com.shuffle.p2p.Session;
-import com.shuffle.protocol.FormatException;
 import com.shuffle.protocol.InvalidImplementationError;
-import com.shuffle.protocol.SignedPacket;
+import com.shuffle.protocol.WaitingException;
+import com.shuffle.protocol.message.Packet;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -28,6 +28,7 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * A class for setting up Network objects. It manages setting up all all the necessary
@@ -139,6 +140,7 @@ public class Connect<Identity> {
 
     // Connect to all peers; remote peers can be initiating connections to us as well.
     public com.shuffle.protocol.Network connect(
+            SigningKey me,
             Channel<Identity, Bytestring> channel,
             Map<Identity, VerificationKey> keys,
             Marshaller<Bytestring> marshall,
@@ -153,7 +155,7 @@ public class Connect<Identity> {
 
         Map<VerificationKey, Session<Identity, Bytestring>> players = new HashMap<>();
 
-        Network<Identity> network = new Network<>(players, marshall, timeout);
+        Network<Identity> network = new Network<>(me, players, marshall, timeout);
 
         Listener listener = new Listener(peers, keys, network);
 
@@ -251,9 +253,12 @@ public class Connect<Identity> {
         final Marshaller<Bytestring> marshall;
         final Chan<Bytestring> received = new BasicChan<>();
         final int timeout;
+        final SigningKey me;
 
-        Network(Map<VerificationKey, Session<Identity, Bytestring>> players,
+        Network(SigningKey me, Map<VerificationKey, Session<Identity, Bytestring>> players,
                 Marshaller<Bytestring> marshall, int timeout) {
+
+            this.me = me;
             this.players = players;
             this.marshall = marshall;
             this.timeout = timeout;
@@ -266,7 +271,7 @@ public class Connect<Identity> {
         // receive when it needs to without thinking about what's going on underneith.
 
         @Override
-        public void sendTo(VerificationKey to, SignedPacket packet)
+        public void sendTo(VerificationKey to, Packet packet)
                 throws InvalidImplementationError, InterruptedException {
 
             Session<Identity, Bytestring> session = players.get(to);
@@ -275,16 +280,29 @@ public class Connect<Identity> {
                 throw new InvalidImplementationError();
             }
 
-            session.send(marshall.marshall(packet));
+            session.send(marshall.marshall(me.makeSignedPacket(packet)));
         }
 
         @Override
-        public SignedPacket receive()
+        public Packet receive()
                 throws InvalidImplementationError,
-                InterruptedException, FormatException {
+                InterruptedException {
 
-            Bytestring str = received.receive(timeout, TimeUnit.SECONDS);
-            return marshall.unmarshall(str);
+            // TODO handle timing out for this function
+            while(true) {
+                Bytestring str = received.receive(timeout, TimeUnit.SECONDS);
+
+                if (str == null) {
+                    return null;
+                }
+
+                // Check signature.
+                SignedPacket signed = marshall.unmarshall(str);
+
+                if (signed == null) continue;
+
+                if (signed.verify()) return signed.payload;
+            }
         }
 
         // Receiver<Bytestring>.
