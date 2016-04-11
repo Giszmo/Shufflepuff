@@ -34,7 +34,6 @@ import java.util.Set;
  */
 public class Mailbox {
     private final Network network;
-    private final SessionIdentifier session;
     private final SigningKey sk;
     private final Collection<VerificationKey> players; // The keys representing all the players.
 
@@ -47,13 +46,11 @@ public class Mailbox {
     private final Set<Reason> blame = new HashSet<>();
 
     public Mailbox(
-            SessionIdentifier session,
             SigningKey sk,
             Collection<VerificationKey> players,
             Network network) {
 
         this.sk = sk;
-        this.session = session;
         this.network = network;
         this.players = players;
     }
@@ -71,30 +68,30 @@ public class Mailbox {
     public void send(Packet packet) throws IOException, InterruptedException {
 
         // Don't send anything to a nonexistent player.
-        if (!players.contains(packet.recipient)) {
+        if (!players.contains(packet.to())) {
             return;
         }
 
         // If this is a message to myself, don't send it. Just pretend we received it.
         // This is useful later when we have to collect all blame messages later.
-        if (packet.recipient.equals(sk.VerificationKey())) {
+        if (packet.to().equals(sk.VerificationKey())) {
             history.add(packet);
-            if (packet.phase == Phase.Blame) {
+            if (packet.phase() == Phase.Blame) {
                 try {
-                    blame.add(packet.message.readBlame().reason);
+                    blame.add(packet.payload().readBlame().reason);
                 } catch (FormatException e) {
                     e.printStackTrace();
                 }
             }
         } else {
-            network.sendTo(packet.recipient, packet);
+            network.sendTo(packet.to(), packet);
         }
     }
 
     public void broadcast(Message message, Phase phase) throws IOException, InterruptedException {
 
         for (VerificationKey to : players) {
-            send(new Packet(message, session, phase, sk.VerificationKey(), to));
+            send(message.prepare(phase, to, sk));
         }
     }
 
@@ -112,7 +109,7 @@ public class Mailbox {
                 Packet packet = i.next();
 
                 // Return any that matches what we're looking for.
-                if (expectedPhase == packet.phase) {
+                if (expectedPhase == packet.phase()) {
                     i.remove();
                     found = packet;
                     break;
@@ -128,18 +125,7 @@ public class Mailbox {
                     return null;
                 }
 
-                Phase phase = packet.phase;
-
-                // TODO: handle these next two checks at a lower level.
-                // Check that this is someone in the same session of this protocol as us.
-                if (!session.equals(packet.session)) {
-                    continue;
-                }
-
-                // Check that this message is intended for us.
-                if (!packet.recipient.equals(sk.VerificationKey())) {
-                    continue;
-                }
+                Phase phase = packet.phase();
 
                 if (expectedPhase == phase || phase == Phase.Blame) {
                     found = packet;
@@ -151,10 +137,10 @@ public class Mailbox {
         }
 
         history.add(found);
-        if (found.phase == Phase.Blame) {
+        if (found.phase() == Phase.Blame) {
 
             try {
-                blame.add(found.message.readBlame().reason);
+                blame.add(found.payload().readBlame().reason);
             } catch (FormatException e) {
                 e.printStackTrace();
             }
@@ -167,13 +153,13 @@ public class Mailbox {
         Queue<Packet> selection = new LinkedList<>();
 
         for (Packet packet : history) {
-            if (packet.phase == phase) {
+            if (packet.phase() == phase) {
                 selection.add(packet);
             }
         }
 
         for (Packet packet : delivered) {
-            if (packet.phase == phase) {
+            if (packet.phase() == phase) {
                 selection.add(packet);
             }
         }
@@ -191,11 +177,11 @@ public class Mailbox {
             throw new WaitingException(from);
         }
 
-        if (packet.phase == Phase.Blame && expectedPhase != Phase.Blame) {
-            throw new BlameException(packet.signer, packet);
+        if (packet.phase() == Phase.Blame && expectedPhase != Phase.Blame) {
+            throw new BlameException(packet.from(), packet);
         }
 
-        return packet.message;
+        return packet.payload();
     }
 
     // Wait to receive a message from a given player.
@@ -207,9 +193,9 @@ public class Mailbox {
             packet = receiveNextPacket(expectedPhase);
             if (packet == null) throw new WaitingException(from);
 
-        } while (expectedPhase != Phase.Blame && packet.phase == Phase.Blame);
+        } while (expectedPhase != Phase.Blame && packet.phase() == Phase.Blame);
 
-        return packet.message;
+        return packet.payload();
     }
 
     // Receive messages from a set of players, which may come in any order.
@@ -229,18 +215,18 @@ public class Mailbox {
             Packet packet = receiveNextPacket(expectedPhase);
             if (packet == null) throw new WaitingException(from);
 
-            if (expectedPhase != Phase.Blame && packet.phase == Phase.Blame) {
+            if (expectedPhase != Phase.Blame && packet.phase() == Phase.Blame) {
                 if (!ignoreBlame) {
                     // Put the messages already collected back so that they can be received later.
                     for (Packet p : broadcasts.values()) {
                         delivered.add(p);
                     }
 
-                    throw new BlameException(packet.signer, packet);
+                    throw new BlameException(packet.from(), packet);
                 }
                 continue;
             }
-            VerificationKey sender = packet.signer;
+            VerificationKey sender = packet.from();
 
             if (broadcasts.containsKey(sender)) {
                 throw new ProtocolException();
@@ -253,7 +239,7 @@ public class Mailbox {
         Map<VerificationKey, Message> messages = new HashMap<>();
 
         for (Map.Entry<VerificationKey, Packet> packet : broadcasts.entrySet()) {
-            messages.put(packet.getKey(), packet.getValue().message);
+            messages.put(packet.getKey(), packet.getValue().payload());
         }
 
         return messages;
@@ -295,8 +281,8 @@ public class Mailbox {
 
         // First get the blame messages in history.
         for (Packet packet : history) {
-            if (packet.phase == Phase.Blame) {
-                blame.get(packet.signer).add(packet);
+            if (packet.phase() == Phase.Blame) {
+                blame.get(packet.from()).add(packet);
             }
         }
 
@@ -305,7 +291,7 @@ public class Mailbox {
             Packet next = receiveNextPacket(Phase.Blame);
             if (next == null) break;
 
-            blame.get(next.signer).add(next);
+            blame.get(next.from()).add(next);
         }
 
         return blame;

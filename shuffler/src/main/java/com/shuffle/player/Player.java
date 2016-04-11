@@ -22,7 +22,6 @@ import com.shuffle.protocol.Mailbox;
 import com.shuffle.protocol.message.MessageFactory;
 import com.shuffle.protocol.Network;
 import com.shuffle.protocol.message.Phase;
-import com.shuffle.protocol.SessionIdentifier;
 import com.shuffle.protocol.blame.Matrix;
 
 import org.apache.logging.log4j.Logger;
@@ -150,7 +149,7 @@ class Player<Identity, Format> {
             }
 
             // Make an inbox for the next round.
-            Mailbox mailbox = new Mailbox(session, sk, validPlayers, net);
+            Mailbox mailbox = new Mailbox(sk, validPlayers, net);
 
             // Send an introductory message and make sure all players agree on who is in
             // this round of the protocol.
@@ -158,7 +157,7 @@ class Player<Identity, Format> {
 
             Matrix blame = null;
             try {
-                return shuffle.runProtocol(session,
+                return shuffle.runProtocol(
                         settings.amount, sk, validPlayers, settings.change, net, chan);
             } catch (Matrix m) {
                 blame = m;

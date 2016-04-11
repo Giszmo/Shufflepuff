@@ -13,11 +13,11 @@ import com.shuffle.bitcoin.CoinNetworkException;
 import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.player.SessionIdentifier;
 import com.shuffle.protocol.CoinShuffle;
 import com.shuffle.protocol.MaliciousMachine;
 import com.shuffle.protocol.message.MessageFactory;
 import com.shuffle.protocol.Network;
-import com.shuffle.protocol.SessionIdentifier;
 import com.shuffle.protocol.blame.Evidence;
 import com.shuffle.protocol.blame.Matrix;
 import com.shuffle.protocol.blame.Reason;
@@ -127,7 +127,7 @@ public class InitialState {
     private static final ExpectedPatternAny anyMatrix = new ExpectedPatternAny();
     private static final ExpectedPatternNull nullMatrix = new ExpectedPatternNull();
 
-    private final SessionIdentifier session;
+    public final SessionIdentifier session;
     private final long amount;
     private final Crypto crypto;
     private final LinkedList<PlayerInitialState> players = new LinkedList<>();
@@ -266,7 +266,7 @@ public class InitialState {
                 shuffle = new CoinShuffle(messages, crypto, coin);
             }
 
-            return new Adversary(session, amount, sk, keys, shuffle, network);
+            return new Adversary(amount, sk, keys, shuffle, network);
         }
 
         // The sort of malicious behavior to be performed by this player, if any.
@@ -588,8 +588,8 @@ public class InitialState {
             final long amount,
             final Crypto crypto,
             final int[] views, // Each player may have a different view of the network; ie,
-                              // some players may be able to observe that the double spend has
-                             // occurred but others may not.
+            // some players may be able to observe that the double spend has
+            // occurred but others may not.
             final int[] spenders  // The set of players who attempt to double spend.
     ) {
         final Set<Integer> doubleSpenders = new HashSet<>();

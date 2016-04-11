@@ -71,15 +71,15 @@ public class MockNetwork implements Network {
     }
 
     final Queue<Map.Entry<Packet, VerificationKey>> responses;
-    final Queue<Packet> sent;
+    final Queue<Packet> received;
 
     public MockNetwork() {
-        this.sent = new LinkedList<>();
+        this.received = new LinkedList<>();
         this.responses = new LinkedList<>();
     }
 
-    MockNetwork(Queue<Packet> sent) {
-        this.sent = sent;
+    MockNetwork(Queue<Packet> received) {
+        this.received = received;
         this.responses = new LinkedList<>();
     }
 
@@ -95,14 +95,14 @@ public class MockNetwork implements Network {
 
     @Override
     public Packet receive() {
-        if (sent.size() == 0) {
+        if (received.size() == 0) {
             return null;
         }
 
-        return sent.remove();
+        return received.remove();
     }
 
     public void deliver(Packet packet) {
-        sent.add(packet);
+        received.add(packet);
     }
 }

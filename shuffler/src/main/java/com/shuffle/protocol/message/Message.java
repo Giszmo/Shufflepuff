@@ -12,6 +12,8 @@ import com.shuffle.bitcoin.Address;
 import com.shuffle.bitcoin.CryptographyError;
 import com.shuffle.bitcoin.EncryptionKey;
 import com.shuffle.bitcoin.Signature;
+import com.shuffle.bitcoin.SigningKey;
+import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.protocol.FormatException;
 import com.shuffle.protocol.InvalidImplementationError;
 import com.shuffle.protocol.blame.Blame;
@@ -41,4 +43,8 @@ public interface Message {
     Blame readBlame() throws FormatException, CryptographyError;
 
     Message rest() throws FormatException;
+
+    Packet prepare(Phase phase, VerificationKey to, SigningKey from);
+
+    Message hashed();
 }

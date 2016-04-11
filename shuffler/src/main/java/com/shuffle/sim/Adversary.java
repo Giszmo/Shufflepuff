@@ -24,8 +24,6 @@ import com.shuffle.protocol.FormatException;
 import com.shuffle.protocol.InvalidImplementationError;
 import com.shuffle.protocol.InvalidParticipantSetException;
 import com.shuffle.protocol.Network;
-import com.shuffle.protocol.SessionIdentifier;
-import com.shuffle.protocol.SignatureException;
 import com.shuffle.protocol.WaitingException;
 import com.shuffle.protocol.blame.Matrix;
 
@@ -44,7 +42,6 @@ import java.util.concurrent.TimeUnit;
  */
 public class Adversary {
 
-    private final SessionIdentifier session;
     private final CoinShuffle shuffle;
     private final Network network;
     private final SigningKey sk;
@@ -52,13 +49,12 @@ public class Adversary {
     private final long amount;
 
     Adversary(
-            SessionIdentifier session,
             long amount,
             SigningKey sk,
             SortedSet<VerificationKey> players,
             CoinShuffle shuffle,
             Network network) {
-        this.session = session;
+
         this.amount = amount;
         this.sk = sk;
         this.network = network;
@@ -71,7 +67,6 @@ public class Adversary {
             Either<Transaction, Matrix>>>> runProtocolFuture(
 
             final CoinShuffle shuffle,
-            final SessionIdentifier session, // Unique session identifier.
             final long amount, // The amount to be shuffled per player.
             final SigningKey sk, // The signing key of the current player.
             // The set of players, sorted alphabetically by address.
@@ -84,7 +79,7 @@ public class Adversary {
         if (amount <= 0) {
             throw new IllegalArgumentException();
         }
-        if (session == null || sk == null || players == null || network == null) {
+        if (sk == null || players == null || network == null) {
             throw new NullPointerException();
         }
 
@@ -95,7 +90,7 @@ public class Adversary {
                 try {
                     try {
                         q.send(new Either<Transaction, Matrix>(shuffle.runProtocol(
-                                session, amount, sk, players, change, network, null
+                                amount, sk, players, change, network, null
                         ), null));
 
                     } catch (Matrix m) {
@@ -188,15 +183,11 @@ public class Adversary {
         };
     }
 
-    public SessionIdentifier session() {
-        return session;
-    }
-
     // Return a future that can be composed with others.
     public Future<Summable.SummableElement<Map<SigningKey, Either<Transaction, Matrix>>>> turnOn(
     ) throws InvalidImplementationError {
 
-        return runProtocolFuture(shuffle, session, amount, sk, players, null, network);
+        return runProtocolFuture(shuffle, amount, sk, players, null, network);
     }
 
     public SigningKey identity() {

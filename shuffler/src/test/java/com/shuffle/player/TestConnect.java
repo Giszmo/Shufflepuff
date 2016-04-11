@@ -9,6 +9,7 @@
 package com.shuffle.player;
 
 import com.shuffle.bitcoin.Crypto;
+import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.chan.BasicChan;
 import com.shuffle.chan.Chan;

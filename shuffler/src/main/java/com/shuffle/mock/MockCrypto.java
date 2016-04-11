@@ -12,8 +12,8 @@ import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.CryptographyError;
 import com.shuffle.bitcoin.DecryptionKey;
 import com.shuffle.bitcoin.SigningKey;
+import com.shuffle.player.Message;
 import com.shuffle.protocol.InvalidImplementationError;
-import com.shuffle.protocol.message.Message;
 
 /**
  *
@@ -52,14 +52,15 @@ public class MockCrypto implements Crypto {
     }
 
     @Override
-    public synchronized Message hash(Message m)
+    public synchronized com.shuffle.protocol.message.Message hash(com.shuffle.protocol.message.Message m)
             throws CryptographyError, InvalidImplementationError {
-        if (!(m instanceof MockMessage)) {
+
+        if (!(m instanceof Message)) {
             throw new InvalidImplementationError();
         }
 
-        MockMessage p = ((MockMessage)m);
+        Message p = ((Message)m);
 
-        return new MockMessage().attach(new MockMessage.Hash(p.atoms));
+        return p.hashed();
     }
 }

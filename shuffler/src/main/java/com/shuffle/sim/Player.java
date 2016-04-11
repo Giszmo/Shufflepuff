@@ -10,6 +10,7 @@ package com.shuffle.sim;
 
 import com.shuffle.bitcoin.CoinNetworkException;
 import com.shuffle.bitcoin.Crypto;
+import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.chan.BasicChan;
@@ -18,14 +19,14 @@ import com.shuffle.chan.ReceiveChan;
 import com.shuffle.chan.SendChan;
 import com.shuffle.mock.InsecureRandom;
 import com.shuffle.mock.MockCrypto;
-import com.shuffle.mock.MockMessageFactory;
 import com.shuffle.mock.MockSessionIdentifier;
+import com.shuffle.player.MessageFactory;
 import com.shuffle.mock.MockSigningKey;
 import com.shuffle.p2p.Bytestring;
 import com.shuffle.p2p.Channel;
 import com.shuffle.p2p.TcpChannel;
 import com.shuffle.player.Connect;
-import com.shuffle.player.SigningKey;
+import com.shuffle.player.SessionIdentifier;
 import com.shuffle.protocol.CoinShuffle;
 import com.shuffle.protocol.FormatException;
 import com.shuffle.protocol.InvalidParticipantSetException;
@@ -57,16 +58,18 @@ import java.util.regex.Pattern;
 class Player implements Runnable {
     private static class Parameters {
         public final SigningKey me;
+        SessionIdentifier session;
         public final int port;
         public final int threads;
         public final InitialState.PlayerInitialState init;
         public final Map<InetSocketAddress, VerificationKey> identities;
 
-        public Parameters(SigningKey me, int port, int threads,
+        public Parameters(SigningKey me, SessionIdentifier session, int port, int threads,
                           InitialState.PlayerInitialState init,
                           Map<InetSocketAddress, VerificationKey> identities) {
 
             this.me = me;
+            this.session = session;
             this.port = port;
             this.threads = threads;
             this.init = init;
@@ -90,52 +93,64 @@ class Player implements Runnable {
         return new String(encoded, encoding);
     }
 
-    private static Map<String, Integer> readOptions(String[] args) {
+    private static Map<String, String> readOptions(String[] args) {
         if (args.length % 2 != 0) {
             System.out.println("Invalid argument list: " + args.length
                     + " elements found; should be even.");
             throw new IllegalArgumentException();
         }
 
-        Pattern opt = Pattern.compile("-[a-z]+");
-        Pattern val = Pattern.compile("[0-9]+");
+        // The map that we will eventually return.
+        Map<String, String> map = new HashMap<>();
 
-        Map<String, Integer> map = new HashMap<>();
-
-        Map<String, Integer> defaults = new HashMap<>();
-        defaults.put("-minport", 1803);
-        defaults.put("-threads", 3);
+        // Default values for arguments.
+        Map<String, String> defaults = new HashMap<>();
+        defaults.put("-id", null);
+        defaults.put("-key", null);
+        defaults.put("-minport", "1803");
+        defaults.put("-threads", "3");
         defaults.put("-players", null);
         defaults.put("-identity", null);
-        defaults.put("-amount", 20);
+        defaults.put("-amount", "20");
+
+        // Expected patterns for arguments.
+        Pattern dec = Pattern.compile("[0-9]+");
+        Pattern str = Pattern.compile("[a-zA-Z0-9]+");
+        Pattern hex = Pattern.compile("a-f0-9");
+        Map<String, Pattern> expected = new HashMap<>();
+        expected.put("-id", str);
+        expected.put("-key", hex);
+        expected.put("-minport", dec);
+        expected.put("-threads", dec);
+        expected.put("-players", dec);
+        expected.put("-identity", dec);
+        expected.put("-amount", dec);
 
         int p = 0;
         while (2 * p < args.length) {
             String optName = args[2 * p];
             String optVal = args[2 * p + 1];
 
-            if (!opt.matcher(optName).matches()) {
-                System.out.println("Error: invalid argument type found " + optName);
-                throw new IllegalArgumentException();
-            }
-
-            if (!val.matcher(optVal).matches()) {
-                System.out.println("Error: invalid argument value found " + optVal);
-                throw new IllegalArgumentException();
-            }
-
             if (!defaults.containsKey(optName)) {
-                System.out.println("Error: unknown argument type found " + optName);
-                throw new IllegalArgumentException();
+                throw new IllegalArgumentException("Invalid option " + optName);
             }
 
-            map.put(optName, Integer.parseInt(optVal));
+            if (map.containsKey(optName)) {
+                throw new IllegalArgumentException("Duplicate option " + optName);
+            }
+
+            Pattern pattern = expected.get(optVal);
+            if (!pattern.matcher(optVal).matches()) {
+                throw new IllegalArgumentException("Invalid value for " + optName + "; expected " + pattern);
+            }
+
+            map.put(optName, optVal);
 
             p++;
         }
 
         // Insert default values.
-        for (Map.Entry<String, Integer> entry : defaults.entrySet()) {
+        for (Map.Entry<String, String> entry : defaults.entrySet()) {
             if (!map.containsKey(entry.getKey())) {
                 if (entry.getValue() == null) {
                     System.out.println("Error: no default value defined for " + entry.getKey());
@@ -150,19 +165,19 @@ class Player implements Runnable {
     }
 
     private static Parameters readParameters(String[] args) {
-        Map<String, Integer> options = readOptions(args);
+        Map<String, String> options = readOptions(args);
         Map<InetSocketAddress, VerificationKey> identities = new HashMap<>();
         Crypto crypto = new MockCrypto(new InsecureRandom(7777));
 
         InitialState init = InitialState.successful(
-                new MockSessionIdentifier("tcp test"),
-                options.get("-amount"),
+                new MockSessionIdentifier(options.get("-id")),
+                Integer.parseInt(options.get("-amount")),
                 crypto,
-                options.get("-players"));
+                Integer.parseInt(options.get("-players")));
         List<VerificationKey> keys = init.getKeys();
 
         // Create keys object.
-        int port = options.get("-minport");
+        int port = Integer.parseInt(options.get("-minport"));
         try {
             for (VerificationKey vk : keys) {
                 identities.put(new InetSocketAddress(InetAddress.getLocalHost(), port), vk);
@@ -172,13 +187,14 @@ class Player implements Runnable {
             e.printStackTrace();
         }
 
-        int i = options.get("-identity") - 1;
+        int i = Integer.parseInt(options.get("-identity")) - 1;
         InitialState.PlayerInitialState pinit = init.getPlayer(i);
 
         return new Parameters(
-                new MockSigningKey(options.get("-key")),
-                options.get("-minport") + i,
-                options.get("-threads"),
+                new MockSigningKey(Integer.parseInt(options.get("-key"))),
+                new MockSessionIdentifier(options.get("-id")),
+                Integer.parseInt(options.get("-minport")) + i,
+                Integer.parseInt(options.get("-threads")),
                 pinit, identities);
     }
 
@@ -239,9 +255,8 @@ class Player implements Runnable {
 
         try {
             return new CoinShuffle(
-                    new MockMessageFactory(), param.init.crypto(), param.init.coin()
+                    new MessageFactory(param.session, param.me.VerificationKey(), network), param.init.crypto(), param.init.coin()
             ).runProtocol(
-                    param.init.getSession(),
                     param.init.getAmount(),
                     param.init.sk,
                     param.init.keys,

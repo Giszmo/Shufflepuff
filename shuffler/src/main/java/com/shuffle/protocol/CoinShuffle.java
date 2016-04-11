@@ -71,11 +71,9 @@ public class CoinShuffle {
     class Round {
         final CurrentPhase phase;
 
-        final SessionIdentifier session;
-
         private final long amount; // The amount to be shuffled.
 
-        private final SigningKey sk; // My signing private key.
+        final SigningKey sk; // My signing private key.
 
         public final int me; // Which player am I?
 
@@ -111,7 +109,7 @@ public class CoinShuffle {
             // In the announcement phase, participants distribute temporary encryption keys.
             phase.set(Phase.Announcement);
             log.info("Player " + me + " begins Coin Shuffle protocol "
-                    + session + " with " + N + " players.");
+                    + " with " + N + " players.");
 
             // Check for sufficient funds.
             // There was a problem with the wording of the original paper which would have meant
@@ -166,8 +164,7 @@ public class CoinShuffle {
 
                 // Pass it along to the next player.
                 if (me != N) {
-                    mailbox.send(
-                            new Packet(shuffled, session, phase.get(), vk, players.get(me + 1)));
+                    mailbox.send(shuffled.prepare(phase.get(), players.get(me + 1), sk));
                 }
 
                 // Phase 3: broadcast outputs.
@@ -176,7 +173,7 @@ public class CoinShuffle {
 
                 newAddresses = readAndBroadcastNewAddresses(shuffled);
             } catch (BlameException e) {
-                switch (e.packet.message.readBlame().reason) {
+                switch (e.packet.payload().readBlame().reason) {
                     case MissingOutput: {
                         // This was sent by a player in phase 3, which means that the new addresses
                         // were sent out by the last player, which means that we need to receive
@@ -234,7 +231,7 @@ public class CoinShuffle {
             try {
                 signatureMessages = mailbox.receiveFromMultiple(playerSet(1, N), phase.get());
             } catch (BlameException e) {
-                switch (e.packet.message.readBlame().reason) {
+                switch (e.packet.payload().readBlame().reason) {
                     case InvalidSignature: {
                         // Continue receiving messages and ignore any further blame messages.
                         signatureMessages = mailbox.receiveFromMultipleBlameless(playerSet(1, N),
@@ -536,7 +533,7 @@ public class CoinShuffle {
                         mailbox.getPacketsByPhase(Phase.EquivocationCheck);
 
                 for (Packet packet : hashMessages) {
-                    hashes.put(packet.signer, packet.message);
+                    hashes.put(packet.from(), packet.payload());
                     // Include my own hash.
                     hashes.put(vk, equivocationCheckHash(players, encryptionKeys, newAddresses));
                 }
@@ -559,7 +556,7 @@ public class CoinShuffle {
                 VerificationKey from = entry.getKey();
                 Queue<Packet> responses = entry.getValue();
                 for (Packet packet : responses) {
-                    Message message = packet.message;
+                    Message message = packet.payload();
 
                     if (message.isEmpty()) {
                         log.error("Empty blame message received from " + from);
@@ -604,7 +601,7 @@ public class CoinShuffle {
                                     addresses = newAddresses;
                                 } else {
 
-                                    Message output = outputVectors.get(from).message;
+                                    Message output = outputVectors.get(from).payload();
                                     while (!output.isEmpty()) {
                                         addresses.add(output.readAddress());
                                         output = output.rest();
@@ -635,7 +632,7 @@ public class CoinShuffle {
 
                                 // Check that the decryption key is valid. (The decryption key
                                 // can be null for player 1, who doesn't make one.)
-                                if (packet.signer != players.get(1)) {
+                                if (packet.from() != players.get(1)) {
                                     if (blame.privateKey == null)  {
                                         // TODO blame someone here.
                                     } else if (
@@ -747,7 +744,7 @@ public class CoinShuffle {
 
                 List<Message> outputMessages = new LinkedList<>();
                 for (Packet packet : outputVectors.values()) {
-                    outputMessages.add(packet.message);
+                    outputMessages.add(packet.payload());
                 }
 
                 // If they are not all equal, blame the last player for equivocating.
@@ -832,7 +829,6 @@ public class CoinShuffle {
 
         // A round is a single run of the protocol.
         Round(  CurrentPhase phase,
-                SessionIdentifier session,
                 long amount,
                 SigningKey sk,
                 Map<Integer, VerificationKey> players,
@@ -840,7 +836,6 @@ public class CoinShuffle {
                 Mailbox mailbox) throws InvalidParticipantSetException {
 
             this.phase = phase;
-            this.session = session;
             this.amount = amount;
             this.sk = sk;
             this.players = players;
@@ -958,7 +953,7 @@ public class CoinShuffle {
 
         // Collect all packets received in the appropriate place.
         for (Packet packet : packets) {
-            switch (packet.phase) {
+            switch (packet.phase()) {
                 case BroadcastOutput: {
                     if (outputVectors.containsKey(from)) {
                         // We should only ever receive one such message from each player.
@@ -975,15 +970,15 @@ public class CoinShuffle {
                     break;
                 }
                 case Announcement: {
-                    Map<VerificationKey, EncryptionKey> map = sentKeys.get(packet.signer);
+                    Map<VerificationKey, EncryptionKey> map = sentKeys.get(packet.from());
                     if (map == null) {
                         map = new HashMap<>();
-                        sentKeys.put(packet.signer, map);
+                        sentKeys.put(packet.from(), map);
                     }
 
-                    EncryptionKey key = packet.message.readEncryptionKey();
+                    EncryptionKey key = packet.payload().readEncryptionKey();
                     map.put(from, key);
-                    receivedKeys.put(packet.signer, key);
+                    receivedKeys.put(packet.from(), key);
                     break;
                 }
                 case Shuffling: {
@@ -1043,7 +1038,7 @@ public class CoinShuffle {
                 return null;
             }
 
-            Message message = packet.message;
+            Message message = packet.payload();
 
             // Grab the correct number of addresses and decrypt them.
             SortedSet<Address> addresses = new TreeSet<>();
@@ -1089,7 +1084,6 @@ public class CoinShuffle {
 
     // Run the protocol without creating a new thread.
     public Transaction runProtocol(
-            SessionIdentifier session, // Unique session identifier.
             long amount, // The amount to be shuffled per player.
             SigningKey sk, // The signing key of the current player.
             // The set of players, sorted alphabetically by address.
@@ -1105,7 +1099,7 @@ public class CoinShuffle {
         if (amount <= 0) {
             throw new IllegalArgumentException();
         }
-        if (session == null || sk == null || players == null || network == null) {
+        if (sk == null || players == null || network == null) {
             throw new NullPointerException();
         }
 
@@ -1126,11 +1120,11 @@ public class CoinShuffle {
 
         // Make an inbox for the next round.
         Mailbox mailbox = new Mailbox(
-                session, sk, numberedPlayers.values(), network
+                sk, numberedPlayers.values(), network
         );
 
         return this.new Round(
-                machine, session, amount, sk, numberedPlayers, change, mailbox
+                machine, amount, sk, numberedPlayers, change, mailbox
         ).protocolDefinition();
     }
 

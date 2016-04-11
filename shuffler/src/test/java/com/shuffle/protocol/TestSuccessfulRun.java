@@ -32,7 +32,7 @@ public class TestSuccessfulRun extends TestShuffleMachine {
 
         // Tests for successful runs.
         int minPlayers = 2;
-        int maxPlayers = 12;
+        int maxPlayers = 2; // 12;
         for (int numPlayer = minPlayers; numPlayer <= maxPlayers; numPlayer++) {
             try {
                 log.info("Protocol successful run with " + numPlayer + " players.");

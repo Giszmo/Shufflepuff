@@ -12,8 +12,7 @@ import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.monad.Either;
-import com.shuffle.protocol.message.MessageFactory;
-import com.shuffle.protocol.SessionIdentifier;
+import com.shuffle.player.SessionIdentifier;
 import com.shuffle.protocol.blame.Matrix;
 
 import org.apache.logging.log4j.Logger;
@@ -38,7 +37,7 @@ public abstract class TestCase {
 
         public Mismatch(SigningKey player, Matrix expected, Matrix result) {
             if (player == null) throw new NullPointerException();
-            
+
             this.player = player;
             this.expected = expected;
             this.result = result;
@@ -88,11 +87,13 @@ public abstract class TestCase {
 
     private final SessionIdentifier session;
 
-    protected TestCase(long amount, MessageFactory messages, SessionIdentifier session) {
+    protected TestCase(long amount, SessionIdentifier session) {
         this.amount = amount;
         this.session = session;
     }
 
+    // Get the cryptography service for this test case (could be mock crypto or real, depending
+    // on what we're testing.)
     protected abstract Crypto crypto();
 
     public final InitialState successfulTestCase(final int numPlayers) {

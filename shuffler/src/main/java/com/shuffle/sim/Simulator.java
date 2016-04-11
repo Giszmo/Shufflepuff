@@ -13,14 +13,14 @@ import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.chan.BasicChan;
 import com.shuffle.chan.Chan;
-import com.shuffle.mock.MockMessageFactory;
+import com.shuffle.player.MessageFactory;
 import com.shuffle.monad.Either;
 import com.shuffle.monad.NaturalSummableFuture;
 import com.shuffle.monad.SummableFuture;
 import com.shuffle.monad.SummableFutureZero;
 import com.shuffle.monad.SummableMaps;
+import com.shuffle.player.SessionIdentifier;
 import com.shuffle.protocol.InvalidImplementationError;
-import com.shuffle.protocol.message.MessageFactory;
 import com.shuffle.protocol.Network;
 import com.shuffle.protocol.blame.Matrix;
 import com.shuffle.protocol.message.Packet;
@@ -83,10 +83,15 @@ public final class Simulator {
 
     private static class SimulationInitializer implements InitialState.Initializer {
         public final Map<VerificationKey, NetworkSim> networks = new HashMap<>();
+        public final SessionIdentifier session;
+
+        private SimulationInitializer(SessionIdentifier session) {
+            this.session = session;
+        }
 
         @Override
-        public MessageFactory messages(VerificationKey key) {
-            return new MockMessageFactory();
+        public com.shuffle.protocol.message.MessageFactory messages(VerificationKey key) {
+            return new MessageFactory(session, key, network(key));
         }
 
         @Override
@@ -99,7 +104,7 @@ public final class Simulator {
 
     public static Map<SigningKey, Either<Transaction, Matrix>> run(InitialState init) {
 
-        final SimulationInitializer initializer = new SimulationInitializer();
+        final SimulationInitializer initializer = new SimulationInitializer(init.session);
         final Map<SigningKey, Adversary> machines = init.getPlayers(initializer);
 
         Map<SigningKey, Either<Transaction, Matrix>> results = runSimulation(machines);

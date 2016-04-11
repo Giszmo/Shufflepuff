@@ -6,18 +6,16 @@
  *
  */
 
-package com.shuffle.mock;
+package com.shuffle.player;
 
-import com.shuffle.bitcoin.Address;
-import com.shuffle.bitcoin.CryptographyError;
-import com.shuffle.bitcoin.EncryptionKey;
-import com.shuffle.bitcoin.Signature;
-import com.shuffle.bitcoin.Transaction;
+import com.shuffle.bitcoin.*;
+import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.protocol.FormatException;
 import com.shuffle.protocol.InvalidImplementationError;
-import com.shuffle.protocol.message.Message;
+import com.shuffle.protocol.Network;
 import com.shuffle.protocol.message.Packet;
 import com.shuffle.protocol.blame.Blame;
+import com.shuffle.protocol.message.Phase;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
@@ -28,22 +26,22 @@ import java.util.Iterator;
 
 /**
  */
-public class MockMessage implements Message, Serializable {
-    private static final transient Logger log = LogManager.getLogger(MockMessage.class);
+public class Message implements com.shuffle.protocol.message.Message, Serializable {
+    private static final transient Logger log = LogManager.getLogger(Message.class);
 
-    public static class Hash implements Serializable {
+    public static class SecureHash implements Serializable {
         public final Atom hashed;
 
-        public Hash(Atom toHash) {
+        public SecureHash(Atom toHash) {
             hashed = toHash;
         }
 
-        public Hash(Message message) {
-            if (!(message instanceof MockMessage)) {
+        public SecureHash(com.shuffle.protocol.message.Message message) {
+            if (!(message instanceof Message)) {
                 throw new InvalidImplementationError();
             }
 
-            hashed = ((MockMessage)message).atoms;
+            hashed = ((Message)message).atoms;
         }
 
         public String toString() {
@@ -55,13 +53,13 @@ public class MockMessage implements Message, Serializable {
                 return false;
             }
 
-            if (!(o instanceof Hash)) {
+            if (!(o instanceof SecureHash)) {
                 return false;
             }
 
-            Hash mockHashed = (Hash)o;
+            SecureHash mockHashed = (SecureHash)o;
 
-            return new MockMessage(hashed).equals(new MockMessage(mockHashed.hashed));
+            return hashed.equals(mockHashed.hashed);
         }
     }
 
@@ -69,7 +67,7 @@ public class MockMessage implements Message, Serializable {
         public final Address addr;
         public final EncryptionKey ek;
         public final Signature sig;
-        public final Hash hash;
+        public final SecureHash secureHash;
         public final Blame blame;
 
         public final Transaction t;
@@ -82,7 +80,7 @@ public class MockMessage implements Message, Serializable {
                 Address addr,
                 EncryptionKey ek,
                 Signature sig,
-                Hash hash,
+                SecureHash secureHash,
                 Blame blame,
                 Transaction t,
                 Packet packet,
@@ -91,27 +89,27 @@ public class MockMessage implements Message, Serializable {
             // Enforce the correct format.
             format : {
                 if (addr != null) {
-                    if (ek != null || sig != null || hash != null || blame != null || t != null) {
+                    if (ek != null || sig != null || secureHash != null || blame != null || t != null) {
                         throw new IllegalArgumentException();
                     }
                     break format;
                 }
 
                 if (ek != null) {
-                    if (sig != null || hash != null || blame != null || t != null) {
+                    if (sig != null || secureHash != null || blame != null || t != null) {
                         throw new IllegalArgumentException();
                     }
                     break format;
                 }
 
                 if (sig != null) {
-                    if (hash != null || blame != null || t != null) {
+                    if (secureHash != null || blame != null || t != null) {
                         throw new IllegalArgumentException();
                     }
                     break format;
                 }
 
-                if (hash != null) {
+                if (secureHash != null) {
                     if (blame != null || t != null) {
                         throw new IllegalArgumentException();
                     }
@@ -135,7 +133,7 @@ public class MockMessage implements Message, Serializable {
             this.addr = addr;
             this.ek = ek;
             this.sig = sig;
-            this.hash = hash;
+            this.secureHash = secureHash;
             this.blame = blame;
             this.t = t;
             this.packet = packet;
@@ -152,8 +150,8 @@ public class MockMessage implements Message, Serializable {
             if (o instanceof Signature) {
                 return new Atom(null, null, (Signature)o, null, null, null, null, next);
             }
-            if (o instanceof Hash) {
-                return new Atom(null, null, null, (Hash)o, null, null, null, next);
+            if (o instanceof SecureHash) {
+                return new Atom(null, null, null, (SecureHash)o, null, null, null, next);
             }
             if (o instanceof Blame) {
                 return new Atom(null, null, null, null, (Blame)o, null, null, next);
@@ -177,7 +175,7 @@ public class MockMessage implements Message, Serializable {
                 return o;
             }
 
-            return new Atom(a.addr, a.ek, a.sig, a.hash, a.blame, a.t, a.packet, attach(a.next, o));
+            return new Atom(a.addr, a.ek, a.sig, a.secureHash, a.blame, a.t, a.packet, attach(a.next, o));
         }
 
         @Override
@@ -199,7 +197,7 @@ public class MockMessage implements Message, Serializable {
                     && (a.packet == null && packet == null
                         || packet != null && packet.equals(a.packet))
                     && (a.blame == null && blame == null || blame != null && blame.equals(a.blame))
-                    && (a.hash == null && hash == null || hash != null && hash.equals(a.hash))
+                    && (a.secureHash == null && secureHash == null || secureHash != null && secureHash.equals(a.secureHash))
                     && (a.next == null && next == null || next != null && next.equals(a.next));
         }
 
@@ -208,7 +206,7 @@ public class MockMessage implements Message, Serializable {
             int hash = addr == null ? 0 : addr.hashCode();
             hash = hash * 15 + (ek == null ? 0 : ek.hashCode());
             hash = hash * 15 + (sig == null ? 0 : sig.hashCode());
-            hash = hash * 15 + (this.hash == null ? 0 : this.hash.hashCode());
+            hash = hash * 15 + (this.secureHash == null ? 0 : this.secureHash.hashCode());
             hash = hash * 15 + (blame == null ? 0 : blame.hashCode());
             hash = hash * 15 + (next == null ? 0 : next.hashCode());
             return hash;
@@ -224,7 +222,7 @@ public class MockMessage implements Message, Serializable {
 
             if (sig != null) str += sig.toString();
 
-            if (hash != null) str += hash.toString();
+            if (secureHash != null) str += secureHash.toString();
 
             if (t != null) str += t.toString();
 
@@ -238,17 +236,33 @@ public class MockMessage implements Message, Serializable {
         }
     }
 
-    final Atom atoms;
+    public final SessionIdentifier session;
+    public final Atom atoms;
+    public final VerificationKey from;
+    public final transient Network net;
 
-    public MockMessage() {
+    public Message(SessionIdentifier session, VerificationKey from, Network net) {
+        if (net == null || from == null || session == null) throw new NullPointerException();
+
+        this.net = net;
         atoms = null;
+        this.session = session;
+        this.from = from;
     }
 
-    private MockMessage(Atom atom) {
+    private Message(SessionIdentifier session, VerificationKey from, Network net, Atom atom) {
+        if (net == null || session == null || from == null) throw new NullPointerException();
+
+        this.net = net;
+        this.from = from;
         atoms = atom;
+        this.session = session;
     }
 
-    public MockMessage(Deque atoms) {
+    public Message(SessionIdentifier session, VerificationKey from, Network net, Deque atoms) {
+        if (net == null || session == null || from == null || atoms == null) throw new NullPointerException();
+
+        this.net = net;
         Atom atom = null;
 
         Iterator i = atoms.descendingIterator();
@@ -258,6 +272,8 @@ public class MockMessage implements Message, Serializable {
         }
 
         this.atoms = atom;
+        this.session = session;
+        this.from = from;
     }
 
     @Override
@@ -265,55 +281,54 @@ public class MockMessage implements Message, Serializable {
         return atoms == null;
     }
 
-    public Message attachAddrs(Deque<Address> addrs) {
+    public com.shuffle.protocol.message.Message attachAddrs(Deque<Address> addrs) {
         if (addrs == null) throw new NullPointerException();
 
-        MockMessage m = new MockMessage(addrs);
+        Message m = new Message(session, from, net, addrs);
 
-        return new MockMessage(Atom.attach(atoms, m.atoms));
+        return new Message(session, from, net, Atom.attach(atoms, m.atoms));
     }
 
     @Override
-    public Message attach(EncryptionKey ek) {
+    public com.shuffle.protocol.message.Message attach(EncryptionKey ek) {
         if (ek == null) throw new NullPointerException();
 
-        return new MockMessage(Atom.attach(atoms, Atom.make(ek)));
+        return new Message(session, from, net, Atom.attach(atoms, Atom.make(ek)));
     }
 
     @Override
-    public Message attach(Address addr) {
+    public com.shuffle.protocol.message.Message attach(Address addr) {
         if (addr == null) throw new NullPointerException();
 
-        return new MockMessage(Atom.attach(atoms, Atom.make(addr)));
+        return new Message(session, from, net, Atom.attach(atoms, Atom.make(addr)));
     }
 
     @Override
-    public Message attach(Signature sig) {
+    public com.shuffle.protocol.message.Message attach(Signature sig) {
         if (sig == null) throw new NullPointerException();
 
-        return new MockMessage(Atom.attach(atoms, Atom.make(sig)));
+        return new Message(session, from, net, Atom.attach(atoms, Atom.make(sig)));
     }
 
     @Override
-    public Message attach(Blame blame) {
+    public com.shuffle.protocol.message.Message attach(Blame blame) {
         if (blame == null) throw new NullPointerException();
 
-        return new MockMessage(Atom.attach(atoms, Atom.make(blame)));
+        return new Message(session, from, net, Atom.attach(atoms, Atom.make(blame)));
     }
 
-    public Message attach(Hash hash) {
-        if (hash == null) throw new NullPointerException();
+    public com.shuffle.protocol.message.Message hashed() {
 
-        return new MockMessage(Atom.attach(atoms, Atom.make(hash)));
+        return new Message(session, from, net, Atom.make(new SecureHash(this)));
     }
 
     @Override
-    public Message attach(Message message) throws InvalidImplementationError {
+    public com.shuffle.protocol.message.Message attach(com.shuffle.protocol.message.Message message) throws InvalidImplementationError {
         if (message == null) throw new NullPointerException();
 
-        if (!(message instanceof MockMessage)) throw new InvalidImplementationError();
+        if (!(message instanceof Message)) throw new InvalidImplementationError();
 
-        return new MockMessage(Atom.attach(atoms, ((MockMessage)message).atoms));
+        return new Message(session, from, net, Atom.attach(atoms, ((Message)message).atoms));
     }
 
     @Override
@@ -347,27 +362,43 @@ public class MockMessage implements Message, Serializable {
     }
 
     @Override
-    public Message rest() throws FormatException {
+    public com.shuffle.protocol.message.Message rest() throws FormatException {
 
         if (atoms == null) throw new FormatException();
 
-        return new MockMessage(atoms.next);
+        return new Message(session, from, net, atoms.next);
+    }
+
+    @Override
+    public Packet prepare(Phase phase, VerificationKey to, SigningKey from) {
+        return new SignedPacket(this, phase, to, from);
     }
 
     @Override
     public boolean equals(Object o) {
+
         if (o == null) return false;
 
-        if (!(o instanceof MockMessage)) return false;
+        if (!(o instanceof Message)) return false;
 
-        MockMessage mock = (MockMessage)o;
+        Message mock = (Message)o;
 
-        return (atoms == null && mock.atoms == null) || (atoms != null && atoms.equals(mock.atoms));
+        return session.equals(mock.session)
+                && ((atoms == null && mock.atoms == null)
+                    || (atoms != null && atoms.equals(mock.atoms)));
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 0;
+        hash = hash * 15 + session.hashCode();
+        hash = hash * 15 + atoms.hashCode();
+        return hash;
     }
 
     @Override
     public String toString() {
-        if (atoms == null) return "";
+        if (atoms == null) return "[]";
 
         return atoms.toString();
     }

@@ -9,6 +9,7 @@
 package com.shuffle.player;
 
 import com.shuffle.bitcoin.Crypto;
+import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.chan.BasicChan;
 import com.shuffle.chan.Chan;
@@ -19,7 +20,6 @@ import com.shuffle.p2p.Peer;
 import com.shuffle.p2p.Receiver;
 import com.shuffle.p2p.Session;
 import com.shuffle.protocol.InvalidImplementationError;
-import com.shuffle.protocol.WaitingException;
 import com.shuffle.protocol.message.Packet;
 
 import java.io.IOException;
@@ -28,7 +28,6 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 /**
  * A class for setting up Network objects. It manages setting up all all the necessary
@@ -36,45 +35,54 @@ import java.util.concurrent.TimeoutException;
  *
  * Created by Daniel Krawisz on 2/16/16.
  */
-public class Connect<Identity> {
+public class Connect<Address> {
+
     private final Crypto crypto;
 
-    public Connect(Crypto crypto) {
-        this.crypto = crypto;
-    }
+    // The list of peers will be altered by two threads; the one for initiating connections
+    // and the one for receiving connections. We set it in its own class to allow for some
+    // synchronized functions.
+    private class Peers {
+        private final Queue<Peer<VerificationKey, SignedPacket>> peers = new LinkedList<>();
 
-    // Provides functions for a thread to call when it receives a new connection.
-    private class Listener implements com.shuffle.p2p.Listener<Identity, Bytestring> {
-        final Receiver<Bytestring> receiver;
-        final Map<VerificationKey, Session<Identity, Bytestring>> players = new HashMap<>();
-        final Peers peers;
-        final Map<Identity, VerificationKey> keys;
+        private Peers() { }
 
-        private Listener(Peers peers,
-                         Map<Identity, VerificationKey> keys,
-                         Receiver<Bytestring> receiver) {
-            this.peers = peers;
-            this.receiver = receiver;
-            this.keys = keys;
+        public void add(Peer<VerificationKey, SignedPacket> peer) {
+            if (peer == null) {
+                throw new NullPointerException();
+            }
+            peers.add(peer);
+        }
+
+        public Peer<VerificationKey, SignedPacket> peek() {
+            return peers.peek();
+        }
+
+        synchronized boolean rotate() {
+            Peer<VerificationKey, SignedPacket> peer = peers.poll();
+            if (peer == null) {
+                return false;
+            }
+
+            peers.add(peer);
+            return true;
+        }
+
+        synchronized boolean remove(Peer<VerificationKey, SignedPacket> peer) {
+            return peers.remove(peer);
         }
 
         @Override
-        public Receiver<Bytestring> newSession(Session<Identity, Bytestring> session) {
-            VerificationKey key = keys.get(session.peer().identity());
-
-            if (peers.remove(session.peer())) {
-                players.put(key, session);
-            }
-
-            return receiver;
+        public String toString() {
+            return peers.toString();
         }
     }
 
     // Keep track of the number of connection attempt retries for each address.
     private class Retries {
-        final Map<Peer<Identity, Bytestring>, Integer> retries = new HashMap<>();
+        final Map<Peer<VerificationKey, SignedPacket>, Integer> retries = new HashMap<>();
 
-        public int retries(Peer<Identity, Bytestring> peer) {
+        public int retries(Peer<VerificationKey, SignedPacket> peer) {
             Integer r = retries.get(peer);
             if (r == null) {
                 retries.put(peer, 0);
@@ -84,7 +92,7 @@ public class Connect<Identity> {
             return r;
         }
 
-        public int increment(Peer<Identity, Bytestring> peer) {
+        public int increment(Peer<VerificationKey, SignedPacket> peer) {
             Integer r = retries.get(peer);
 
             if (r == null) {
@@ -97,52 +105,44 @@ public class Connect<Identity> {
         }
     }
 
-    // The list of peers will be altered by two threads; the one for initiating connections
-    // and the one for receiving connections. We set it in its own class to allow for some
-    // synchronized functions.
-    private class Peers {
-        private final Queue<Peer<Identity, Bytestring>> peers = new LinkedList<>();
+    // Provides functions for a thread to call when it receives a new connection.
+    private class Listener implements com.shuffle.p2p.Listener<VerificationKey, SignedPacket> {
+        final Receiver<SignedPacket> receiver;
+        final Map<VerificationKey, Session<VerificationKey, SignedPacket>> players = new HashMap<>();
+        final Peers peers;
+        final Map<Address, VerificationKey> keys;
 
-        private Peers() { }
-
-        public void add(Peer<Identity, Bytestring> peer) {
-            if (peer == null) {
-                throw new NullPointerException();
-            }
-            peers.add(peer);
-        }
-
-        public Peer<Identity, Bytestring> peek() {
-            return peers.peek();
-        }
-
-        synchronized boolean rotate() {
-            Peer<Identity, Bytestring> peer = peers.poll();
-            if (peer == null) {
-                return false;
-            }
-
-            peers.add(peer);
-            return true;
-        }
-
-        synchronized boolean remove(Peer<Identity, Bytestring> peer) {
-            return peers.remove(peer);
+        private Listener(Peers peers,
+                         Map<Address, VerificationKey> keys,
+                         Receiver<SignedPacket> receiver) {
+            this.peers = peers;
+            this.receiver = receiver;
+            this.keys = keys;
         }
 
         @Override
-        public String toString() {
-            return peers.toString();
+        public Receiver<SignedPacket> newSession(Session<VerificationKey, SignedPacket> session) {
+            VerificationKey key = keys.get(session.peer().identity());
+
+            if (peers.remove(session.peer())) {
+                players.put(key, session);
+            }
+
+            return receiver;
         }
     }
 
-    private Connection<Identity, Bytestring> connection;
+    private Connection<VerificationKey, SignedPacket> connection;
+
+    public Connect(Crypto crypto) {
+        this.crypto = crypto;
+    }
 
     // Connect to all peers; remote peers can be initiating connections to us as well.
     public com.shuffle.protocol.Network connect(
             SigningKey me,
-            Channel<Identity, Bytestring> channel,
-            Map<Identity, VerificationKey> keys,
+            Channel<Address, Bytestring> underlying,
+            Map<Address, VerificationKey> keys,
             Marshaller<Bytestring> marshall,
             int timeout,
             int maxRetries) throws IOException, InterruptedException {
@@ -153,11 +153,13 @@ public class Connect<Identity> {
 
         Peers peers = new Peers();
 
-        Map<VerificationKey, Session<Identity, Bytestring>> players = new HashMap<>();
+        Map<VerificationKey, Session<Address, Packet>> players = new HashMap<>();
 
-        Network<Identity> network = new Network<>(me, players, marshall, timeout);
+        Network<Address> network = new Network<>(me, players, timeout);
 
         Listener listener = new Listener(peers, keys, network);
+
+        Channel<VerificationKey, SignedPacket> channel = new SignedChannel<Address>(me, marshall, underlying, keys);
 
         connection = channel.open(listener);
         // TODO need to be able to disconnect the network.
@@ -168,10 +170,10 @@ public class Connect<Identity> {
         // Randomly arrange the list of peers.
         // First, put all peers in an array.
         int size = keys.size();
-        Peer<Identity, Bytestring>[] p = new Peer[size];
+        Peer<VerificationKey, SignedPacket>[] p = new Peer[size];
         int i = 0;
-        for (Identity identity : keys.keySet()) {
-            Peer<Identity, Bytestring> peer = channel.getPeer(identity);
+        for (VerificationKey key : keys.values()) {
+            Peer<VerificationKey, SignedPacket> peer = channel.getPeer(key);
             if (peer == null) {
                 throw new NullPointerException();
             }
@@ -193,7 +195,7 @@ public class Connect<Identity> {
 
         int l = 0;
         while (true) {
-            Peer<Identity, Bytestring> peer = peers.peek();
+            Peer<VerificationKey, SignedPacket> peer = peers.peek();
             if (peer == null) {
                 break;
             }
@@ -203,7 +205,7 @@ public class Connect<Identity> {
                 continue;
             }
 
-            Session<Identity, Bytestring> session = peer.openSession(network);
+            Session<VerificationKey, SignedPacket> session = peer.openSession(network);
 
             if (session != null) {
                 peers.remove(peer);
@@ -247,20 +249,17 @@ public class Connect<Identity> {
      * Created by Daniel Krawisz on 2/13/16.
      */
     private static class Network<Identity>
-            implements com.shuffle.protocol.Network, Receiver<Bytestring> {
+            implements com.shuffle.protocol.Network, Receiver<SignedPacket> {
 
-        final Map<VerificationKey, Session<Identity, Bytestring>> players;
-        final Marshaller<Bytestring> marshall;
-        final Chan<Bytestring> received = new BasicChan<>();
+        final Map<VerificationKey, Session<Identity, Packet>> players;
+        final Chan<Packet> received = new BasicChan<>();
         final int timeout;
         final SigningKey me;
 
-        Network(SigningKey me, Map<VerificationKey, Session<Identity, Bytestring>> players,
-                Marshaller<Bytestring> marshall, int timeout) {
+        Network(SigningKey me, Map<VerificationKey, Session<Identity, Packet>> players, int timeout) {
 
             this.me = me;
             this.players = players;
-            this.marshall = marshall;
             this.timeout = timeout;
 
         }
@@ -274,13 +273,13 @@ public class Connect<Identity> {
         public void sendTo(VerificationKey to, Packet packet)
                 throws InvalidImplementationError, InterruptedException {
 
-            Session<Identity, Bytestring> session = players.get(to);
+            Session<Identity, Packet> session = players.get(to);
 
             if (session == null) {
                 throw new InvalidImplementationError();
             }
 
-            session.send(marshall.marshall(me.makeSignedPacket(packet)));
+            session.send(packet);
         }
 
         @Override
@@ -288,21 +287,7 @@ public class Connect<Identity> {
                 throws InvalidImplementationError,
                 InterruptedException {
 
-            // TODO handle timing out for this function
-            while(true) {
-                Bytestring str = received.receive(timeout, TimeUnit.SECONDS);
-
-                if (str == null) {
-                    return null;
-                }
-
-                // Check signature.
-                SignedPacket signed = marshall.unmarshall(str);
-
-                if (signed == null) continue;
-
-                if (signed.verify()) return signed.payload;
-            }
+            return received.receive(timeout, TimeUnit.SECONDS);
         }
 
         // Receiver<Bytestring>.
@@ -310,8 +295,8 @@ public class Connect<Identity> {
         // We collect all messages from everybody in a central queue.
 
         @Override
-        public void receive(Bytestring bytestring) throws InterruptedException {
-            received.send(bytestring);
+        public void receive(SignedPacket packet) throws InterruptedException {
+            received.send(packet);
         }
     }
 }
