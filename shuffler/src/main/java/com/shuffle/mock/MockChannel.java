@@ -118,7 +118,7 @@ public class MockChannel<Q, X> implements Channel<Q, X> {
             }
 
             @Override
-            public boolean send(X x) {
+            public boolean send(X x) throws InterruptedException {
                 if (receiver == null) {
                     return false;
                 }

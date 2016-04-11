@@ -267,7 +267,7 @@ public class Connect<Identity> {
 
         @Override
         public void sendTo(VerificationKey to, SignedPacket packet)
-                throws InvalidImplementationError, TimeoutError {
+                throws InvalidImplementationError, TimeoutError, InterruptedException {
 
             Session<Identity, Bytestring> session = players.get(to);
 
@@ -292,7 +292,7 @@ public class Connect<Identity> {
         // We collect all messages from everybody in a central queue.
 
         @Override
-        public void receive(Bytestring bytestring) {
+        public void receive(Bytestring bytestring) throws InterruptedException {
             received.send(bytestring);
         }
     }

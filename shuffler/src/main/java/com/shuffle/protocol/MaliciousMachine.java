@@ -52,7 +52,7 @@ public final class MaliciousMachine extends CoinShuffle {
         }
 
         @Override
-        DecryptionKey newDecryptionKey(Map<VerificationKey, Address> changeAddresses) {
+        DecryptionKey newDecryptionKey(Map<VerificationKey, Address> changeAddresses) throws InterruptedException {
             DecryptionKey dk = null;
             if (me != 1) {
                 dk = crypto.makeDecryptionKey();

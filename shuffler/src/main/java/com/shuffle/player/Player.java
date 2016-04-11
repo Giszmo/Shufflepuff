@@ -101,7 +101,7 @@ class Player<Identity, Format> {
             Map<Identity, VerificationKey> keys, // Can be null.
             Settings settings,
             Chan<Machine> chan
-    ) {
+    ) throws InterruptedException {
         SessionIdentifier session = settings.session;
 
         // TODO make this work.

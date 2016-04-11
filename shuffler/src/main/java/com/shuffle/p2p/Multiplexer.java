@@ -25,7 +25,7 @@ public class Multiplexer<X, Y, Message> implements Channel<Either<X, Y>, Message
         }
 
         @Override
-        public boolean send(Message message) {
+        public boolean send(Message message) throws InterruptedException {
             if (x == null) {
                 return y.send(message);
             }
