@@ -7,6 +7,7 @@ import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.protocol.InvalidImplementationError;
 import com.shuffle.protocol.Packet;
 
+import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 
 /**
@@ -14,9 +15,9 @@ import org.bitcoinj.core.NetworkParameters;
  */
 public class VerificationKeyImpl implements VerificationKey {
 
-   public byte[] ecKey;
+   public ECKey ecKey;
 
-   public VerificationKeyImpl(byte[] ecKey) {
+   public VerificationKeyImpl(ECKey ecKey) {
       this.ecKey = ecKey;
    }
 
@@ -47,7 +48,7 @@ public class VerificationKeyImpl implements VerificationKey {
          throw new IllegalArgumentException("unable to compare with other VerificationKey");
       }
       //get netParams to create right address and check by address.
-      org.bitcoinj.core.Address  a= ((VerificationKeyImpl) o).privateKey.toAddress(NetworkParameters.prodNet());
+      org.bitcoinj.core.Address  a= ((VerificationKeyImpl) o).ecKey.toAddress(NetworkParameters.prodNet());
       return a.compareTo(((org.bitcoinj.core.Address) o));
 
 

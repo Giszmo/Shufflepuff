@@ -28,7 +28,6 @@ public class BitcoinCrypto implements Crypto {
    // Figure out which network we should connect to. Each one gets its own set of files.
     NetworkParameters params = TestNet3Params.get();
    String fileprefix = "_cosh";
-
    WalletAppKit kit;
 
 
@@ -43,7 +42,7 @@ public class BitcoinCrypto implements Crypto {
    ECKey ecKey = new ECKey(sr);
    DeterministicKeyChain keyChain = new DeterministicKeyChain(sr, 256);
 
-   KeyCrypter keyCrypter = new KeyCrypter();
+   // KeyCrypter keyCrypter = new KeyCrypter();
 
    //using bitcoinj
    org.bitcoinj.core.Address pvK = kit.wallet().freshAddress(KeyChain.KeyPurpose.AUTHENTICATION);
@@ -109,9 +108,9 @@ public class BitcoinCrypto implements Crypto {
        // use KeyCrypter to encrypt message: encrypt(byte[] plainBytes, org.spongycastle.crypto.params.KeyParameter aesKey)
 
        // get the message bytes[] to encode
-       m.
+
              //get the key to encrypt to, attached to message
-                   keyCrypter.encrypt();
+             //      keyCrypter.encrypt();
        return null;
     }
 
