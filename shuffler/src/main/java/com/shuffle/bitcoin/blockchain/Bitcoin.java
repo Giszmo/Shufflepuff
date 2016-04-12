@@ -99,6 +99,10 @@ public abstract class Bitcoin implements Coin {
         }
     }
 
+    public NetworkParameters getNetParams(){
+        return netParams;
+    }
+
     // TODO
     // Take transaction fees into account
 

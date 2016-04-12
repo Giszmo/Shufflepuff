@@ -15,21 +15,23 @@ import org.bitcoinj.core.ECKey;
 
 public class DecryptionKeyImpl implements DecryptionKey {
 
-   int index;
-   ECKey key;
-   byte[] encryptionKey;
+   final int index;
+   final ECKey key;
+   final byte[] encryptionKey;
 
 
-   public DecryptionKeyImpl(org.bitcoinj.core.ECKey key) {
+   public DecryptionKeyImpl(org.bitcoinj.core.ECKey key, int index) {
       this.key = key;
+      this.index = index;
       this.encryptionKey = key.getPubKey();
    }
 
    @Override
    public EncryptionKey EncryptionKey() {
-      return (EncryptionKey) key.getPubKey();
+      return new EncryptionKeyImpl(key);
    }
 
+   //not sure if that is meant to be passing a Message m?
    @Override
    public Address decrypt(Address m) throws FormatException, CryptographyError {
       return null;
