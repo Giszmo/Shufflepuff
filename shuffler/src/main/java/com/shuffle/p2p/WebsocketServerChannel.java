@@ -41,23 +41,33 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
      *  Necessary class to listen for remote websocket peers
      */
 
-    Session clientSession;
+    Listener<InetAddress, Bytestring> globalListener = null;
 
-    @ServerEndpoint("/")  //    ws://localhost:port/
+    @ServerEndpoint("/")  //    ws://localhost:port/path
     private class WebsocketServerEndpoint {
 
-        //Session userSession = null;
+        Session userSession;
 
         @OnOpen
         public void onOpen(Session userSession) {
-            clientSession = userSession;
+            this.userSession = userSession;
+            String clientIp = ((TyrusSession)this.userSession).getRemoteAddr();
+            InetAddress identity;
+            try {
+                identity = InetAddress.getByName(clientIp);
+            } catch (UnknownHostException e) {
+                this.userSession = null;
+                return;
+            }
+            WebsocketPeer.WebsocketSession session = openSessions.putOpenSession(identity,this.userSession);
+            globalListener.newSession(session);
         }
 
-        //@OnMessage?
+        //@OnMessage? Will this receive any messages?
 
         @OnClose
         public void onClose(Session userSession, CloseReason reason) {
-            clientSession = null;
+            this.userSession = null;
         }
 
     }
@@ -195,78 +205,27 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
 
     }
 
-    private class WebsocketListener implements Runnable {
-        final Listener<InetAddress, Bytestring> listener;
-
-        private WebsocketListener(Listener<InetAddress, Bytestring> listener) {
-            this.listener = listener;
-        }
-
-        @Override
-        public void run() {
-            while(true) {
-                // New connection found.
-                Session client = clientSession;
-                if (client != null) {
-
-                    // Casts client to a TyrusSession, which we can get
-                    // the remote IP from.
-                    String clientIp = ((TyrusSession)client).getRemoteAddr();
-                    InetAddress identity;
-                    try {
-                        identity = InetAddress.getByName(clientIp);
-                    } catch (UnknownHostException e) {
-                        return;
-                    }
-
-                    WebsocketPeer.WebsocketSession session = openSessions.putOpenSession(identity, client);
-
-                    if (session == null) {
-                        try {
-                            client.close();
-                        } catch (IOException e) {
-                            continue;
-                        }
-                        continue;
-                    }
-
-
-                    // Do I need a WebsocketReceiver??
-                    /*
-                    Receiver<Bytestring> receiver = listener.newSession(session);
-
-                    if (receiver == null) {
-                        continue;
-                    }
-
-                    executor.execute(new WebsocketReceiver(session, receiver));*/
-                }
-            }
-        }
-    }
-
     private final int port;
+    private final String hostName;
+    //private static final String path;
     private Server server;
     private boolean running = false;
-    private final Executor executor;
     private final Object lock = new Object();
 
     public WebsocketServerChannel(
             int port,
-            Executor executor
+            String hostName
+            //String path
     ) {
-        if (executor == null) {
-            throw new NullPointerException();
-        }
 
         this.port = port;
-        this.executor = executor;
+        this.hostName = hostName;
+        //this.path = path;
     }
 
     private class WebsocketConnection implements Connection<InetAddress, Bytestring> {
 
         @Override
-
         public void close() {
             synchronized (lock) {
                 if (server != null) {
@@ -275,6 +234,7 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
                     openSessions = null;
                     running = false;
                     server = null;
+                    globalListener = null;
                 }
             }
         }
@@ -287,13 +247,15 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
             throw new NullPointerException();
         }
 
+        globalListener = listener;
+
         synchronized (lock) {
             if (running) return null;
 
             if (server == null) {
                 try {
-                    // not localhost...
-                    server = new Server("localhost", port, "", new HashMap<String, Object>(), WebsocketServerEndpoint.class);
+                    //rootPath variable?
+                    server = new Server(hostName, port, "", new HashMap<String, Object>(), WebsocketServerEndpoint.class);
                     server.start();
                 } catch (DeploymentException e) {
                     return null;
@@ -302,7 +264,6 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
 
             running = true;
             openSessions = new OpenSessions();
-            executor.execute(new WebsocketListener(listener));
             return new WebsocketConnection();
         }
     }
