@@ -9,7 +9,6 @@
 package com.shuffle.mock;
 
 import com.shuffle.bitcoin.Address;
-import com.shuffle.bitcoin.CryptographyError;
 import com.shuffle.bitcoin.DecryptionKey;
 import com.shuffle.bitcoin.EncryptionKey;
 import com.shuffle.protocol.FormatException;
@@ -17,7 +16,7 @@ import com.shuffle.protocol.FormatException;
 import java.io.Serializable;
 
 /**
- * TODO
+ * It's a pretend decryption key for testing purposes.
  *
  * Created by Daniel Krawisz on 12/8/15.
  */
@@ -37,7 +36,7 @@ public class MockDecryptionKey implements DecryptionKey, Serializable {
 
     @Override
     // Intended blockchain decrypt a single element.
-    public Address decrypt(Address m) throws FormatException, CryptographyError {
+    public Address decrypt(Address m) throws FormatException {
 
         if (m instanceof MockEncryptedAddress) {
 

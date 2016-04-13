@@ -9,13 +9,10 @@
 package com.shuffle.protocol.message;
 
 import com.shuffle.bitcoin.Address;
-import com.shuffle.bitcoin.CryptographyError;
 import com.shuffle.bitcoin.EncryptionKey;
 import com.shuffle.bitcoin.Signature;
-import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.protocol.FormatException;
-import com.shuffle.protocol.InvalidImplementationError;
 import com.shuffle.protocol.blame.Blame;
 
 /**
@@ -32,19 +29,18 @@ public interface Message {
 
     Message attach(Blame blame);
 
-    Message attach(Message message) throws InvalidImplementationError;
-
     EncryptionKey readEncryptionKey() throws FormatException;
 
     Signature readSignature() throws FormatException;
 
     Address readAddress() throws FormatException;
 
-    Blame readBlame() throws FormatException, CryptographyError;
+    Blame readBlame() throws FormatException;
 
     Message rest() throws FormatException;
 
-    Packet prepare(Phase phase, VerificationKey to, SigningKey from);
+    // Prepare message to be sent.
+    Packet prepare(Phase phase, VerificationKey to);
 
     Message hashed();
 }

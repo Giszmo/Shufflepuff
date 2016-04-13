@@ -14,8 +14,6 @@ import com.shuffle.mock.AlwaysZero;
 import com.shuffle.mock.InsecureRandom;
 import com.shuffle.mock.MockCrypto;
 import com.shuffle.mock.MockSessionIdentifier;
-import com.shuffle.player.MessageFactory;
-import com.shuffle.player.SessionIdentifier;
 import com.shuffle.sim.InitialState;
 import com.shuffle.sim.TestCase;
 

@@ -8,11 +8,11 @@
 
 package com.shuffle.protocol;
 
-import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.protocol.blame.BlameException;
 import com.shuffle.protocol.blame.Reason;
 import com.shuffle.protocol.message.Message;
+import com.shuffle.protocol.message.MessageFactory;
 import com.shuffle.protocol.message.Packet;
 import com.shuffle.protocol.message.Phase;
 
@@ -33,8 +33,8 @@ import java.util.Set;
  * Created by Daniel Krawisz on 1/22/16.
  */
 public class Mailbox {
-    private final Network network;
-    private final SigningKey sk;
+    private final MessageFactory messages;
+    private final VerificationKey me;
     private final Collection<VerificationKey> players; // The keys representing all the players.
 
     // A queue of messages that has been delivered that we aren't ready to look at yet.
@@ -46,12 +46,12 @@ public class Mailbox {
     private final Set<Reason> blame = new HashSet<>();
 
     public Mailbox(
-            SigningKey sk,
+            VerificationKey me,
             Collection<VerificationKey> players,
-            Network network) {
+            MessageFactory messages) {
 
-        this.sk = sk;
-        this.network = network;
+        this.me = me;
+        this.messages = messages;
         this.players = players;
     }
 
@@ -74,7 +74,7 @@ public class Mailbox {
 
         // If this is a message to myself, don't send it. Just pretend we received it.
         // This is useful later when we have to collect all blame messages later.
-        if (packet.to().equals(sk.VerificationKey())) {
+        if (packet.to().equals(me)) {
             history.add(packet);
             if (packet.phase() == Phase.Blame) {
                 try {
@@ -84,14 +84,14 @@ public class Mailbox {
                 }
             }
         } else {
-            network.sendTo(packet.to(), packet);
+            packet.send();
         }
     }
 
     public void broadcast(Message message, Phase phase) throws IOException, InterruptedException {
 
         for (VerificationKey to : players) {
-            send(message.prepare(phase, to, sk));
+            send(message.prepare(phase, to));
         }
     }
 
@@ -120,7 +120,8 @@ public class Mailbox {
         // Now we wait for the right message from the network, since we haven't already received it.
         if (found == null) {
             while (true) {
-                Packet packet = network.receive();
+                Packet packet = messages.receive();
+
                 if (packet == null) {
                     return null;
                 }
@@ -209,7 +210,7 @@ public class Mailbox {
         Map<VerificationKey, Packet> broadcasts = new HashMap<>();
 
         // Don't receive a message from myself.
-        from.remove(sk.VerificationKey());
+        from.remove(me);
 
         while (from.size() > 0) {
             Packet packet = receiveNextPacket(expectedPhase);

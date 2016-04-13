@@ -18,9 +18,9 @@ import com.shuffle.protocol.message.Packet;
  * Created by Daniel Krawisz on 12/3/15.
  */
 public interface SigningKey extends Comparable {
-    VerificationKey VerificationKey() throws CryptographyError;
+    VerificationKey VerificationKey();
 
-    Signature makeSignature(Transaction t) throws CryptographyError;
+    Signature makeSignature(Transaction t);
 
-    Signature makeSignature(Packet p) throws CryptographyError;
+    Signature makeSignature(Packet p);
 }

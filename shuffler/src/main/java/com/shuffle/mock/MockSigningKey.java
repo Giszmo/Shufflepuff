@@ -8,7 +8,6 @@
 
 package com.shuffle.mock;
 
-import com.shuffle.bitcoin.CryptographyError;
 import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
@@ -26,17 +25,17 @@ public class MockSigningKey implements SigningKey {
     }
 
     @Override
-    public VerificationKey VerificationKey() throws CryptographyError {
+    public VerificationKey VerificationKey() {
         return new MockVerificationKey(index);
     }
 
     @Override
-    public Signature makeSignature(Transaction t) throws CryptographyError {
+    public Signature makeSignature(Transaction t) {
         return new MockSignature(t, new MockVerificationKey(index));
     }
 
     @Override
-    public Signature makeSignature(Packet p) throws CryptographyError {
+    public Signature makeSignature(Packet p) {
         return new MockSignature(p, new MockVerificationKey(index));
     }
 

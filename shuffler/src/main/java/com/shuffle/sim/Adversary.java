@@ -23,7 +23,6 @@ import com.shuffle.protocol.CoinShuffle;
 import com.shuffle.protocol.FormatException;
 import com.shuffle.protocol.InvalidImplementationError;
 import com.shuffle.protocol.InvalidParticipantSetException;
-import com.shuffle.protocol.Network;
 import com.shuffle.protocol.WaitingException;
 import com.shuffle.protocol.blame.Matrix;
 
@@ -43,8 +42,8 @@ import java.util.concurrent.TimeUnit;
 public class Adversary {
 
     private final CoinShuffle shuffle;
-    private final Network network;
     private final SigningKey sk;
+    private final Address addrNew;
     private final SortedSet<VerificationKey> players;
     private final long amount;
 
@@ -52,14 +51,16 @@ public class Adversary {
             long amount,
             SigningKey sk,
             SortedSet<VerificationKey> players,
-            CoinShuffle shuffle,
-            Network network) {
+            Address addrNew,
+            CoinShuffle shuffle) {
+
+        if (sk == null || players == null || shuffle == null || addrNew == null) throw new NullPointerException();
 
         this.amount = amount;
         this.sk = sk;
-        this.network = network;
         this.players = players;
         this.shuffle = shuffle;
+        this.addrNew = addrNew;
     }
 
     // Run the protocol in a separate thread and get a future to the final state.
@@ -71,15 +72,15 @@ public class Adversary {
             final SigningKey sk, // The signing key of the current player.
             // The set of players, sorted alphabetically by address.
             final SortedSet<VerificationKey> players,
-            final Address change, // Change address. (can be null)
-            final Network network // The network that connects us to the other players.
+            final Address addrNew,
+            final Address change // Change address. (can be null)
     ) {
         final Chan<Either<Transaction, Matrix>> q = new BasicChan<>();
 
         if (amount <= 0) {
             throw new IllegalArgumentException();
         }
-        if (sk == null || players == null || network == null) {
+        if (sk == null || players == null || addrNew == null) {
             throw new NullPointerException();
         }
 
@@ -90,7 +91,7 @@ public class Adversary {
                 try {
                     try {
                         q.send(new Either<Transaction, Matrix>(shuffle.runProtocol(
-                                amount, sk, players, change, network, null
+                                amount, sk, players, addrNew, change, null
                         ), null));
 
                     } catch (Matrix m) {
@@ -187,7 +188,7 @@ public class Adversary {
     public Future<Summable.SummableElement<Map<SigningKey, Either<Transaction, Matrix>>>> turnOn(
     ) throws InvalidImplementationError {
 
-        return runProtocolFuture(shuffle, amount, sk, players, null, network);
+        return runProtocolFuture(shuffle, amount, sk, players, addrNew, null);
     }
 
     public SigningKey identity() {

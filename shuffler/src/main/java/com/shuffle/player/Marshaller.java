@@ -8,7 +8,7 @@
 
 package com.shuffle.player;
 
-import com.shuffle.protocol.FormatException;
+import com.shuffle.p2p.Bytestring;
 import com.shuffle.protocol.message.Packet;
 
 /**
@@ -16,8 +16,8 @@ import com.shuffle.protocol.message.Packet;
  *
  * Created by Daniel Krawisz on 1/31/16.
  */
-public interface Marshaller<Format> {
-    Format marshall(SignedPacket packet);
+public interface Marshaller {
+    Bytestring marshallAndSign(Packet packet);
 
-    SignedPacket unmarshall(Format string);
+    Messages.SignedPacket unmarshall(Bytestring string);
 }

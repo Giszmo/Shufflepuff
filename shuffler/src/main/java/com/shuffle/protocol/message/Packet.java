@@ -10,7 +10,7 @@ package com.shuffle.protocol.message;
 
 import com.shuffle.bitcoin.VerificationKey;
 
-import java.io.Serializable;
+import java.io.IOException;
 
 /**
  * Represents a coin shuffle message with context information attached that is necessary to
@@ -26,4 +26,8 @@ public interface Packet {
     VerificationKey from();
     VerificationKey to();
 
+    // Send across the CoinShuffle network.
+    void send() throws // May be thrown if this protocol runs in an interruptable thread.
+            InterruptedException,
+            IOException; // May be thrown if the internet connection fails.
 }

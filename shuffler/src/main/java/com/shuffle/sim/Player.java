@@ -20,7 +20,7 @@ import com.shuffle.chan.SendChan;
 import com.shuffle.mock.InsecureRandom;
 import com.shuffle.mock.MockCrypto;
 import com.shuffle.mock.MockSessionIdentifier;
-import com.shuffle.player.MessageFactory;
+import com.shuffle.player.Messages;
 import com.shuffle.mock.MockSigningKey;
 import com.shuffle.p2p.Bytestring;
 import com.shuffle.p2p.Channel;
@@ -30,7 +30,6 @@ import com.shuffle.player.SessionIdentifier;
 import com.shuffle.protocol.CoinShuffle;
 import com.shuffle.protocol.FormatException;
 import com.shuffle.protocol.InvalidParticipantSetException;
-import com.shuffle.protocol.Network;
 import com.shuffle.protocol.message.Phase;
 import com.shuffle.protocol.WaitingException;
 import com.shuffle.protocol.blame.Matrix;
@@ -240,10 +239,10 @@ class Player implements Runnable {
                 new TcpChannel(InetSocketAddress.createUnresolved("localhost", param.port), exec);
 
         Connect<InetSocketAddress> conn = null;
-        Network network = null;
+        Messages messages = null;
         try {
-            conn = new Connect<>(param.init.crypto());
-            network = conn.connect(param.me, tcp, param.identities, new MockMarshaller(), 1, 3);
+            conn = new Connect<>(param.init.crypto(), param.session);
+            messages = conn.connect(param.me, tcp, param.identities, new MockMarshaller(), 1, 3);
         } catch (IOException e) {
             // Indicates that something has gone wrong with the initial connection.
             return null;
@@ -255,14 +254,13 @@ class Player implements Runnable {
 
         try {
             return new CoinShuffle(
-                    new MessageFactory(param.session, param.me.VerificationKey(), network), param.init.crypto(), param.init.coin()
+                    messages, param.init.crypto(), param.init.coin()
             ).runProtocol(
                     param.init.getAmount(),
                     param.init.sk,
                     param.init.keys,
-                    null,
-                    network,
-                    msg
+                    param.init.addr,
+                    null, msg
             );
         } catch (IOException // TODO there should be an exception which says that the internet connection failed.
                 | CoinNetworkException // Indicates a problem with the Bitcoin network.

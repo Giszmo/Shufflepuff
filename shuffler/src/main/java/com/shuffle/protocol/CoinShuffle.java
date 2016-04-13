@@ -12,7 +12,6 @@ import com.shuffle.bitcoin.Address;
 import com.shuffle.bitcoin.Coin;
 import com.shuffle.bitcoin.CoinNetworkException;
 import com.shuffle.bitcoin.Crypto;
-import com.shuffle.bitcoin.CryptographyError;
 import com.shuffle.bitcoin.DecryptionKey;
 import com.shuffle.bitcoin.EncryptionKey;
 import com.shuffle.bitcoin.Signature;
@@ -91,6 +90,8 @@ public class CoinShuffle {
         // The set of new addresses into which the coins will be deposited.
         public Queue<Address> newAddresses = null;
 
+        public final Address addrNew;
+
         public final Address change; // My change address. (may be null).
 
         public final Map<VerificationKey, Signature> signatures = new HashMap<>();
@@ -120,7 +121,7 @@ public class CoinShuffle {
             Map<VerificationKey, Address> changeAddresses = new HashMap<>();
 
             // Everyone except player 1 creates a new keypair and sends it around to everyone else.
-            dk = newDecryptionKey(changeAddresses);
+            dk = broadcastNewKey(changeAddresses);
 
             // Now we wait to receive similar key from everyone else.
             Map<VerificationKey, Message> announcement;
@@ -141,22 +142,20 @@ public class CoinShuffle {
             // to all participants.
             phase.set(Phase.Shuffling);
 
-            // Each participant chooses a new bitcoin address which will be their new outputs.
-            SigningKey skNew = crypto.makeSigningKey();
-            Address addrNew = skNew.VerificationKey().address();
-
             try {
                 // Player one begins the cycle and encrypts its new address with everyone's
                 // public encryption key, in order.
                 // Each subsequent player reorders the cycle and removes one layer of encryption.
-                Message shuffled = messages.make();
+                Message shuffled;
                 if (me != 1) {
-                    shuffled = decryptAll(shuffled.attach(
-                            mailbox.receiveFrom(players.get(me - 1), phase.get())), dk, me - 1);
+                    shuffled = decryptAll(
+                            mailbox.receiveFrom(players.get(me - 1), phase.get()), dk, me - 1);
 
                     if (shuffled == null) {
                         blameShuffleMisbehavior();
                     }
+                } else {
+                    shuffled = messages.make();
                 }
 
                 // Make an encrypted address to the mix, and then shuffle everything ourselves.
@@ -164,7 +163,7 @@ public class CoinShuffle {
 
                 // Pass it along to the next player.
                 if (me != N) {
-                    mailbox.send(shuffled.prepare(phase.get(), players.get(me + 1), sk));
+                    mailbox.send(shuffled.prepare(phase.get(), players.get(me + 1)));
                 }
 
                 // Phase 3: broadcast outputs.
@@ -284,7 +283,7 @@ public class CoinShuffle {
         }
 
         // Everyone except player 1 creates a new keypair and sends it around to everyone else.
-        DecryptionKey newDecryptionKey(Map<VerificationKey, Address> changeAddresses)
+        DecryptionKey broadcastNewKey(Map<VerificationKey, Address> changeAddresses)
                 throws WaitingException, InterruptedException, IOException {
 
             DecryptionKey dk = null;
@@ -298,6 +297,7 @@ public class CoinShuffle {
                 if (change != null) {
                     message.attach(change);
                 }
+
                 mailbox.broadcast(message, phase.get());
             }
             return dk;
@@ -367,14 +367,7 @@ public class CoinShuffle {
 
                 addrs.add(address);
                 count++;
-                try {
-                    decrypted = decrypted.attach(key.decrypt(address));
-                } catch (CryptographyError e) {
-                    mailbox.broadcast(messages.make().attach(Blame.ShuffleFailure(players.get(N))),
-                            phase.get());
-
-                    return null;
-                }
+                decrypted = decrypted.attach(key.decrypt(address));
             }
 
             if (addrs.size() != count || count != expected) {
@@ -777,7 +770,7 @@ public class CoinShuffle {
 
         // Get the set of players from i to N.
         public final Set<VerificationKey> playerSet(int i, int n)
-                throws CryptographyError, InvalidImplementationError {
+                throws InvalidImplementationError {
 
             if (i < 1) {
                 i = 1;
@@ -795,8 +788,7 @@ public class CoinShuffle {
         }
 
         // get the set of all players for this round.
-        public final Set<VerificationKey> playerSet()
-                throws CryptographyError, InvalidImplementationError {
+        public final Set<VerificationKey> playerSet() {
             return playerSet(1, N);
         }
 
@@ -824,7 +816,7 @@ public class CoinShuffle {
                 }
             }
 
-            return crypto.hash(check);
+            return check.hashed();
         }
 
         // A round is a single run of the protocol.
@@ -832,6 +824,7 @@ public class CoinShuffle {
                 long amount,
                 SigningKey sk,
                 Map<Integer, VerificationKey> players,
+                Address addrNew,
                 Address change,
                 Mailbox mailbox) throws InvalidParticipantSetException {
 
@@ -842,6 +835,7 @@ public class CoinShuffle {
             this.change = change;
             vk = sk.VerificationKey();
             this.mailbox = mailbox;
+            this.addrNew = addrNew;
 
             int m = -1;
             N = players.size();
@@ -862,8 +856,7 @@ public class CoinShuffle {
     }
 
     // Algorithm to randomly shuffle the elements of a message.
-    final Message shuffle(Message message)
-            throws CryptographyError, InvalidImplementationError, FormatException {
+    final Message shuffle(Message message) throws InvalidImplementationError, FormatException {
 
         Message shuffled = messages.make();
 
@@ -1088,8 +1081,8 @@ public class CoinShuffle {
             SigningKey sk, // The signing key of the current player.
             // The set of players, sorted alphabetically by address.
             SortedSet<VerificationKey> players,
+            Address addrNew, // My new (anonymous) address.
             Address change, // Change address. (can be null)
-            Network network, // The network that connects us to the other players.
             // If this is not null, the machine is put in this channel so that another thread can
             // query the phase as it runs.
             SendChan<Phase> chan
@@ -1099,7 +1092,7 @@ public class CoinShuffle {
         if (amount <= 0) {
             throw new IllegalArgumentException();
         }
-        if (sk == null || players == null || network == null) {
+        if (sk == null || players == null) {
             throw new NullPointerException();
         }
 
@@ -1120,11 +1113,10 @@ public class CoinShuffle {
 
         // Make an inbox for the next round.
         Mailbox mailbox = new Mailbox(
-                sk, numberedPlayers.values(), network
-        );
+                sk.VerificationKey(), numberedPlayers.values(), messages);
 
         return this.new Round(
-                machine, amount, sk, numberedPlayers, change, mailbox
+                machine, amount, sk, numberedPlayers, addrNew, change, mailbox
         ).protocolDefinition();
     }
 

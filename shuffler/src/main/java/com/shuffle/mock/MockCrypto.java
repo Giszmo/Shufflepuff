@@ -9,11 +9,8 @@
 package com.shuffle.mock;
 
 import com.shuffle.bitcoin.Crypto;
-import com.shuffle.bitcoin.CryptographyError;
 import com.shuffle.bitcoin.DecryptionKey;
 import com.shuffle.bitcoin.SigningKey;
-import com.shuffle.player.Message;
-import com.shuffle.protocol.InvalidImplementationError;
 
 /**
  *
@@ -22,7 +19,7 @@ import com.shuffle.protocol.InvalidImplementationError;
  */
 public class MockCrypto implements Crypto {
     public interface Random {
-        int getRandom(int n) throws CryptographyError, InvalidImplementationError;
+        int getRandom(int n) ;
     }
 
     private int signingKeyCounter;
@@ -37,30 +34,17 @@ public class MockCrypto implements Crypto {
     }
 
     @Override
-    public synchronized DecryptionKey makeDecryptionKey() throws CryptographyError {
+    public synchronized DecryptionKey makeDecryptionKey() {
         return new MockDecryptionKey(decryptionKeyCounter++);
     }
 
     @Override
-    public synchronized SigningKey makeSigningKey() throws CryptographyError {
+    public synchronized SigningKey makeSigningKey() {
         return new MockSigningKey(signingKeyCounter++);
     }
 
     @Override
-    public synchronized int getRandom(int n) throws CryptographyError, InvalidImplementationError {
+    public synchronized int getRandom(int n) {
         return rand.getRandom(n);
-    }
-
-    @Override
-    public synchronized com.shuffle.protocol.message.Message hash(com.shuffle.protocol.message.Message m)
-            throws CryptographyError, InvalidImplementationError {
-
-        if (!(m instanceof Message)) {
-            throw new InvalidImplementationError();
-        }
-
-        Message p = ((Message)m);
-
-        return p.hashed();
     }
 }

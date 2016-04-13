@@ -17,7 +17,6 @@ import com.shuffle.player.SessionIdentifier;
 import com.shuffle.protocol.CoinShuffle;
 import com.shuffle.protocol.MaliciousMachine;
 import com.shuffle.protocol.message.MessageFactory;
-import com.shuffle.protocol.Network;
 import com.shuffle.protocol.blame.Evidence;
 import com.shuffle.protocol.blame.Matrix;
 import com.shuffle.protocol.blame.Reason;
@@ -138,6 +137,7 @@ public class InitialState {
         final SigningKey sk;
         final VerificationKey vk;
         final SortedSet<VerificationKey> keys = new TreeSet<>();
+        final Address addr;
         long initialAmount = 0;
         long spend = 0;
         long doubleSpend = 0;
@@ -155,12 +155,14 @@ public class InitialState {
         int duplicate = 0; // Whether to duplicate another address to replace it with.
         boolean replace = false; // Whether to replace dropped address with a new one.
 
-        PlayerInitialState(SigningKey sk) {
+        PlayerInitialState(SigningKey sk, Address addr) {
             this.sk = sk;
+            this.addr = addr;
             vk = sk.VerificationKey();
         }
 
-        PlayerInitialState(VerificationKey vk) {
+        PlayerInitialState(VerificationKey vk, Address addr) {
+            this.addr = addr;
             this.sk = null;
             this.vk = vk;
         }
@@ -223,8 +225,7 @@ public class InitialState {
 
         // Turn the initial state into an Adversary object that can be run in the simulator.
         public Adversary adversary(
-                MessageFactory messages,
-                Network network
+                MessageFactory messages
         ) throws CoinNetworkException {
 
             if (sk == null) {
@@ -266,7 +267,7 @@ public class InitialState {
                 shuffle = new CoinShuffle(messages, crypto, coin);
             }
 
-            return new Adversary(amount, sk, keys, shuffle, network);
+            return new Adversary(amount, sk, keys, addr, shuffle);
         }
 
         // The sort of malicious behavior to be performed by this player, if any.
@@ -367,9 +368,7 @@ public class InitialState {
     }
 
     public interface Initializer {
-        MessageFactory messages(VerificationKey key);
-
-        Network network(VerificationKey key);
+        MessageFactory messages(SigningKey key);
     }
 
     public Map<SigningKey, Adversary> getPlayers(Initializer initializer) {
@@ -383,8 +382,7 @@ public class InitialState {
             try {
                 p.put(player.sk,
                         player.adversary(
-                                initializer.messages(player.vk),
-                                initializer.network(player.vk)
+                                initializer.messages(player.sk)
                         ));
 
             } catch (CoinNetworkException e) {
@@ -422,8 +420,9 @@ public class InitialState {
 
     public InitialState player() {
         SigningKey key = crypto.makeSigningKey();
+        Address addr = crypto.makeSigningKey().VerificationKey().address();
 
-        PlayerInitialState next = new PlayerInitialState(key);
+        PlayerInitialState next = new PlayerInitialState(key, addr);
         PlayerInitialState last = players.peekLast();
         if (last != null) {
             next.keys.addAll(last.keys);
@@ -769,5 +768,9 @@ public class InitialState {
         }
 
         return init;
+    }
+
+    public int size() {
+        return players.size();
     }
 }
