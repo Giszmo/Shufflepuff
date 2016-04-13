@@ -43,11 +43,14 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
 
     Listener<InetAddress, Bytestring> globalListener = null;
 
-    @ServerEndpoint("/")  //    ws://localhost:port/path
+    // path variable here?
+    // The below class sets up the WebsocketServer, available at "ws://localhost:port/path"
+    @ServerEndpoint("/")
     private class WebsocketServerEndpoint {
 
         Session userSession;
 
+        // Callback for when a peer connects to the WebsocketServer.
         @OnOpen
         public void onOpen(Session userSession) {
             this.userSession = userSession;
@@ -56,6 +59,11 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
             try {
                 identity = InetAddress.getByName(clientIp);
             } catch (UnknownHostException e) {
+                try {
+                    this.userSession.close();
+                } catch (IOException er) {
+                    return;
+                }
                 this.userSession = null;
                 return;
             }
@@ -65,8 +73,26 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
 
         //@OnMessage? Will this receive any messages?
 
+        // Callback for when a peer disconnects from the WebsocketServer
         @OnClose
         public void onClose(Session userSession, CloseReason reason) {
+
+            String sessionIp = ((TyrusSession)this.userSession).getRemoteAddr();
+            InetAddress identity;
+
+            try {
+                identity = InetAddress.getByName(sessionIp);
+            } catch (UnknownHostException er) {
+                return;
+            }
+
+            try {
+                this.userSession.close();
+            } catch (IOException e) {
+                return;
+            }
+
+            openSessions.remove(identity);
             this.userSession = null;
         }
 
@@ -184,7 +210,7 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
                 try {
                     session.close();
                 } catch (IOException e) {
-
+                    return;
                 }
                 session = null;
                 WebsocketPeer.this.currentSession = null;
@@ -254,7 +280,8 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
 
             if (server == null) {
                 try {
-                    //rootPath variable?
+                    // rootPath variable?
+                    // initializes and starts the Websocket Server at the specified port
                     server = new Server(hostName, port, "", new HashMap<String, Object>(), WebsocketServerEndpoint.class);
                     server.start();
                 } catch (DeploymentException e) {
