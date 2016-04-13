@@ -10,15 +10,11 @@ package com.shuffle.p2p;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executor;
 
 import javax.websocket.CloseReason;
 import javax.websocket.DeploymentException;
@@ -27,12 +23,17 @@ import javax.websocket.OnMessage;
 import javax.websocket.OnOpen;
 import javax.websocket.Session;
 import javax.websocket.server.ServerEndpoint;
-import org.glassfish.tyrus.container.grizzly.server.*;
 import org.glassfish.tyrus.core.TyrusSession;
 import org.glassfish.tyrus.server.Server;
 
 /**
  * Created by Eugene Siegel on 4/1/16.
+ */
+
+
+/**
+ *  Starts a Websocket Server and manages connections to this server.
+ *  Currently, Websocket Secure (wss) is not supported.
  */
 
 public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> {
@@ -71,7 +72,7 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
             globalListener.newSession(session);
         }
 
-        //@OnMessage? Will this receive any messages?
+        // @OnMessage? Will this receive any messages?
 
         // Callback for when a peer disconnects from the WebsocketServer
         @OnClose

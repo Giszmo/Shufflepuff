@@ -39,7 +39,7 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
  * A manager for websocket connections.
  */
 
-public class WebsocketChannel implements Channel<URI, Bytestring> {
+public class WebsocketClientChannel implements Channel<URI, Bytestring> {
 
     /**
      *  Necessary class to use the javax.websocket library.
@@ -251,7 +251,7 @@ public class WebsocketChannel implements Channel<URI, Bytestring> {
     private boolean running = false;
     private final Object lock = new Object();
 
-    public WebsocketChannel() {
+    public WebsocketClientChannel() {
 
     }
 
