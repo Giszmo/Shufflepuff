@@ -11,6 +11,7 @@ package com.shuffle.sim;
 import com.shuffle.bitcoin.CoinNetworkException;
 import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.chan.BasicChan;
 import com.shuffle.chan.Chan;
 import com.shuffle.mock.InsecureRandom;
 import com.shuffle.mock.MockCrypto;
@@ -62,7 +63,7 @@ class Player implements Runnable {
         }
     }
 
-    private final Chan<Machine> msg = new Chan<>();
+    private final Chan<Machine> msg = new BasicChan<>();
     private final Executor exec;
     private final Parameters param;
     private final PrintStream stream;

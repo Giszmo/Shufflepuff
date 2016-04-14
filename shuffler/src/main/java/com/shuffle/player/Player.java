@@ -13,6 +13,7 @@ import com.shuffle.bitcoin.Coin;
 import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.chan.BasicChan;
 import com.shuffle.chan.Chan;
 import com.shuffle.p2p.Channel;
 import com.shuffle.protocol.CoinShuffle;

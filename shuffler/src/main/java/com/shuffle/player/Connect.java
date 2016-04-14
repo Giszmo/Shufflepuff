@@ -10,6 +10,7 @@ package com.shuffle.player;
 
 import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.chan.BasicChan;
 import com.shuffle.chan.Chan;
 import com.shuffle.p2p.Bytestring;
 import com.shuffle.p2p.Channel;
@@ -249,7 +250,7 @@ public class Connect<Identity> {
 
         final Map<VerificationKey, Session<Identity, Bytestring>> players;
         final Marshaller<Bytestring> marshall;
-        final Chan<Bytestring> received = new Chan<>();
+        final Chan<Bytestring> received = new BasicChan<>();
         final int timeout;
 
         Network(Map<VerificationKey, Session<Identity, Bytestring>> players,
