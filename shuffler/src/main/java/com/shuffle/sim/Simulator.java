@@ -10,6 +10,7 @@ package com.shuffle.sim;
 
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.chan.BasicChan;
 import com.shuffle.chan.Chan;
 import com.shuffle.mock.MockMessageFactory;
 import com.shuffle.monad.NaturalSummableFuture;
@@ -54,7 +55,7 @@ public final class Simulator {
             }
             this.networks = networks;
 
-            inbox = new Chan<>(2 * (1 + networks.size()));
+            inbox = new BasicChan<>(2 * (1 + networks.size()));
         }
 
         @Override

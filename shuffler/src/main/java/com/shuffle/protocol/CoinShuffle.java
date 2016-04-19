@@ -19,6 +19,7 @@ import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.chan.BasicChan;
 import com.shuffle.chan.Chan;
 import com.shuffle.chan.SendChan;
 import com.shuffle.protocol.blame.Blame;
@@ -1171,7 +1172,7 @@ public class CoinShuffle {
             final Address change, // Change address. (can be null)
             final Network network // The network that connects us to the other players.
     ) {
-        final Chan<Machine> q = new Chan<>();
+        final Chan<Machine> q = new BasicChan<>();
 
         if (amount <= 0) {
             throw new IllegalArgumentException();

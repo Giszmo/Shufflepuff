@@ -10,6 +10,7 @@ package com.shuffle.player;
 
 import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.chan.BasicChan;
 import com.shuffle.chan.Chan;
 import com.shuffle.chan.ReceiveChan;
 import com.shuffle.chan.SendChan;
@@ -104,7 +105,7 @@ public class TestConnect {
                 Map<Integer, VerificationKey> keys) {
             me = i;
 
-            Chan<Network> netChan = new Chan<>();
+            Chan<Network> netChan = new BasicChan<>();
             this.netChan = netChan;
 
             new Thread(new ConnectRun(connect, channel, keys, 1, 3, netChan)).start();
