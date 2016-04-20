@@ -211,7 +211,7 @@ class Player implements Runnable {
     }
 
     private Machine play() {
-        Channel<InetSocketAddress, Bytestring> tcp = new TcpChannel(param.port, exec);
+        Channel<InetSocketAddress, Bytestring> tcp = new TcpChannel(InetSocketAddress.createUnresolved("localhost", param.port), exec);
 
         Connect<InetSocketAddress> connect = new Connect<>(param.init.crypto());
 

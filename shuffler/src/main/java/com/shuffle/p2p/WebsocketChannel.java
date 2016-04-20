@@ -27,6 +27,8 @@ import javax.websocket.OnOpen;
 import javax.websocket.Session;
 import javax.websocket.WebSocketContainer;
 
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
+
 /**
  *
  *
@@ -256,7 +258,12 @@ public class WebsocketChannel implements Channel<URI, Bytestring> {
     private class WebsocketConnection implements Connection<URI, Bytestring> {
 
         @Override
+        public URI identity() {
+            // TODO
+            throw new NotImplementedException();
+        }
 
+        @Override
         public void close() {
             synchronized (lock) {
                 openSessions.closeAll();

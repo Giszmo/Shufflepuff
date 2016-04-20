@@ -14,5 +14,7 @@ package com.shuffle.p2p;
  * Created by Daniel Krawisz on 2/22/16.
  */
 public interface Connection<Identity, Message> {
+    Identity identity();
+
     void close();
 }

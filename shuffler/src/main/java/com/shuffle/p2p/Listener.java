@@ -15,5 +15,5 @@ package com.shuffle.p2p;
  */
 public interface Listener<Identity, Message> {
     // Message to call when a new peer is found.
-    Receiver<Message> newSession(Session<Identity, Message> session);
+    Receiver<Message> newSession(Session<Identity, Message> session) throws InterruptedException;
 }

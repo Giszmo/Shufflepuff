@@ -15,6 +15,7 @@ package com.shuffle.p2p;
  */
 
 import java.io.Serializable;
+import java.util.Arrays;
 
 /**
  * A simple wrapper for []byte.
@@ -103,5 +104,10 @@ public class Bytestring implements Serializable {
         }
 
         return code;
+    }
+
+    @Override
+    public String toString() {
+        return Arrays.toString(bytes);
     }
 }
