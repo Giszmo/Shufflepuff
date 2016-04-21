@@ -63,7 +63,7 @@ public class SignedReceiver implements Receive<Messages.SignedPacket>, Send<Byte
     }
 
     @Override
-    public void close() {
+    public void close() throws InterruptedException {
         chan.close();
     }
 }

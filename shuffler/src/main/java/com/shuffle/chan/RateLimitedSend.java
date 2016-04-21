@@ -155,7 +155,7 @@ public class RateLimitedSend<X> implements Chan<X> {
     }
 
     @Override
-    public void close() {
+    public void close() throws InterruptedException {
         chan.close();
     }
 

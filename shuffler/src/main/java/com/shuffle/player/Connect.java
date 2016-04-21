@@ -124,7 +124,7 @@ public class Connect<Address> {
         }
 
         @Override
-        public Send<Bytestring> newSession(Session<Address, Bytestring> session) {
+        public Send<Bytestring> newSession(Session<Address, Bytestring> session) throws InterruptedException {
             VerificationKey key = keys.get(session.peer().identity());
 
             if (key == null) {
@@ -238,7 +238,7 @@ public class Connect<Address> {
         return new Messages(session, me.VerificationKey(), players, receiver);
     }
 
-    public void shutdown() {
+    public void shutdown() throws InterruptedException {
         if (connection == null) {
             return;
         }

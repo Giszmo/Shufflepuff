@@ -96,6 +96,8 @@ public class Adversary {
 
                     } catch (Matrix m) {
                         q.send(new Either<Transaction, Matrix>(null, m));
+                    } finally {
+                        q.close();
                     }
 
                 } catch (IOException
@@ -111,7 +113,6 @@ public class Adversary {
                     // Ignore and we'll just return nothing.
                 }
 
-                q.close();
             }
         }).start();
 

@@ -35,7 +35,7 @@ public class Multiplexer<X, Y, Message> implements Channel<Either<X, Y>, Message
         }
 
         @Override
-        public void close() {
+        public void close() throws InterruptedException {
             if (first == null) {
                 second.close();
                 return;
@@ -45,7 +45,7 @@ public class Multiplexer<X, Y, Message> implements Channel<Either<X, Y>, Message
         }
 
         @Override
-        public boolean closed() {
+        public boolean closed() throws InterruptedException {
             if (first == null) {
                 return second.closed();
             }
@@ -99,7 +99,7 @@ public class Multiplexer<X, Y, Message> implements Channel<Either<X, Y>, Message
         }
 
         @Override
-        public boolean open() {
+        public boolean open() throws InterruptedException {
             if (first == null) {
                 return second.open();
             }
@@ -108,7 +108,7 @@ public class Multiplexer<X, Y, Message> implements Channel<Either<X, Y>, Message
         }
 
         @Override
-        public void close() {
+        public void close() throws InterruptedException {
             if (first == null) {
                 second.close();
                 return;
@@ -158,14 +158,16 @@ public class Multiplexer<X, Y, Message> implements Channel<Either<X, Y>, Message
         }
 
         @Override
-        public void close() {
+        public void close() throws InterruptedException {
             x.close();
             y.close();
         }
     }
 
     @Override
-    public Connection<Either<X, Y>, Message> open(final Listener<Either<X, Y>, Message> listener) {
+    public Connection<Either<X, Y>, Message> open(final Listener<Either<X, Y>, Message> listener)
+            throws InterruptedException {
+        
         Connection<X, Message> cx = x.open(new Listener<X, Message>(){
             @Override
             public Send<Message> newSession(Session<X, Message> session) throws InterruptedException {

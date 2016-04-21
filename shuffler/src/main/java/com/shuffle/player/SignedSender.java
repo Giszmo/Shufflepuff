@@ -25,7 +25,7 @@ public class SignedSender<Address> implements Send<Packet> {
     }
 
     @Override
-    public void close() {
+    public void close() throws InterruptedException {
         session.close();
     }
 }

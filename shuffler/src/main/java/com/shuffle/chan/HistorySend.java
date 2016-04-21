@@ -26,7 +26,7 @@ public class HistorySend<X> implements Send<X> {
     }
 
     @Override
-    public void close() {
+    public void close() throws InterruptedException {
         chan.close();
     }
 

@@ -91,9 +91,14 @@ public class TestConnect {
             } catch (IOException | InterruptedException e) {
                 e.printStackTrace();
             }
-            net.close();
 
-            connect.shutdown();
+            try {
+                net.close();
+
+                connect.shutdown();
+            } catch (InterruptedException e) {
+                return;
+            }
         }
     }
 

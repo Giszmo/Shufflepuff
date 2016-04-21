@@ -33,12 +33,12 @@ public abstract class FundamentalPeer<Identity, Message> implements Peer<Identit
             throws InterruptedException;
 
     // Whether there is an open session to this peer.
-    public final boolean open() {
+    public final boolean open() throws InterruptedException {
         return currentSession != null && !currentSession.closed();
     }
 
     // Close any open sessions for this peer.
-    public final void close() {
+    public final void close() throws InterruptedException {
         if (currentSession != null) {
             currentSession.close();
         }

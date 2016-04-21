@@ -116,12 +116,12 @@ public class TestTcpChannel {
             }
 
             @Override
-            public boolean open() {
+            public boolean open() throws InterruptedException {
                 return peer.open();
             }
 
             @Override
-            public void close() {
+            public void close() throws InterruptedException {
                 peer.close();
             }
         }
@@ -134,7 +134,7 @@ public class TestTcpChannel {
             }
 
             @Override
-            public boolean closed() {
+            public boolean closed() throws InterruptedException {
                 return session.closed();
             }
 
@@ -150,7 +150,7 @@ public class TestTcpChannel {
             }
 
             @Override
-            public void close() {
+            public void close() throws InterruptedException {
                 session.close();
             }
         }
@@ -185,7 +185,7 @@ public class TestTcpChannel {
             }
 
             @Override
-            public void close() {
+            public void close() throws InterruptedException {
                 conn.close();
             }
         }
@@ -245,7 +245,7 @@ public class TestTcpChannel {
         }
 
         @Override
-        public void close() {
+        public void close() throws InterruptedException {
             inner.close();
             closed = true;
         }
@@ -415,7 +415,7 @@ public class TestTcpChannel {
     }
 
     @After
-    public void shutdown() {
+    public void shutdown() throws InterruptedException {
         int[] numbers = new int[]{0, 1, 2};
 
         // Close sessions.

@@ -18,7 +18,7 @@ import com.shuffle.chan.Send;
 public interface Session<Identity, Message> extends Send<Message> {
 
     // Whether the session has been closed.
-    boolean closed();
+    boolean closed() throws InterruptedException;
 
     // The peer corresponding to this session.
     Peer<Identity, Message> peer();

@@ -16,5 +16,5 @@ package com.shuffle.p2p;
 public interface Connection<Identity, Message> {
     Identity identity();
 
-    void close();
+    void close() throws InterruptedException;
 }

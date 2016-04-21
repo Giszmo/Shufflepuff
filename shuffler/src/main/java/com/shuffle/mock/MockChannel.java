@@ -43,7 +43,7 @@ public class MockChannel<Q, X> implements Channel<Q, X> {
         }
 
         @Override
-        public void close() {
+        public void close() throws InterruptedException {
             if (connection == null) {
                 return;
             }

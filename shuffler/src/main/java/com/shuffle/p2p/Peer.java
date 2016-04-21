@@ -23,8 +23,8 @@ public interface Peer<Identity, Message> {
     Session<Identity, Message> openSession(Send<Message> send) throws InterruptedException;
 
     // Whether there is an open session to this peer.
-    boolean open();
+    boolean open() throws InterruptedException;
 
     // Close any open sessions for this peer.
-    void close();
+    void close() throws InterruptedException;
 }

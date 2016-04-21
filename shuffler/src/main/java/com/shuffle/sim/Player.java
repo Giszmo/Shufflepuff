@@ -282,10 +282,12 @@ class Player implements Runnable {
     public void run() {
         // Run the protocol and signal to the other thread when it's done.
         try {
-            play(param, msg, exec);
+            try {
+                play(param, msg, exec);
+            } finally {
+                msg.close();
+            }
         } catch (InterruptedException e) {
-        } finally {
-            msg.close();
         }
     }
 }

@@ -46,7 +46,7 @@ public class NetworkSim implements Send<Packet>, Receive<Messages.SignedPacket> 
     }
 
     @Override
-    public void close() {
+    public void close() throws InterruptedException {
         inbox.close();
     }
 }
