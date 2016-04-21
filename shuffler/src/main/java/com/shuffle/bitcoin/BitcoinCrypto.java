@@ -7,7 +7,6 @@ import com.shuffle.protocol.Message;
 
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.crypto.KeyCrypter;
 import org.bitcoinj.kits.WalletAppKit;
 import org.bitcoinj.net.discovery.DnsDiscovery;
 import org.bitcoinj.params.TestNet3Params;
@@ -18,15 +17,17 @@ import org.bitcoinj.wallet.KeyChain;
 import java.io.File;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.SecureRandom;
 
 
 public class BitcoinCrypto implements Crypto {
 
    // Figure out which network we should connect to. Each one gets its own set of files.
-    NetworkParameters params = TestNet3Params.get();
+   NetworkParameters params = TestNet3Params.get();
    String fileprefix = "_cosh";
    WalletAppKit kit;
 
@@ -35,8 +36,15 @@ public class BitcoinCrypto implements Crypto {
    //List<String> mnemonicCode = seed.getMnemonicCode();
 
 
+   //Generate Keypair using HMAC
    KeyPairGenerator keyPG = getKeyPGen();
    KeyPair keys = getKeyPair();
+   KeyPair keyPair = keyPG.generateKeyPair();
+   PrivateKey privKey = keyPair.getPrivate();
+   PublicKey pubKey = keyPair.getPublic();
+
+
+
    DeterministicSeed seed = kit.wallet().getKeyChainSeed();
    SecureRandom sr = new SecureRandom(seed.getSeedBytes());
    ECKey ecKey = new ECKey(sr);
@@ -48,6 +56,10 @@ public class BitcoinCrypto implements Crypto {
    org.bitcoinj.core.Address pvK = kit.wallet().freshAddress(KeyChain.KeyPurpose.AUTHENTICATION);
    //using ECkey
    org.bitcoinj.core.Address ecaddress = ecKey.toAddress(params);
+
+   public NetworkParameters getParams() {
+      return params;
+   }
 
    public void initKit() {
       //initialize files and stuff here, add our address to the watched ones
@@ -77,35 +89,49 @@ public class BitcoinCrypto implements Crypto {
 
    public KeyPair getKeyPair() {
       if (keys == null || keyPG == null) {
-         KeyPairGenerator keyPairGenerator = getKeyPGen();
-         keys = keyPairGenerator.generateKeyPair();
+         if (keyPG == null) {
+            keyPG = getKeyPGen();
+         }
+
+         keys = keyPG.generateKeyPair();
          return keys;
       }
       return keys;
    }
 
 
-   SigningKey signingKey = new SigningKeyImpl(ecKey);
-   DecryptionKey decryptionKey = DecryptionKeyImpl(ecKey);
-
+   //todo: index?
     @Override
     public DecryptionKey makeDecryptionKey() throws CryptographyError {
-       return (DecryptionKey) keys.getPrivate();
+       return new DecryptionKeyImpl(new ECKey(sr), 0);
     }
 
     @Override
     public SigningKey makeSigningKey() throws CryptographyError {
-       return signingKey;
+       return new SigningKeyImpl(new ECKey(sr));
     }
 
     @Override
-    public int getRandom(int n) throws CryptographyError, InvalidImplementationError, NoSuchProviderException, NoSuchAlgorithmException {
+    public int getRandom(int n) throws CryptographyError, InvalidImplementationError, NoSuchAlgorithmException {
          return sr.nextInt(n);
     }
 
     @Override
     public Message hash(Message m) throws CryptographyError, InvalidImplementationError {
        // use KeyCrypter to encrypt message: encrypt(byte[] plainBytes, org.spongycastle.crypto.params.KeyParameter aesKey)
+       try {
+          MessageDigest md = MessageDigest.getInstance("SHA-256");
+          String message = m.toString();
+          md.update(message.getBytes());
+          byte[] mHash = md.digest();
+          //TODO
+          return null;
+
+
+       } catch (NoSuchAlgorithmException e) {
+          e.printStackTrace();
+       }
+
 
        // get the message bytes[] to encode
 
