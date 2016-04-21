@@ -73,7 +73,7 @@ public class BitcoinCrypto implements Crypto {
       kit.wallet().addWatchedAddress(ecKey.toAddress(params));
    }
 
-   public KeyPairGenerator getKeyPGen() {
+   private KeyPairGenerator getKeyPGen() {
       if (keyPG == null) {
          try {
             keyPG = KeyPairGenerator.getInstance("HMacSP800DRBG");
@@ -87,7 +87,7 @@ public class BitcoinCrypto implements Crypto {
       return keyPG;
    }
 
-   public KeyPair getKeyPair() {
+   private KeyPair getKeyPair() {
       if (keys == null || keyPG == null) {
          if (keyPG == null) {
             keyPG = getKeyPGen();

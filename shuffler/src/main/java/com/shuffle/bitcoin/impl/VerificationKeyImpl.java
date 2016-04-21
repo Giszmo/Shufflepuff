@@ -28,7 +28,7 @@ public class VerificationKeyImpl implements VerificationKey {
 
    @Override
    public boolean verify(Transaction t, Signature sig) throws InvalidImplementationError {
-
+      org.bitcoinj.core.Transaction transaction = t.hashCode()
       return false;
    }
 
