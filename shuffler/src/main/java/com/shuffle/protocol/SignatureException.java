@@ -8,16 +8,23 @@
 
 package com.shuffle.protocol;
 
+import com.shuffle.protocol.message.Packet;
+
 /**
  * Created by Daniel Krawisz on 1/27/16.
  */
 public class SignatureException extends Exception {
-    public final SignedPacket packet;
+    public final Packet packet;
 
-    public SignatureException(SignedPacket packet) {
+    public SignatureException(Packet packet) {
         if (packet == null) {
             throw new NullPointerException();
         }
         this.packet = packet;
+    }
+
+    @Override
+    public String getMessage() {
+        return "CoinShuffle Signature Exception";
     }
 }

@@ -6,12 +6,12 @@
  *
  */
 
-package com.shuffle.mock;
+package com.shuffle.sim;
 
 import com.shuffle.p2p.Bytestring;
 import com.shuffle.player.Marshaller;
-import com.shuffle.protocol.FormatException;
-import com.shuffle.protocol.SignedPacket;
+import com.shuffle.player.Messages;
+import com.shuffle.protocol.message.Packet;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -24,17 +24,12 @@ import java.io.ObjectOutputStream;
  *
  * Created by Daniel Krawisz on 1/31/16.
  */
-public class MockMarshaller implements Marshaller<Bytestring> {
-
-    public static Bytestring marshall(Object object) throws IOException {
-        ByteArrayOutputStream b = new ByteArrayOutputStream();
-        ObjectOutputStream o = new ObjectOutputStream(b);
-        o.writeObject(object);
-        return new Bytestring(b.toByteArray());
-    }
+public class MockMarshaller implements Marshaller {
 
     @Override
-    public Bytestring marshall(SignedPacket packet) {
+    public Bytestring marshallAndSign(Packet packet) {
+
+
         ByteArrayOutputStream b = new ByteArrayOutputStream();
         try {
             ObjectOutputStream o = new ObjectOutputStream(b);
@@ -46,20 +41,20 @@ public class MockMarshaller implements Marshaller<Bytestring> {
     }
 
     @Override
-    public SignedPacket unmarshall(Bytestring string) throws FormatException {
+    public Messages.SignedPacket unmarshall(Bytestring string) {
         ByteArrayInputStream b = new ByteArrayInputStream(string.bytes);
         Object obj = null;
         try {
             ObjectInputStream o = new ObjectInputStream(b);
             obj = o.readObject();
         } catch (ClassNotFoundException | IOException e) {
-            throw new FormatException();
+            return null;
         }
 
-        if (!(obj instanceof SignedPacket)) {
-            throw new FormatException();
+        if (!(obj instanceof Messages.SignedPacket)) {
+            return null;
         }
 
-        return (SignedPacket)obj;
+        return (Messages.SignedPacket)obj;
     }
 }

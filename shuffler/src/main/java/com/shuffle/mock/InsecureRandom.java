@@ -1,8 +1,5 @@
 package com.shuffle.mock;
 
-import com.shuffle.bitcoin.CryptographyError;
-import com.shuffle.protocol.InvalidImplementationError;
-
 /**
  * A class used for testing purposes that uses a standard RNG instead of one that is
  * cryptographically secure. s
@@ -17,7 +14,7 @@ public class InsecureRandom implements MockCrypto.Random {
     }
 
     @Override
-    public int getRandom(int n) throws CryptographyError, InvalidImplementationError {
+    public int getRandom(int n) {
         return r.nextInt(n + 1);
     }
 }

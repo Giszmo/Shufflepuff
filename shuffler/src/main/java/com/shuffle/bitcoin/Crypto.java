@@ -8,9 +8,6 @@
 
 package com.shuffle.bitcoin;
 
-import com.shuffle.protocol.InvalidImplementationError;
-import com.shuffle.protocol.Message;
-
 /**
  *
  * A set of cryptographic functions used in the protocol. According to the original paper,
@@ -24,13 +21,11 @@ import com.shuffle.protocol.Message;
 public interface Crypto {
     // Generate new signing key.
     // (The key doesn't have to have any bitcoins in it; it can just be new.)
-    SigningKey makeSigningKey() throws CryptographyError;
+    SigningKey makeSigningKey();
 
     // Generate new decryption key.
-    DecryptionKey makeDecryptionKey() throws CryptographyError;
+    DecryptionKey makeDecryptionKey();
 
     // Get a random number between 0 and N inclusive.
-    int getRandom(int n) throws CryptographyError, InvalidImplementationError;
-    // Hash a message.
-    Message hash(Message m) throws CryptographyError, InvalidImplementationError;
+    int getRandom(int n);
 }

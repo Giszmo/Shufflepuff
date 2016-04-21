@@ -13,7 +13,6 @@ import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.mock.AlwaysZero;
 import com.shuffle.mock.InsecureRandom;
 import com.shuffle.mock.MockCrypto;
-import com.shuffle.mock.MockMessageFactory;
 import com.shuffle.mock.MockSessionIdentifier;
 import com.shuffle.sim.InitialState;
 import com.shuffle.sim.TestCase;
@@ -36,7 +35,8 @@ import java.util.Map;
 public class TestShuffleMachine {
     static final Logger log = LogManager.getLogger(TestShuffleMachine.class);
     private static final int defaultSeed = 99;
-    private static final int defaultTrials = 10;
+    private static final int defaultTrials = 1;
+    private static final boolean override = true;
 
     private int seed = 99;
 
@@ -50,8 +50,13 @@ public class TestShuffleMachine {
     }
 
     public TestShuffleMachine(int seed, int trials) {
-        this.seed = defaultSeed;
-        this.trials = defaultTrials;
+        if (override) {
+            this.seed = defaultSeed;
+            this.trials = defaultTrials;
+        } else {
+            this.seed = seed;
+            this.trials = trials;
+        }
     }
 
     public class Report {
@@ -70,8 +75,8 @@ public class TestShuffleMachine {
 
     public class MockTestCase extends TestCase {
 
-        MockTestCase(String description) {
-            super(17, new MockMessageFactory(), new MockSessionIdentifier(description));
+        MockTestCase(String session) {
+            super(17, new MockSessionIdentifier(session));
         }
 
         @Override
@@ -82,8 +87,8 @@ public class TestShuffleMachine {
 
     public class NoShuffleTestCase extends TestCase {
 
-        NoShuffleTestCase(String description) {
-            super(17, new MockMessageFactory(), new MockSessionIdentifier(description));
+        NoShuffleTestCase(String session) {
+            super(17, new MockSessionIdentifier(session));
         }
 
         @Override
@@ -93,7 +98,7 @@ public class TestShuffleMachine {
         }
     }
 
-    void check(String description, InitialState init) {
+    void check(InitialState init) {
         int fail = 0;
         int success = 0;
         caseNo++;
@@ -104,7 +109,7 @@ public class TestShuffleMachine {
             }
 
             Map<SigningKey, TestCase.Mismatch> mismatch
-                    = com.shuffle.sim.TestCase.test(init, new MockMessageFactory());
+                    = com.shuffle.sim.TestCase.test(init);
             if (mismatch == null || mismatch.isEmpty() ) {
                 success ++;
             } else {

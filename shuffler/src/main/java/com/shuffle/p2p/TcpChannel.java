@@ -2,6 +2,7 @@ package com.shuffle.p2p;
 
 import java.io.InputStream;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -65,8 +66,10 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
         public synchronized TcpPeer get(InetSocketAddress identity) {
             TcpPeer peer = peers.get(identity);
             if (peer == null) {
-                peer = peers.put(identity, new TcpPeer(identity));
+                peer = new TcpPeer(identity);
+                peers.put(identity, peer);
             }
+
             return peer;
         }
     }
@@ -81,7 +84,7 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
                 = new ConcurrentHashMap<>();
 
         // We don't want to overwrite a session that already exists, so this is in a synchronized
-        // function. This is for creatin new sessions.
+        // function. This is for creating new sessions.
         public synchronized TcpPeer.TcpSession putNewSession(
                 InetSocketAddress identity,
                 TcpPeer peer
@@ -97,7 +100,9 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
 
             TcpPeer.TcpSession session = peer.newSession();
 
-            return openSessions.put(identity, session);
+            if (session == null) return null;
+            openSessions.put(identity, session);
+            return session;
         }
 
         // This is for creating a session that was initiated by a remote peer.
@@ -121,7 +126,9 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
                 return null;
             }
 
-            return openSessions.put(identity, peer.currentSession);
+            openSessions.put(identity, peer.currentSession);
+
+            return peer.currentSession;
         }
 
         public TcpPeer.TcpSession get(InetSocketAddress identity) {
@@ -147,7 +154,7 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
         TcpSession currentSession;
 
         // Constructor for initiating a connection.
-        public TcpPeer(InetSocketAddress identity) {
+        TcpPeer(InetSocketAddress identity) {
             super(identity);
         }
 
@@ -166,8 +173,17 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
         TcpSession newSession() {
             InetSocketAddress identity = identity();
 
+            InetAddress address = identity.getAddress();
+
+            if (address == null) {
+                return null;
+            }
+
             try {
-                return new TcpSession(new Socket(identity.getAddress(), identity.getPort()));
+
+                Socket socket = new Socket(identity.getAddress(), identity.getPort());
+
+                return new TcpSession(socket);
             } catch (IOException e) {
                 return null;
             }
@@ -204,7 +220,11 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
             Socket socket;
             InputStream in;
 
-            public TcpSession(Socket socket) throws IOException {
+            TcpSession(Socket socket) throws IOException {
+                if (socket == null) {
+                    throw new NullPointerException();
+                }
+
                 this.socket = socket;
                 in = socket.getInputStream();
             }
@@ -230,6 +250,9 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
 
             @Override
             public synchronized void close() {
+                if (socket == null) {
+                    return;
+                }
 
                 try {
                     socket.close();
@@ -269,11 +292,18 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
         public void run() {
             while (true) {
                 try {
+                    Bytestring bs;
+
                     byte[] head = new byte[header.headerLength()];
                     in.read(head);
 
                     byte[] msg = new byte[header.payloadLength(head)];
-                    in.read(msg);
+                    int total = in.read(msg);
+
+                    if (total < msg.length) {
+                        session.close();
+                        return;
+                    }
 
                     receiver.receive(new Bytestring(msg));
 
@@ -288,49 +318,48 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
     // This contains the function that listens for new tcp connections.
     private class TcpListener implements Runnable {
         final Listener<InetSocketAddress, Bytestring> listener;
+        final ServerSocket server;
 
-        private TcpListener(Listener<InetSocketAddress, Bytestring> listener) {
+        private TcpListener(Listener<InetSocketAddress, Bytestring> listener, ServerSocket server) {
             this.listener = listener;
+            this.server = server;
         }
 
         @Override
         public void run() {
             while (true) {
-                // New connection found.
-                Socket client = null;
                 try {
-                    client = server.accept();
-                } catch (IOException e) {
-                    return;
-                }
+                    // New connection found.
+                    Socket client = server.accept();
 
-                // Determine the identity of this connection.
-                InetSocketAddress identity =
-                        new InetSocketAddress(client.getInetAddress(), client.getPort());
+                    // Determine the identity of this connection.
+                    InetSocketAddress identity =
+                            new InetSocketAddress(client.getInetAddress(), client.getPort());
 
-                TcpPeer.TcpSession session = openSessions.putOpenSession(identity, client);
+                    TcpPeer.TcpSession session = openSessions.putOpenSession(identity, client);
 
-                if (session == null) {
-                    try {
+                    if (session == null) {
                         client.close();
-                    } catch (IOException e) {
                         continue;
                     }
-                    continue;
+
+                    Receiver<Bytestring> receiver;
+                    receiver = listener.newSession(session);
+
+                    if (receiver == null) {
+                        continue;
+                    }
+
+                    executor.execute(new TcpReceiver(session, receiver));
+                } catch (IOException | InterruptedException e) {
+                    return;
                 }
-
-                Receiver<Bytestring> receiver = listener.newSession(session);
-
-                if (receiver == null) {
-                    continue;
-                }
-
-                executor.execute(new TcpReceiver(session, receiver));
             }
         }
     }
 
     private final int port;
+    private final InetSocketAddress me;
 
     private ServerSocket server;
     private boolean running = false;
@@ -340,22 +369,29 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
 
     public TcpChannel(
             Header header,
-            int port,
+            InetSocketAddress me,
             Executor executor) {
-        if (executor == null || header == null) {
+
+        if (executor == null || header == null || me == null) {
             throw new NullPointerException();
         }
 
+        this.me = me;
         this.header = header;
-        this.port = port;
         this.executor = executor;
+        this.port = me.getPort();
     }
 
-    public TcpChannel(int port, Executor executor) {
-        this(defaultHeader(), port, executor);
+    public TcpChannel(InetSocketAddress me, Executor executor) {
+        this(defaultHeader(), me, executor);
     }
 
     private class TcpConnection implements Connection<InetSocketAddress, Bytestring> {
+
+        @Override
+        public InetSocketAddress identity() {
+            return me;
+        }
 
         @Override
         // TODO should close all connections and stop listening.
@@ -367,10 +403,9 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
                         openSessions.closeAll();
                         openSessions = null;
                     } catch (IOException ignored) {
-
+                        server = null;
+                        running = false;
                     }
-                    server = null;
-                    running = false;
                 }
             }
         }
@@ -399,7 +434,7 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
 
             openSessions = new OpenSessions();
 
-            executor.execute(new TcpListener(listener));
+            executor.execute(new TcpListener(listener, server));
 
             return new TcpConnection();
         }
@@ -407,6 +442,9 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
 
     @Override
     public Peer<InetSocketAddress, Bytestring> getPeer(InetSocketAddress you) {
+
+        if (you.equals(me)) return null;
+
         return peers.get(you);
     }
 }

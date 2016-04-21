@@ -9,7 +9,6 @@
 package com.shuffle.mock;
 
 import com.shuffle.bitcoin.Address;
-import com.shuffle.bitcoin.CryptographyError;
 import com.shuffle.bitcoin.EncryptionKey;
 
 import java.io.Serializable;
@@ -26,7 +25,7 @@ public class MockEncryptionKey implements EncryptionKey, Serializable {
     }
 
     @Override
-    public Address encrypt(Address m) throws CryptographyError {
+    public Address encrypt(Address m) {
         if (m instanceof MockDecryptedAddress) {
             MockDecryptedAddress dec = (MockDecryptedAddress) m;
 

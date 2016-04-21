@@ -38,6 +38,11 @@ public class MockChannel<Q, X> implements Channel<Q, X> {
     class MockConnection implements Connection<Q, X> {
 
         @Override
+        public Q identity() {
+            return me;
+        }
+
+        @Override
         public void close() {
             if (connection == null) {
                 return;

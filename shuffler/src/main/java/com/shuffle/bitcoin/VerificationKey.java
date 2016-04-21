@@ -9,7 +9,7 @@
 package com.shuffle.bitcoin;
 
 import com.shuffle.protocol.InvalidImplementationError;
-import com.shuffle.protocol.Packet;
+import com.shuffle.protocol.message.Packet;
 
 /**
  *

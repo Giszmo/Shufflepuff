@@ -12,24 +12,21 @@ import com.shuffle.bitcoin.Address;
 import com.shuffle.bitcoin.Coin;
 import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.SigningKey;
+import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.chan.BasicChan;
 import com.shuffle.chan.Chan;
 import com.shuffle.p2p.Channel;
 import com.shuffle.protocol.CoinShuffle;
-import com.shuffle.protocol.Machine;
 import com.shuffle.protocol.Mailbox;
-import com.shuffle.protocol.MessageFactory;
-import com.shuffle.protocol.Network;
-import com.shuffle.protocol.Phase;
-import com.shuffle.protocol.SessionIdentifier;
+import com.shuffle.protocol.message.MessageFactory;
+import com.shuffle.protocol.message.Phase;
+import com.shuffle.protocol.blame.Matrix;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 
 import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
@@ -40,7 +37,7 @@ import java.util.TreeSet;
  *
  * Created by Daniel Krawisz on 2/1/16.
  */
-class Player<Identity, Format> {
+class Player<Identity, Bytestring> {
     private static final Logger log = LogManager.getLogger(Player.class);
 
     private final SigningKey sk;
@@ -54,6 +51,7 @@ class Player<Identity, Format> {
     public class Settings {
         final SessionIdentifier session;
         final long amount;
+        final Address addrNew;
         final Address change;
         final int minPlayers;
         final int maxRetries;
@@ -62,6 +60,7 @@ class Player<Identity, Format> {
         public Settings(
                 SessionIdentifier session,
                 long amount,
+                Address addrNew,
                 Address change,
                 int minPlayers,
                 int maxRetries,
@@ -69,6 +68,7 @@ class Player<Identity, Format> {
         ) {
             this.session = session;
             this.amount = amount;
+            this.addrNew = addrNew;
             this.change = change;
             this.minPlayers = minPlayers;
             this.maxRetries = maxRetries;
@@ -95,18 +95,14 @@ class Player<Identity, Format> {
 
     }
 
-    public List<Machine> coinShuffle(
+    public Transaction coinShuffle(
             Set<Identity> identities,
-            Channel<Identity, Format> channel,
-            Marshaller<Format> marshaller,
+            Channel<Identity, Bytestring> channel,
             Map<Identity, VerificationKey> keys, // Can be null.
             Settings settings,
-            Chan<Machine> chan
-    ) throws InterruptedException {
-        SessionIdentifier session = settings.session;
-
-        // TODO make this work.
-        Network net = null; // new Connect.Network<>(channel, marshaller, settings.timeout);
+            Crypto crypto,
+            Chan<Phase> chan
+    ) {
 
         // Start by making connections to all the identies.
         for (Identity identity : identities) {
@@ -126,7 +122,6 @@ class Player<Identity, Format> {
         }
 
         // Try the protocol.
-        List<Machine> list = new LinkedList<>();
         int attempt = 0;
 
         // The eliminated players. A player is eliminated when there is a subset of players
@@ -138,7 +133,7 @@ class Player<Identity, Format> {
         while (true) {
 
             if (players.size() - eliminated.size() < settings.minPlayers) {
-                break;
+                return null;
             }
 
             // Get the initial ordering of the players.
@@ -152,26 +147,28 @@ class Player<Identity, Format> {
             }
 
             // Make an inbox for the next round.
-            Mailbox mailbox = new Mailbox(session, sk, validPlayers, net);
+            Mailbox mailbox = new Mailbox(sk.VerificationKey(), validPlayers, messages);
 
             // Send an introductory message and make sure all players agree on who is in
             // this round of the protocol.
             // TODO
 
-            Machine machine = shuffle.runProtocol(session,
-                    settings.amount, sk, validPlayers, settings.change, net, chan);
-
-            if (machine.exception() == null && machine.phase() != Phase.Blame) {
-                break;
+            Matrix blame = null;
+            try {
+                return shuffle.runProtocol(
+                        settings.amount, sk, validPlayers, settings.addrNew, settings.change, chan);
+            } catch (Matrix m) {
+                blame = m;
+            } catch (Exception e) {
+                e.printStackTrace();
             }
 
             attempt++;
 
             if (attempt > settings.maxRetries) {
-                break;
+                return null;
             }
 
-            break; // TODO remove this line.
             // TODO
             // Determine if the protocol can be restarted with some players eliminated.
 
@@ -188,7 +185,5 @@ class Player<Identity, Format> {
             // similar message from the remaining players.
 
         }
-
-        return list;
     }
 }

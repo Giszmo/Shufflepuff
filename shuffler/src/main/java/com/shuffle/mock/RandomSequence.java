@@ -1,6 +1,5 @@
 package com.shuffle.mock;
 
-import com.shuffle.bitcoin.CryptographyError;
 import com.shuffle.protocol.InvalidImplementationError;
 
 /**
@@ -15,10 +14,10 @@ public class RandomSequence implements MockCrypto.Random {
     }
 
     @Override
-    public int getRandom(int n) throws CryptographyError, InvalidImplementationError {
+    public int getRandom(int n) {
         // we use a premature end of the sequence blockchain simulate a problem.
         if (counter >= sequence.length) {
-            throw new CryptographyError();
+            return 0;
         }
 
         // Tests should be designed so as not blockchain give invalid numbers.

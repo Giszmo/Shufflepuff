@@ -1,8 +1,6 @@
 package com.shuffle.mock;
 
-import com.shuffle.bitcoin.CryptographyError;
 import com.shuffle.mock.MockCrypto.Random;
-import com.shuffle.protocol.InvalidImplementationError;
 
 /**
  * This is used for certain test cases in which we have to control the shuffling. Effectively
@@ -12,7 +10,7 @@ import com.shuffle.protocol.InvalidImplementationError;
  */
 public class AlwaysZero implements Random{
     @Override
-    public int getRandom(int n) throws CryptographyError, InvalidImplementationError {
+    public int getRandom(int n) {
         return 0;
     }
 }

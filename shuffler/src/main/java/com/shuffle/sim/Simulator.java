@@ -9,20 +9,19 @@
 package com.shuffle.sim;
 
 import com.shuffle.bitcoin.SigningKey;
+import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.chan.BasicChan;
-import com.shuffle.chan.Chan;
-import com.shuffle.mock.MockMessageFactory;
+import com.shuffle.chan.SendChan;
+import com.shuffle.player.Messages;
+import com.shuffle.monad.Either;
 import com.shuffle.monad.NaturalSummableFuture;
 import com.shuffle.monad.SummableFuture;
 import com.shuffle.monad.SummableFutureZero;
 import com.shuffle.monad.SummableMaps;
-import com.shuffle.protocol.InvalidImplementationError;
-import com.shuffle.protocol.Machine;
-import com.shuffle.protocol.MessageFactory;
-import com.shuffle.protocol.Network;
-import com.shuffle.protocol.SignedPacket;
-import com.shuffle.protocol.TimeoutError;
+import com.shuffle.player.SessionIdentifier;
+import com.shuffle.protocol.blame.Matrix;
+import com.shuffle.protocol.message.Packet;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
@@ -30,7 +29,6 @@ import org.apache.logging.log4j.LogManager;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
 /**
  * A simulator for running integration tests on the protocol.
@@ -40,95 +38,48 @@ import java.util.concurrent.TimeUnit;
 public final class Simulator {
     private static final Logger log = LogManager.getLogger(Simulator.class);
 
-    /**
-     * A network connecting different players together in a simulation.
-     *
-     * Created by Daniel Krawisz on 2/8/16.
-     */
-    private static class NetworkSim implements Network {
-        final Chan<SignedPacket> inbox;
-        final Map<VerificationKey, NetworkSim> networks;
-
-        NetworkSim(Map<VerificationKey, NetworkSim> networks) {
-            if (networks == null) {
-                throw new NullPointerException();
-            }
-            this.networks = networks;
-
-            inbox = new BasicChan<>(2 * (1 + networks.size()));
-        }
-
-        @Override
-        public void sendTo(
-                VerificationKey to,
-                SignedPacket packet
-        ) throws InvalidImplementationError, TimeoutError {
-
-            try {
-                networks.get(to).deliver(packet);
-            } catch (InterruptedException e) {
-                // This means that the thread running the machine we are delivering to
-                // has been interrupted. This would look like a timeout if this were
-                // happening over a real network.
-                throw new TimeoutError();
-            }
-        }
-
-        @Override
-        public SignedPacket receive() throws TimeoutError, InterruptedException {
-            for (int i = 0; i < 2; i++) {
-                SignedPacket next = inbox.receive(300, TimeUnit.MILLISECONDS);
-
-                if (next != null) {
-                    return next;
-                }
-            }
-
-            throw new TimeoutError();
-        }
-
-        public void deliver(SignedPacket packet) throws InterruptedException {
-            boolean sent = inbox.send(packet);
-        }
-    }
-
+    // Cannot be instantiated. Everything here is static!
     private Simulator() {
     }
 
     private static class SimulationInitializer implements InitialState.Initializer {
-        public final Map<VerificationKey, NetworkSim> networks = new HashMap<>();
+        public final Map<VerificationKey, SendChan<Packet>> networks = new HashMap<>();
+        public final SessionIdentifier session;
+        public final int capacity;
 
-        @Override
-        public MessageFactory messages(VerificationKey key) {
-            return new MockMessageFactory();
+        private SimulationInitializer(SessionIdentifier session, int capacity) {
+
+            this.session = session;
+            this.capacity = capacity;
         }
 
         @Override
-        public Network network(VerificationKey key) {
-            NetworkSim network = new NetworkSim(networks);
-            networks.put(key, network);
-            return network;
+        public com.shuffle.protocol.message.MessageFactory messages(SigningKey key) {
+            NetworkSim sim = new NetworkSim(key, new BasicChan<Messages.SignedPacket>(capacity));
+            networks.put(key.VerificationKey(), sim);
+            return new Messages(session, key.VerificationKey(), networks, sim);
         }
     }
 
-    public static Map<SigningKey, Machine> run(InitialState init, MessageFactory messages) {
+    public static Map<SigningKey, Either<Transaction, Matrix>> run(InitialState init) {
 
-        final SimulationInitializer initializer = new SimulationInitializer();
+        final SimulationInitializer initializer = new SimulationInitializer(init.session, 2 * (1 + init.size() ));
         final Map<SigningKey, Adversary> machines = init.getPlayers(initializer);
 
-        Map<SigningKey, Machine> results = runSimulation(machines);
+        Map<SigningKey, Either<Transaction, Matrix>> results = runSimulation(machines);
 
         initializer.networks.clear(); // Avoid memory leak.
         return results;
     }
 
-    private static synchronized Map<SigningKey, Machine> runSimulation(
+    private static synchronized Map<SigningKey, Either<Transaction, Matrix>> runSimulation(
             Map<SigningKey, Adversary> machines)  {
 
         // Create a future for the set of entries.
-        SummableFuture<Map<SigningKey, Machine>> wait = new SummableFutureZero<>(
-                new SummableMaps<SigningKey, Machine>()
-        );
+        SummableFuture<Map<SigningKey, Either<Transaction, Matrix>>> wait
+                = new SummableFutureZero<>(
+                        new SummableMaps<SigningKey, Either<Transaction, Matrix>>()
+                );
 
         // Start the simulations.
         for (Adversary in : machines.values()) {

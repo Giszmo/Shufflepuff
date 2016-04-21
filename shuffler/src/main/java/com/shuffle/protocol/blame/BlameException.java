@@ -9,7 +9,7 @@
 package com.shuffle.protocol.blame;
 
 import com.shuffle.bitcoin.VerificationKey;
-import com.shuffle.protocol.Packet;
+import com.shuffle.protocol.message.Packet;
 
 /**
  * Created by Daniel Krawisz on 12/4/15.

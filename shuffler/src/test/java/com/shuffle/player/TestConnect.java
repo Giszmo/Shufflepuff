@@ -9,6 +9,7 @@
 package com.shuffle.player;
 
 import com.shuffle.bitcoin.Crypto;
+import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.chan.BasicChan;
 import com.shuffle.chan.Chan;
@@ -17,7 +18,8 @@ import com.shuffle.chan.SendChan;
 import com.shuffle.mock.InsecureRandom;
 import com.shuffle.mock.MockChannel;
 import com.shuffle.mock.MockCrypto;
-import com.shuffle.mock.MockMarshaller;
+import com.shuffle.mock.MockSessionIdentifier;
+import com.shuffle.mock.MockSigningKey;
 import com.shuffle.monad.NaturalSummableFuture;
 import com.shuffle.monad.Summable;
 import com.shuffle.monad.SummableFuture;
@@ -26,7 +28,7 @@ import com.shuffle.monad.SummableMap;
 import com.shuffle.monad.SummableMaps;
 import com.shuffle.p2p.Bytestring;
 import com.shuffle.p2p.Channel;
-import com.shuffle.protocol.Network;
+import com.shuffle.sim.MockMarshaller;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -49,19 +51,25 @@ public class TestConnect {
 
     public static class ConnectRun implements Runnable {
         private final Channel<Integer, Bytestring> channel;
-        private final SendChan<Network> net;
+        private final SendChan<Messages> net;
         private final Connect<Integer> connect;
 
         private final Map<Integer, VerificationKey> keys;
         private final int timeout;
         private final int maxRetries;
 
+        private final SigningKey me;
+
         public ConnectRun(
+                SigningKey me,
                 Connect<Integer> connect,
                 Channel<Integer, Bytestring> channel,
                 Map<Integer, VerificationKey> keys,
                 int timeout, int maxRetries,
-                SendChan<Network> net) {
+                SendChan<Messages> net) {
+
+            this.me = me;
+
             this.channel = channel;
             this.connect = connect;
             this.keys = keys;
@@ -74,11 +82,11 @@ public class TestConnect {
         @Override
         public void run() {
             try {
-                Network network = connect.connect(
-                    channel, keys,
+                Messages messages = connect.connect(
+                    me, channel, keys,
                     new MockMarshaller(), timeout, maxRetries);
-                if (network != null) {
-                    net.send(network);
+                if (messages != null) {
+                    net.send(messages);
                 }
             } catch (IOException | InterruptedException e) {
                 e.printStackTrace();
@@ -90,10 +98,10 @@ public class TestConnect {
     }
 
     public static class ConnectFuture
-            implements Future<Summable.SummableElement<Map<Integer, Network>>> {
+            implements Future<Summable.SummableElement<Map<Integer, Messages>>> {
         
-        final ReceiveChan<Network> netChan;
-        SummableMap<Integer, Network> net = null;
+        final ReceiveChan<Messages> netChan;
+        SummableMap<Integer, Messages> net = null;
         final int me;
 
         volatile boolean cancelled = false;
@@ -105,10 +113,10 @@ public class TestConnect {
                 Map<Integer, VerificationKey> keys) {
             me = i;
 
-            Chan<Network> netChan = new BasicChan<>();
+            Chan<Messages> netChan = new BasicChan<>();
             this.netChan = netChan;
 
-            new Thread(new ConnectRun(connect, channel, keys, 1, 3, netChan)).start();
+            new Thread(new ConnectRun(new MockSigningKey(i), connect, channel, keys, 1, 3, netChan)).start();
         }
 
         @Override
@@ -127,19 +135,19 @@ public class TestConnect {
             return net != null || netChan.closed();
         }
 
-        SummableMap<Integer, Network> getMap(Network net) {
+        SummableMap<Integer, Messages> getMap(Messages net) {
             if (net == null) {
                 return null;
             }
 
-            Map<Integer, Network> map = new HashMap<>();
+            Map<Integer, Messages> map = new HashMap<>();
             map.put(me, net);
             this.net = new SummableMap<>(map);
             return this.net;
         }
 
         @Override
-        public SummableMap<Integer, Network> get() throws InterruptedException {
+        public SummableMap<Integer, Messages> get() throws InterruptedException {
             if (net != null) {
                 return net;
             }
@@ -152,7 +160,7 @@ public class TestConnect {
         }
 
         @Override
-        public SummableMap<Integer, Network> get(long l, TimeUnit timeUnit)
+        public SummableMap<Integer, Messages> get(long l, TimeUnit timeUnit)
                 throws InterruptedException, ExecutionException, TimeoutException {
 
             if (net != null) {
@@ -190,8 +198,8 @@ public class TestConnect {
         }
 
         // Construct the future which represents all players trying to connect to one another.
-        SummableFuture<Map<Integer, Network>> future = new SummableFutureZero<>(
-                new SummableMaps<Integer, Network>()
+        SummableFuture<Map<Integer, Messages>> future = new SummableFutureZero<>(
+                new SummableMaps<Integer, Messages>()
         );
 
         for (int i = 1; i <= n; i++) {
@@ -201,12 +209,13 @@ public class TestConnect {
             pKeys.remove(i);
 
             future = future.plus(new NaturalSummableFuture<>(
-                    new ConnectFuture(i, new Connect<Integer>(new MockCrypto(
-                            new InsecureRandom(i + seed))), knownHosts.get(i), pKeys)));
+                    new ConnectFuture(i, new Connect<Integer>(
+                            new MockCrypto(new InsecureRandom(i + seed)),
+                            new MockSessionIdentifier("testing the connect")), knownHosts.get(i), pKeys)));
         }
 
         // Get the result of the computation.
-        Map<Integer, Network> nets = null;
+        Map<Integer, Messages> nets = null;
         try {
             nets = future.get();
         } catch (InterruptedException | ExecutionException e) {

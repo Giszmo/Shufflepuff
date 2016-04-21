@@ -6,7 +6,7 @@
  *
  */
 
-package com.shuffle.protocol;
+package com.shuffle.player;
 
 import java.io.Serializable;
 

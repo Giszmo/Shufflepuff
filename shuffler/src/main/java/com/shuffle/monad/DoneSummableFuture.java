@@ -9,7 +9,6 @@
 package com.shuffle.monad;
 
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -57,8 +56,7 @@ public class DoneSummableFuture<X> extends SummableFutureAbstract<X> {
     }
 
     @Override
-    public X get(long l, TimeUnit timeUnit)
-            throws InterruptedException, ExecutionException, TimeoutException {
+    public X get(long l, TimeUnit timeUnit) {
         return x;
     }
 

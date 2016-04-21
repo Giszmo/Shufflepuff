@@ -14,19 +14,19 @@ package com.shuffle.monad;
  * Created by Daniel Krawisz on 3/18/16.
  */
 public class Either<X, Y> {
-    public final X x;
-    public final Y y;
+    public final X first;
+    public final Y second;
 
-    public Either(X x, Y y) {
-        if (x == null) {
-            if (y == null) {
+    public Either(X first, Y second) {
+        if (first == null) {
+            if (second == null) {
                 throw new NullPointerException();
             }
-        } else if (y != null) {
+        } else if (second != null) {
             throw new IllegalArgumentException();
         }
 
-        this.x = x;
-        this.y = y;
+        this.first = first;
+        this.second = second;
     }
 }

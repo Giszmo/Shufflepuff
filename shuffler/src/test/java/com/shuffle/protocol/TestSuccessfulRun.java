@@ -8,9 +8,6 @@
 
 package com.shuffle.protocol;
 
-import com.shuffle.bitcoin.CryptographyError;
-
-import org.junit.Assert;
 import org.junit.Test;
 
 /**
@@ -23,7 +20,7 @@ public class TestSuccessfulRun extends TestShuffleMachine {
     // Create a test case representing a successful run.
     private void SuccessfulRun(int numPlayer) {
         String description = "case " + caseNo + "; successful run with " + numPlayer + " players.";
-        check(description, new MockTestCase(description).successfulTestCase(numPlayer));
+        check(new MockTestCase(description).successfulTestCase(numPlayer));
     }
 
     @Test
@@ -32,14 +29,10 @@ public class TestSuccessfulRun extends TestShuffleMachine {
 
         // Tests for successful runs.
         int minPlayers = 2;
-        int maxPlayers = 12;
+        int maxPlayers = 2;
         for (int numPlayer = minPlayers; numPlayer <= maxPlayers; numPlayer++) {
-            try {
-                log.info("Protocol successful run with " + numPlayer + " players.");
-                SuccessfulRun(numPlayer);
-            } catch (CryptographyError e) {
-                Assert.fail("could not create test case " + caseNo);
-            }
+            log.info("Protocol successful run with " + numPlayer + " players.");
+            SuccessfulRun(numPlayer);
         }
     }
 }

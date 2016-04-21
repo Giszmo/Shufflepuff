@@ -15,5 +15,5 @@ package com.shuffle.bitcoin;
  * Created by Daniel Krawisz on 12/4/15.
  */
 public interface EncryptionKey {
-    Address encrypt(Address m) throws CryptographyError;
+    Address encrypt(Address m);
 }

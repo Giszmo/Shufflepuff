@@ -8,16 +8,16 @@
 
 package com.shuffle.player;
 
-import com.shuffle.protocol.FormatException;
-import com.shuffle.protocol.SignedPacket;
+import com.shuffle.p2p.Bytestring;
+import com.shuffle.protocol.message.Packet;
 
 /**
  * Represents a way of serializing a class.
  *
  * Created by Daniel Krawisz on 1/31/16.
  */
-public interface Marshaller<Format> {
-    Format marshall(SignedPacket packet);
+public interface Marshaller {
+    Bytestring marshallAndSign(Packet packet);
 
-    SignedPacket unmarshall(Format string) throws FormatException;
+    Messages.SignedPacket unmarshall(Bytestring string);
 }
