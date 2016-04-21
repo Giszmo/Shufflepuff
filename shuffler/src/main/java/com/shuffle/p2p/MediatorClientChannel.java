@@ -26,26 +26,25 @@ public class MediatorClientChannel<Name, Address, Payload> implements Channel<Na
 
     public MediatorClientChannel(final Session<Address, Envelope> session) {
 
+        // how to get session's Envelope attributes?
 
         Channel<Name, Payload> c1 = new Channel<Name, Payload>() {
+
             @Override
             public Peer<Name, Payload> getPeer(Name you) {
-                return session.peer(); // incompatible types
-                //return null;
+                // is this a Peer object based on "to"?
+                return null;
             }
 
             @Override
             public Connection<Name, Payload> open(Listener<Name, Payload> listener) {
+                // ?
                 return null;
             }
         };
-        // return Channel<Name,Payload>
-    }
 
-    /*
-    public Channel<Identity, Payload> getChannel(Session<Identity,Payload> session) {
-        return null;
-    }*/
+        // return Channel<Name,Payload> (c1)
+    }
 
     public Peer<Name,Payload> getPeer(Name you) {
         return null;
