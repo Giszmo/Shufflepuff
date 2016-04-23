@@ -14,6 +14,7 @@ dependencies {
     compile 'org.json:json:20160212'
     compile 'com.googlecode.json-simple:json-simple:1.1.1'
     compile 'org.glassfish.tyrus.bundles:tyrus-standalone-client:1.12'
+    compile 'commons-codec:commons-codec:1.10'
 }
 
 project.pmd.ignoreFailures = true
