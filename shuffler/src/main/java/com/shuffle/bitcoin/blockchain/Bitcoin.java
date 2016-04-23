@@ -17,6 +17,8 @@ import com.shuffle.bitcoin.VerificationKey;
 import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.PeerGroup;
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.net.discovery.DnsDiscovery;
 import org.bitcoinj.store.BlockStoreException;
@@ -191,6 +193,50 @@ public abstract class Bitcoin implements Coin {
         } catch (IOException e) {
             throw new CoinNetworkException();
         }
+    }
+
+    /**
+     *
+     * The sumUnspentTxOutputs takes in a list of transactions, sums the UTXOs pertaining to address,
+     * and returns a long value.  This long value represents the balance of a Bitcoin address in Satoshis.
+     *
+     */
+
+    public long sumUnspentTxOutputs(List<Bitcoin.Transaction> txList, String address) {
+
+        long sum = 0;
+        for (Bitcoin.Transaction tx : txList) {
+            org.bitcoinj.core.Transaction tx2 = tx.bitcoinj;
+            String txhash = tx.hash;
+            boolean usedInput = false;
+
+            // check that txhash hasn't been used as input in any transactions, if it has, we discard.
+            outerloop:
+            for (Bitcoin.Transaction checkTx : txList) {
+                org.bitcoinj.core.Transaction tempTx = checkTx.bitcoinj;
+                for (TransactionInput input : tempTx.getInputs()) {
+                    if (input.getParentTransaction().getHashAsString().equals(txhash)) {
+                        usedInput = true;
+                        break outerloop;
+                    }
+                }
+            }
+
+            // else, we find the specific output in the transaction pertaining to our address, and add the value to sum.
+
+            if (!usedInput) {
+                for (TransactionOutput output : tx2.getOutputs()) {
+                    String addressP2pkh = output.getAddressFromP2PKHScript(netParams).toString();
+                    if (address.equals(addressP2pkh)) {
+                        sum += output.getValue().getValue();
+                        break;
+                    }
+                }
+            }
+
+        }
+
+        return sum;
     }
 
     // TODO

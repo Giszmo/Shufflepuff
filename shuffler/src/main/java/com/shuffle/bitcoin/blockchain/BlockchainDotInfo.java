@@ -108,11 +108,9 @@ public final class BlockchainDotInfo extends Bitcoin {
         }
         HexBinaryAdapter adapter = new HexBinaryAdapter();
         byte[] bytearray = adapter.unmarshal(response.toString());
-        NetworkParameters params = MainNetParams.get();
-
         // bitcoinj needs this Context variable
-        Context context = Context.getOrCreate(params);
-        return new org.bitcoinj.core.Transaction(params, bytearray);
+        Context context = Context.getOrCreate(netParams);
+        return new org.bitcoinj.core.Transaction(netParams, bytearray);
 
     }
 

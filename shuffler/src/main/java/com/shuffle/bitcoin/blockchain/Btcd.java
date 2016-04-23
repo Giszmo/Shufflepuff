@@ -40,12 +40,14 @@ import org.json.JSONObject;
  * This in turn, allows address balance lookups for any Bitcoin address.
  * The lookups are through Btcd.
  *
+ *
  * Instructions:
  *
  * In your Btcd.conf file, set an rpcuser and rpcpass (rpclimituser & rpclimitpass also works).
  * Make sure addrindex = 1 (this indexes Bitcoin addresses) and notls = 1 (currently TLS is not supported)
  *
- * Alternatively, if you do not wish to edit the config file, you can use the two flags in the command line:
+ * Alternatively, if you do not wish to edit the config file for addrindex and notls,
+ * you can use the two flags in the command line:
  * "./btcd --addrindex --notls"
  *
  */
@@ -60,8 +62,10 @@ public class Btcd extends Bitcoin {
         this.rpcpass = rpcpass;
     }
 
-    // TODO
-    public long getAddressBalance(String address) {
+    /**
+     * The UTXO sum is handled in Bitcoin.java, so this function is unnecessary.
+     */
+    public long getAddressBalance(String address) throws IOException{
         return 0;
     }
 
@@ -116,9 +120,8 @@ public class Btcd extends Bitcoin {
                 String txid = currentJson.get("txid").toString();
                 HexBinaryAdapter adapter = new HexBinaryAdapter();
                 byte[] bytearray = adapter.unmarshal(currentJson.get("hex").toString());
-                NetworkParameters params = MainNetParams.get();
-                Context context = Context.getOrCreate(params);
-                org.bitcoinj.core.Transaction bitTx = new org.bitcoinj.core.Transaction(params, bytearray);
+                Context context = Context.getOrCreate(netParams);
+                org.bitcoinj.core.Transaction bitTx = new org.bitcoinj.core.Transaction(netParams, bytearray);
                 Transaction tx = new Transaction(txid, bitTx, false);
                 txList.add(tx);
             }
