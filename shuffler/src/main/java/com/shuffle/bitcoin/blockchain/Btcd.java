@@ -8,6 +8,8 @@
 
 package com.shuffle.bitcoin.blockchain;
 
+import com.shuffle.mock.MockCoin;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -70,22 +72,13 @@ public class Btcd extends Bitcoin {
     }
 
     /**
-     * This method is unnecessary because we can already get a transaction in bitcoinj format when
-     * querying for all transactions associated with a wallet.
+     * This method takes in a transaction hash and returns a bitcoinj transaction object.
      */
     public org.bitcoinj.core.Transaction getTransaction(String transactionHash) throws IOException {
-        return null;
-    }
 
-    /**
-     * This method will take in an address hash and return a List of all transactions associated with
-     * this address.  These transactions are in bitcoinj's Transaction format.
-     */
-    public List<Transaction> getWalletTransactions(String address) throws IOException {
-
-        List<Transaction> txList = null;
-        String requestBody = "{\"jsonrpc\":\"2.0\",\"id\":\"null\",\"method\":\"searchrawtransactions\", \"params\":[\"" + address + "\"]}";
-        URL url = new URL("127.0.0.1:8334");
+        org.bitcoinj.core.Transaction tx = null;
+        String requestBody = "{\"jsonrpc\":\"2.0\",\"id\":\"null\",\"method\":\"getrawtransaction\", \"params\":[\"" + transactionHash + "\"]}";
+        URL url = new URL("http://127.0.0.1:8334");
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         connection.setDoOutput(true);
         connection.setRequestMethod("POST");
@@ -96,7 +89,53 @@ public class Btcd extends Bitcoin {
         String encoding = b.encodeAsString(authString.getBytes());
         connection.setRequestProperty("Authorization", "Basic " + encoding);
         connection.setRequestProperty("Content-Length", Integer.toString(requestBody.getBytes().length));
-        connection.setUseCaches(true);
+        connection.setDoInput(true);
+        OutputStream out = connection.getOutputStream();
+        out.write(requestBody.getBytes());
+
+        if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
+            InputStream is = connection.getInputStream();
+            BufferedReader rd = new BufferedReader(new InputStreamReader(is));
+            String line;
+            StringBuffer response = new StringBuffer();
+            while ((line = rd.readLine()) != null) {
+                response.append(line);
+                response.append('\r');
+            }
+            rd.close();
+
+            JSONObject json = new JSONObject(response.toString());
+            String hexTx = (String) json.get("result");
+            HexBinaryAdapter adapter = new HexBinaryAdapter();
+            byte[] bytearray = adapter.unmarshal(hexTx);
+            Context context = Context.getOrCreate(netParams);
+            tx = new org.bitcoinj.core.Transaction(netParams, bytearray);
+
+        }
+
+        return tx;
+
+    }
+
+    /**
+     * This method will take in an address hash and return a List of all transactions associated with
+     * this address.  These transactions are in bitcoinj's Transaction format.
+     */
+    public List<Transaction> getWalletTransactions(String address) throws IOException {
+
+        List<Transaction> txList = null;
+        String requestBody = "{\"jsonrpc\":\"2.0\",\"id\":\"null\",\"method\":\"searchrawtransactions\", \"params\":[\"" + address + "\"]}";
+        URL url = new URL("http://127.0.0.1:8334");
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setDoOutput(true);
+        connection.setRequestMethod("POST");
+        connection.setRequestProperty("Content-Type", "application/json");
+        connection.setRequestProperty("Accept", "application/json");
+        Base64 b = new Base64();
+        String authString = rpcuser + ":" + rpcpass;
+        String encoding = b.encodeAsString(authString.getBytes());
+        connection.setRequestProperty("Authorization", "Basic " + encoding);
+        connection.setRequestProperty("Content-Length", Integer.toString(requestBody.getBytes().length));
         connection.setDoInput(true);
         OutputStream out = connection.getOutputStream();
         out.write(requestBody.getBytes());
