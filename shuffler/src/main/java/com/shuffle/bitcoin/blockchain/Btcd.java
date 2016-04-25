@@ -70,8 +70,8 @@ public class Btcd extends Bitcoin {
      * that does this is located in Bitcoin.java
      */
     public long getAddressBalance(String address) throws IOException{
-        List<Transaction> txList = getWalletTransactions(address);
-        return sumUnspentTxOutputs(txList, address);
+        List<Transaction> txList = getAddressTransactions(address);
+        return getAddressBalance(txList, address);
     }
 
     /**
@@ -124,7 +124,7 @@ public class Btcd extends Bitcoin {
      * This method will take in an address hash and return a List of all transactions associated with
      * this address.  These transactions are in bitcoinj's Transaction format.
      */
-    public List<Transaction> getWalletTransactions(String address) throws IOException {
+    public List<Transaction> getAddressTransactions(String address) throws IOException {
 
         List<Transaction> txList = null;
         String requestBody = "{\"jsonrpc\":\"2.0\",\"id\":\"null\",\"method\":\"searchrawtransactions\", \"params\":[\"" + address + "\"]}";

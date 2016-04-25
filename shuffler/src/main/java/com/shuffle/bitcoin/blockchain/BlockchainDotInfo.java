@@ -69,7 +69,7 @@ public final class BlockchainDotInfo extends Bitcoin {
      * array.
      *
      */
-    public List<Transaction> getWalletTransactions(String address) throws IOException {
+    public List<Transaction> getAddressTransactions(String address) throws IOException {
 
         String url = "https://blockchain.info/rawaddr/" + address;
         URL obj = new URL(url);

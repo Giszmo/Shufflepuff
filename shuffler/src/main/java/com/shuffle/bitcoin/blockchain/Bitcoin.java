@@ -135,7 +135,7 @@ public abstract class Bitcoin implements Coin {
         for (VerificationKey key : from) {
             try {
                 String address = key.address().toString();
-                List<Bitcoin.Transaction> transactions = getWalletTransactions(address);
+                List<Bitcoin.Transaction> transactions = getAddressTransactions(address);
                 if (transactions.size() > 1) return null;
                 org.bitcoinj.core.Transaction tx2 = getTransaction(transactions.get(0).hash);
                 for (TransactionOutput output : tx2.getOutputs()) {
@@ -163,7 +163,7 @@ public abstract class Bitcoin implements Coin {
         for (Address sendto : to) {
             String address = sendto.toString();
             try {
-                List<Bitcoin.Transaction> transactions = getWalletTransactions(address);
+                List<Bitcoin.Transaction> transactions = getAddressTransactions(address);
                 if (transactions.size() > 0) return null;
             } catch (IOException e) {
                 throw new CoinNetworkException();
@@ -189,7 +189,7 @@ public abstract class Bitcoin implements Coin {
     @Override
     public long valueHeld(Address addr) throws CoinNetworkException {
         try {
-            return getAddressBalance(addr.toString());
+            return getAddressBalance(getAddressTransactions(addr.toString()),addr.toString());
         } catch (IOException e) {
             throw new CoinNetworkException();
         }
@@ -202,7 +202,7 @@ public abstract class Bitcoin implements Coin {
      *
      */
 
-    public long sumUnspentTxOutputs(List<Bitcoin.Transaction> txList, String address) {
+    protected long getAddressBalance(List<Bitcoin.Transaction> txList, String address) {
 
         long sum = 0;
         for (Bitcoin.Transaction tx : txList) {
@@ -251,11 +251,9 @@ public abstract class Bitcoin implements Coin {
         return null;
     }
 
-    abstract List<Bitcoin.Transaction> getWalletTransactions(String address)
+    abstract List<Bitcoin.Transaction> getAddressTransactions(String address)
             throws IOException;
 
     abstract org.bitcoinj.core.Transaction getTransaction(String transactionHash)
             throws IOException;
-
-    abstract long getAddressBalance(String address) throws IOException;
 }
