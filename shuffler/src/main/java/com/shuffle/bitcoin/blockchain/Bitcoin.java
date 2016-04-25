@@ -17,6 +17,8 @@ import com.shuffle.bitcoin.VerificationKey;
 import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.PeerGroup;
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.net.discovery.DnsDiscovery;
 import org.bitcoinj.store.BlockStoreException;
@@ -133,7 +135,7 @@ public abstract class Bitcoin implements Coin {
         for (VerificationKey key : from) {
             try {
                 String address = key.address().toString();
-                List<Bitcoin.Transaction> transactions = getWalletTransactions(address);
+                List<Bitcoin.Transaction> transactions = getAddressTransactions(address);
                 if (transactions.size() > 1) return null;
                 org.bitcoinj.core.Transaction tx2 = getTransaction(transactions.get(0).hash);
                 for (TransactionOutput output : tx2.getOutputs()) {
@@ -161,7 +163,7 @@ public abstract class Bitcoin implements Coin {
         for (Address sendto : to) {
             String address = sendto.toString();
             try {
-                List<Bitcoin.Transaction> transactions = getWalletTransactions(address);
+                List<Bitcoin.Transaction> transactions = getAddressTransactions(address);
                 if (transactions.size() > 0) return null;
             } catch (IOException e) {
                 throw new CoinNetworkException();
@@ -193,6 +195,52 @@ public abstract class Bitcoin implements Coin {
         }
     }
 
+    /**
+     *
+     * The sumUnspentTxOutputs takes in a list of transactions, sums the UTXOs pertaining to address,
+     * and returns a long value.  This long value represents the balance of a Bitcoin address in Satoshis.
+     *
+     */
+
+    protected long getAddressBalance(String address) throws IOException {
+
+        List<Bitcoin.Transaction> txList = getAddressTransactions(address);
+
+        long sum = 0;
+        for (Bitcoin.Transaction tx : txList) {
+            org.bitcoinj.core.Transaction tx2 = tx.bitcoinj;
+            String txhash = tx.hash;
+            boolean usedInput = false;
+
+            // check that txhash hasn't been used as input in any transactions, if it has, we discard.
+            outerloop:
+            for (Bitcoin.Transaction checkTx : txList) {
+                org.bitcoinj.core.Transaction tempTx = checkTx.bitcoinj;
+                for (TransactionInput input : tempTx.getInputs()) {
+                    if (input.getParentTransaction().getHashAsString().equals(txhash)) {
+                        usedInput = true;
+                        break outerloop;
+                    }
+                }
+            }
+
+            // else, we find the specific output in the transaction pertaining to our address, and add the value to sum.
+
+            if (!usedInput) {
+                for (TransactionOutput output : tx2.getOutputs()) {
+                    String addressP2pkh = output.getAddressFromP2PKHScript(netParams).toString();
+                    if (address.equals(addressP2pkh)) {
+                        sum += output.getValue().getValue();
+                        break;
+                    }
+                }
+            }
+
+        }
+
+        return sum;
+    }
+
     // TODO
     @Override
     public com.shuffle.bitcoin.Transaction getConflictingTransaction(Address addr, long amount) {
@@ -205,11 +253,9 @@ public abstract class Bitcoin implements Coin {
         return null;
     }
 
-    abstract List<Bitcoin.Transaction> getWalletTransactions(String address)
+    abstract List<Bitcoin.Transaction> getAddressTransactions(String address)
             throws IOException;
 
     abstract org.bitcoinj.core.Transaction getTransaction(String transactionHash)
             throws IOException;
-
-    abstract long getAddressBalance(String address) throws IOException;
 }

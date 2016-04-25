@@ -69,7 +69,7 @@ public final class BlockchainDotInfo extends Bitcoin {
      * array.
      *
      */
-    public List<Transaction> getWalletTransactions(String address) throws IOException {
+    public List<Transaction> getAddressTransactions(String address) throws IOException {
 
         String url = "https://blockchain.info/rawaddr/" + address;
         URL obj = new URL(url);
@@ -108,10 +108,9 @@ public final class BlockchainDotInfo extends Bitcoin {
         }
         HexBinaryAdapter adapter = new HexBinaryAdapter();
         byte[] bytearray = adapter.unmarshal(response.toString());
-        NetworkParameters params = MainNetParams.get();
-        // bitcoinj needs the Context variable for some reason
-        Context context = Context.getOrCreate(params);
-        return new org.bitcoinj.core.Transaction(params, bytearray);
+        // bitcoinj needs this Context variable
+        Context context = Context.getOrCreate(netParams);
+        return new org.bitcoinj.core.Transaction(netParams, bytearray);
 
     }
 
