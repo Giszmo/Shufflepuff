@@ -106,6 +106,9 @@ public class Btcd extends Bitcoin {
 
         }
 
+        out.flush();
+        out.close();
+
         return tx;
 
     }
