@@ -189,7 +189,7 @@ public abstract class Bitcoin implements Coin {
     @Override
     public long valueHeld(Address addr) throws CoinNetworkException {
         try {
-            return getAddressBalance(getAddressTransactions(addr.toString()),addr.toString());
+            return getAddressBalance(addr.toString());
         } catch (IOException e) {
             throw new CoinNetworkException();
         }
@@ -202,7 +202,9 @@ public abstract class Bitcoin implements Coin {
      *
      */
 
-    protected long getAddressBalance(List<Bitcoin.Transaction> txList, String address) {
+    protected long getAddressBalance(String address) throws IOException {
+
+        List<Bitcoin.Transaction> txList = getAddressTransactions(address);
 
         long sum = 0;
         for (Bitcoin.Transaction tx : txList) {

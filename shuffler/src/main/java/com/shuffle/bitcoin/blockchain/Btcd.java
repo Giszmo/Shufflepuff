@@ -65,16 +65,6 @@ public class Btcd extends Bitcoin {
     }
 
     /**
-     * This method takes in an address and returns the address balance in Satoshis.
-     * Address balance is calculated by summing unspent transaction outputs.  The function
-     * that does this is located in Bitcoin.java
-     */
-    public long getAddressBalance(String address) throws IOException{
-        List<Transaction> txList = getAddressTransactions(address);
-        return getAddressBalance(txList, address);
-    }
-
-    /**
      * This method takes in a transaction hash and returns a bitcoinj transaction object.
      */
     public org.bitcoinj.core.Transaction getTransaction(String transactionHash) throws IOException {
