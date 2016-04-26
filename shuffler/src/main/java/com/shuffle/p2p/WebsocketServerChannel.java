@@ -46,6 +46,9 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
 
     // path variable here?
     // The below class sets up the WebsocketServer, available at "ws://localhost:port/path"
+    // It seems impossible to be able to assign a variable to the @ServerEndpoint annotation,
+    // but I will check the Tyrus Glassfish documentation.
+    // TODO
     @ServerEndpoint("/")
     private class WebsocketServerEndpoint {
 
@@ -68,6 +71,7 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
                 this.userSession = null;
                 return;
             }
+
             WebsocketPeer.WebsocketSession session = openSessions.putOpenSession(identity,this.userSession);
             globalListener.newSession(session);
         }
@@ -106,8 +110,10 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
         public synchronized WebsocketPeer get(InetAddress identity) {
             WebsocketPeer peer = peers.get(identity);
             if (peer == null) {
-                peer = peers.put(identity, new WebsocketPeer(identity));
+                peer = new WebsocketPeer(identity);
+                peers.put(identity, peer);
             }
+
             return peer;
         }
     }
@@ -140,7 +146,9 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
                 return null;
             }
 
-            return openSessions.put(identity, peer.currentSession);
+            openSessions.put(identity, peer.currentSession);
+
+            return peer.currentSession;
 
         }
 
@@ -234,6 +242,7 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
 
     private final int port;
     private final String hostName;
+    private final InetAddress me;
     //private static final String path;
     private Server server;
     private boolean running = false;
@@ -241,20 +250,25 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
 
     public WebsocketServerChannel(
             int port,
-            String hostName
+            String hostName,
+            InetAddress me
             //String path
     ) {
 
+        if (me == null) {
+            throw new NullPointerException();
+        }
+
         this.port = port;
         this.hostName = hostName;
+        this.me = me;
         //this.path = path;
     }
 
     private class WebsocketConnection implements Connection<InetAddress, Bytestring> {
 
         public InetAddress identity() {
-            // what exactly does this return?
-            return null;
+            return me;
         }
 
         @Override
@@ -303,6 +317,9 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
 
     @Override
     public Peer<InetAddress, Bytestring> getPeer(InetAddress you) {
+
+        if (you.equals(me)) return null;
+
         return peers.get(you);
     }
 
