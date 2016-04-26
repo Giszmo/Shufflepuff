@@ -53,7 +53,7 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
 
         // Callback for when a peer connects to the WebsocketServer.
         @OnOpen
-        public void onOpen(Session userSession) {
+        public void onOpen(Session userSession) throws InterruptedException {
             this.userSession = userSession;
             String clientIp = ((TyrusSession)this.userSession).getRemoteAddr();
             InetAddress identity;
@@ -251,6 +251,11 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
     }
 
     private class WebsocketConnection implements Connection<InetAddress, Bytestring> {
+
+        public InetAddress identity() {
+            // what exactly does this return?
+            return null;
+        }
 
         @Override
         public void close() {
