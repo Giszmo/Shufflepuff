@@ -5,6 +5,7 @@ import com.shuffle.bitcoin.impl.SigningKeyImpl;
 import com.shuffle.protocol.InvalidImplementationError;
 import com.shuffle.protocol.Message;
 
+import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.kits.WalletAppKit;
@@ -50,8 +51,6 @@ public class BitcoinCrypto implements Crypto {
    ECKey ecKey = new ECKey(sr);
    DeterministicKeyChain keyChain = new DeterministicKeyChain(sr, 256);
 
-   // KeyCrypter keyCrypter = new KeyCrypter();
-
    //using bitcoinj
    org.bitcoinj.core.Address pvK = kit.wallet().freshAddress(KeyChain.KeyPurpose.AUTHENTICATION);
    //using ECkey
@@ -70,7 +69,16 @@ public class BitcoinCrypto implements Crypto {
       kit.startAsync();
       kit.awaitRunning();
       kit.peerGroup().addPeerDiscovery(new DnsDiscovery(params));
-      kit.wallet().addWatchedAddress(ecKey.toAddress(params));
+   }
+
+   public boolean isValidAddress(String address) {
+      org.bitcoinj.core.Address paddress;
+      try {
+         paddress = new org.bitcoinj.core.Address(params, address);
+      } catch (AddressFormatException e) {
+         return false;
+      }
+      return true;
    }
 
    private KeyPairGenerator getKeyPGen() {
@@ -100,19 +108,23 @@ public class BitcoinCrypto implements Crypto {
    }
 
 
-   //todo: index?
+
     @Override
-    public DecryptionKey makeDecryptionKey() throws CryptographyError {
-       return new DecryptionKeyImpl(new ECKey(sr), 0);
+    public DecryptionKey makeDecryptionKey() {
+       ECKey newDecKey = new ECKey(sr);
+       kit.wallet().importKey(newDecKey);
+       return new DecryptionKeyImpl(new ECKey(sr));
     }
 
     @Override
-    public SigningKey makeSigningKey() throws CryptographyError {
-       return new SigningKeyImpl(new ECKey(sr));
+    public SigningKey makeSigningKey() {
+       ECKey newSignKey = new ECKey(sr);
+       kit.wallet().importKey(newSignKey);
+       return new SigningKeyImpl(newSignKey);
     }
 
     @Override
-    public int getRandom(int n) throws CryptographyError, InvalidImplementationError, NoSuchAlgorithmException {
+    public int getRandom(int n) throws InvalidImplementationError {
          return sr.nextInt(n);
     }
 
