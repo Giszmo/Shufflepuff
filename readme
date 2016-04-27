@@ -1,9 +1,27 @@
-An implementation of the CoinShuffle protocol in java. This is a work in
-progress. If you wish to support this project, please contact me 
+Shufflepuff implementation of the CoinShuffle protocol in java. This is a work
+in progress. If you wish to support this project, please contact me 
 (daniel.krawisz@thingobjectentity.net) for tasks that you might try completing.
 
 CoinShuffle description: 
 http://crypsys.mmci.uni-saarland.de/projects/CoinShuffle/coinshuffle.pdf
+
+-- Functionality 
+
+Shufflepuff can run on its own or it can be used as a library and encorporated
+into a java program. 
+
+If it is run on its own, it takes a private key, an amount to be shuffled, and a
+set of IP addresses or websocket addresses denoting the other players. 
+
+Shufflepuff can also be used as a library in another application. The other 
+application would instantiate player.Player and it works from there. 
+Stufflpuff comes with a bitcoinj implementation, but the user could provide an
+implementation in another library too. 
+
+Shufflepuff needs to look up address balances in order to run the protocol. 
+For lite applications there is an option for querying blockchain.info. For
+players with full nodes, an option is provided to look up balances using btcd. 
+The user could also provide other options by extending the Bitcoin class. 
 
 -- Overall Organization of the Project
 
@@ -24,12 +42,7 @@ reduce the risk of introducing errors as the rest of the development work
 proceeds. Furthermore, this protocol can be adapted to any java implementation
 of Bitcoin, or any other cryptocurrency.
 
-Protocol also includes a Simulator which can be used to simulate runs of the
-protocol with any implementation. It allows for malicious players. As of now,
-the success cases for the protocol run perfectly and so do many of the malicious
-cases. The integration tests are not yet comprehensive. 
-
-status: A few remaining test cases. 
+status: Works! 
 
 Package mock includes mock implementations of all these interfaces for testing
 purposes.
@@ -37,7 +50,9 @@ purposes.
 status: functional
 
 Package sim allows for the protocol to be run with any number of simulated
-players.
+players. There is a Simulator class which can be used to simulate runs of the
+protocol with any implementation. It allows for malicious players. All test
+cases work. 
 
 status: very slick
 
@@ -50,7 +65,7 @@ status: coming along.
 Package p2p includes classes for constructing various internet channels, by
 which instances of this program will communicate. 
 
-status: should work, let's try it. 
+status: Partly tested, some classes still needed. 
 
 Package player provides for some peripheral issues about running the protocol, 
 such as collecting the initial data and re-running the protocol if some players
@@ -64,23 +79,3 @@ one another to create joins. It will also provide for a client that can schedule
 and commit to joins. 
 
 status: barely started
-
--- Uses of shuffle-java
-
-shuffle-java will run on its own. It takes a private key and a means of 
-communicating with other players, and then runs the protocol with the other 
-players. 
-
-shuffle-java can be used as a library in another application. The other wallet
-would provide for an implementation of the Player class (not yet fully designed)
-as well as implementations of the underlying services. (The ready-made classes
-in packages bitcoin and p2p can be used in a pinch.)
-
--- Issues
-
-Coin Shuffle requires the ability to look up balances on arbitrary addresses in
-order to determine whether all players have enough funds to make a join
-transaction. Querying arbitrary addresses is actually rather difficult unless
-you just want to defer to a server like Blockchain.info. I don't yet know the
-best way of providing this service on a user's own computer yet. Is there some
-good open-source software for doing blockchain queries? 
