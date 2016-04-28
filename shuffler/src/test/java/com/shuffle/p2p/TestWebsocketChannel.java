@@ -412,13 +412,17 @@ public class TestWebsocketChannel {
 
         public void run() {
             try {
-                WebsocketClientChannel.WebsocketPeer peer3 = new WebsocketClientChannel().new WebsocketPeer(new URI("ws://localhost:8080"));
+                WebsocketClientChannel client = new WebsocketClientChannel();
+                WebsocketClientChannel.WebsocketPeer peer3 = client.new WebsocketPeer(new URI("ws://localhost:8080"));
                 WebsocketClientChannel.WebsocketPeer.WebsocketSession session4 = peer3.newSession();
                 String message = "test message";
-                Bytestring bytestring = new Bytestring(message.getBytes());
-                session4.send(bytestring);
+                //Bytestring bytestring = new Bytestring(message.getBytes());
+                //session4.send(bytestring);
+                session4.session.getBasicRemote().sendText(message);
                 Assert.assertTrue(session4.session.isOpen());
                 Assert.assertTrue(!session4.closed());
+                Thread.sleep(2000);
+                Assert.assertEquals(client.globalMessage, message);
             } catch (Exception e) {
 
             }
@@ -434,7 +438,6 @@ public class TestWebsocketChannel {
         for (int i : numbers) {
             addresses[i] = InetAddress.getLocalHost();
         }
-
 
         Chan<Integer> chan[][] = (Chan<Integer>[][]) new Chan[1][1];
         chan[0][0] = new BasicChan<>(2);
@@ -470,7 +473,7 @@ public class TestWebsocketChannel {
         Thread t1 = new Thread(tt);
         t1.start();
 
-        Thread.sleep(2000);
+        Thread.sleep(5000);
 
         /*
         WebsocketClientChannel.WebsocketPeer peer3 = new WebsocketClientChannel().new WebsocketPeer(new URI("ws://localhost:8080"));
@@ -483,10 +486,11 @@ public class TestWebsocketChannel {
         */
         //Assert.assertNotNull(channel.server.globalListener);
         //Assert.assertNotNull(channel.server.globalReceiver);
+
         Assert.assertNotNull(channel2.globalListener);
         Assert.assertNotNull(channel2.globalReceiver);
 
-        Thread.sleep(4000);
+        Thread.sleep(8000);
         //Assert.assertNotNull(conn);
 
     }

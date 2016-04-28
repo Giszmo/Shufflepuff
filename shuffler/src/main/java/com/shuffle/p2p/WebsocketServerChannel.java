@@ -43,9 +43,9 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
      *  Necessary class to listen for remote websocket peers
      */
 
-    Listener<InetAddress, Bytestring> globalListener = null;
+    static Listener<InetAddress, Bytestring> globalListener = null;
 
-    Receiver<Bytestring> globalReceiver = null;
+    static Receiver<Bytestring> globalReceiver = null;
 
     // path variable here?
     // The below class sets up the WebsocketServer, available at "ws://localhost:port/path"
@@ -53,7 +53,7 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
     // but I will check the Tyrus Glassfish documentation.
     // TODO
     @ServerEndpoint("/")
-    public class WebsocketServerEndpoint {
+    public static class WebsocketServerEndpoint {
 
         Session userSession;
 
@@ -176,7 +176,7 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
 
     }
 
-    private OpenSessions openSessions = null;
+    private static OpenSessions openSessions = null;
 
     public class WebsocketPeer extends FundamentalPeer<InetAddress, Bytestring> {
 

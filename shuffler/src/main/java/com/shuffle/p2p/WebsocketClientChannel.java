@@ -23,6 +23,7 @@ import javax.websocket.ContainerProvider;
 import javax.websocket.DeploymentException;
 import javax.websocket.MessageHandler;
 import javax.websocket.OnClose;
+import javax.websocket.OnMessage;
 import javax.websocket.OnOpen;
 import javax.websocket.Session;
 import javax.websocket.WebSocketContainer;
@@ -45,6 +46,8 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
      *  Necessary class to use the javax.websocket library.
      */
 
+    public String globalMessage;
+
     @ClientEndpoint
     public class WebsocketClientEndpoint {
 
@@ -63,6 +66,11 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
         @OnOpen
         public void onOpen(Session userSession) {
             this.userSession = userSession;
+        }
+
+        @OnMessage
+        public void onMessage(String message, Session userSession)  {
+            globalMessage = message;
         }
 
         @OnClose
