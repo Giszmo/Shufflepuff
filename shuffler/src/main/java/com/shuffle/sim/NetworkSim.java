@@ -5,7 +5,7 @@ import com.shuffle.chan.Chan;
 import com.shuffle.chan.ReceiveChan;
 import com.shuffle.chan.SendChan;
 import com.shuffle.player.Messages;
-import com.shuffle.protocol.message.Packet;
+import com.shuffle.player.Packet;
 
 import java.util.concurrent.TimeUnit;
 
