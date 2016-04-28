@@ -25,6 +25,7 @@ import javax.websocket.Session;
 import javax.websocket.server.ServerEndpoint;
 import org.glassfish.tyrus.core.TyrusSession;
 import org.glassfish.tyrus.server.Server;
+import org.glassfish.tyrus.container.grizzly.server.*;
 
 /**
  * Created by Eugene Siegel on 4/1/16.
@@ -44,13 +45,15 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
 
     Listener<InetAddress, Bytestring> globalListener = null;
 
+    Receiver<Bytestring> globalReceiver = null;
+
     // path variable here?
     // The below class sets up the WebsocketServer, available at "ws://localhost:port/path"
     // It seems impossible to be able to assign a variable to the @ServerEndpoint annotation,
     // but I will check the Tyrus Glassfish documentation.
     // TODO
     @ServerEndpoint("/")
-    private class WebsocketServerEndpoint {
+    public class WebsocketServerEndpoint {
 
         Session userSession;
 
@@ -73,10 +76,15 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
             }
 
             WebsocketPeer.WebsocketSession session = openSessions.putOpenSession(identity,this.userSession);
-            globalListener.newSession(session);
+            globalReceiver = globalListener.newSession(session);
         }
 
         // @OnMessage? Will this receive any messages?
+        @OnMessage
+        public void onMessage(String message, Session userSession) throws InterruptedException {
+            Bytestring bytestring = new Bytestring(message.getBytes());
+            globalReceiver.receive(bytestring);
+        }
 
         // Callback for when a peer disconnects from the WebsocketServer
         @OnClose

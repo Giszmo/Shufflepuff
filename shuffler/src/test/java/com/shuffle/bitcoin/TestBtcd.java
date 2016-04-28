@@ -68,7 +68,7 @@ public class TestBtcd {
          * the correct bitcoinj Transaction objects and is working.
          */
 
-        List<Bitcoin.Transaction> listOfTx = testCase.getWalletTransactions(testAddress);
+        List<Bitcoin.Transaction> listOfTx = testCase.getAddressTransactions(testAddress);
         Transaction testTx = listOfTx.get(0).bitcoinj();
         Transaction testTx2 = listOfTx.get(1).bitcoinj();
         List<Transaction> testTxList = new LinkedList<>(Arrays.asList(testTx, testTx2));

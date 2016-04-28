@@ -46,7 +46,7 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
      */
 
     @ClientEndpoint
-    private class WebsocketClientEndpoint {
+    public class WebsocketClientEndpoint {
 
         Session userSession = null;
         URI uri;
@@ -79,7 +79,8 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
         public synchronized WebsocketPeer get(URI identity) {
             WebsocketPeer peer = peers.get(identity);
             if (peer == null) {
-                peer = peers.put(identity, new WebsocketPeer(identity));
+                peer = new WebsocketPeer(identity);
+                peers.put(identity, peer);
             }
             return peer;
         }
@@ -115,7 +116,9 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
                 return null;
             }
 
-            return openSessions.put(identity, session);
+            openSessions.put(identity, session);
+
+            return session;
         }
 
         public WebsocketPeer.WebsocketSession get(URI identity) {
