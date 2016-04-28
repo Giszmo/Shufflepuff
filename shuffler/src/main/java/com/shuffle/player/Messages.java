@@ -41,7 +41,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class Messages implements MessageFactory {
 
-    final Map<VerificationKey, SendChan<com.shuffle.protocol.message.Packet>> net;
+    final Map<VerificationKey, SendChan<com.shuffle.player.Packet>> net;
     private final ReceiveChan<SignedPacket> receive;
     final SessionIdentifier session;
     final VerificationKey me;
@@ -49,7 +49,7 @@ public class Messages implements MessageFactory {
 
     public Messages(SessionIdentifier session,
                     VerificationKey me,
-                    Map<VerificationKey, SendChan<com.shuffle.protocol.message.Packet>> net,
+                    Map<VerificationKey, SendChan<com.shuffle.player.Packet>> net,
                     ReceiveChan<SignedPacket> receive) {
 
         this.net = net;
@@ -277,7 +277,7 @@ public class Messages implements MessageFactory {
         }
     }
 
-    class Packet implements com.shuffle.protocol.message.Packet, Serializable {
+    class Packet implements com.shuffle.player.Packet, Serializable {
 
         public final Message message;
         public final Phase phase;
@@ -348,13 +348,18 @@ public class Messages implements MessageFactory {
         @Override
         public void send() throws InterruptedException {
 
-            SendChan<com.shuffle.protocol.message.Packet> chan = net.get(to);
+            SendChan<com.shuffle.player.Packet> chan = net.get(to);
 
             if (chan == null) return;
 
             if (chan.send(this)) {
                 sent.add(this);
             }
+        }
+
+        @Override
+        public Preliminary preliminary() {
+            return null;
         }
     }
 
@@ -363,12 +368,12 @@ public class Messages implements MessageFactory {
      *
      * Created by Daniel Krawisz on 1/22/16.
      */
-    public static class SignedPacket implements com.shuffle.protocol.message.Packet, Serializable {
+    public static class SignedPacket implements com.shuffle.player.Packet, Serializable {
 
-        public final com.shuffle.protocol.message.Packet packet;
+        public final com.shuffle.player.Packet packet;
         public final Signature signature;
 
-        public SignedPacket(com.shuffle.protocol.message.Packet packet, Signature signature) {
+        public SignedPacket(com.shuffle.player.Packet packet, Signature signature) {
             if (packet == null || signature == null) {
                 throw new NullPointerException();
             }
@@ -425,6 +430,11 @@ public class Messages implements MessageFactory {
         @Override
         public void send() throws InterruptedException {
             // Message cannot be sent because it is not ours.
+        }
+
+        @Override
+        public Preliminary preliminary() {
+            return packet.preliminary();
         }
     }
 

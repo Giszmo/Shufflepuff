@@ -170,20 +170,12 @@ class Player<Identity, Bytestring> {
             }
 
             // TODO
-            // Determine if the protocol can be restarted with some players eliminated.
-
-            // First, if a player had insufficient funds or not enough funds, does everyone
-            // else agree that this player needs to be eliminated? If so, eliminate that player.
-
-            // If there was an equivocation check failure, does everyone agree as to the player
-            // who caused it? If so then we can restart.
-
-            // If there was a shuffle failure, does everyone agree as to the accused? If so then
-            // eliminate that player.
-
-            // If we can restart, broadcast a message to that effect and wait to receive a
-            // similar message from the remaining players.
-
+            // Now we try to start a new round.
+            // If this player has not been eliminated, make a message to broadcast.
+            // receive messages from other players.
+            // Resend everything to show that we all agree.
+            // Receive rebroadcasts and check.
+            // Begin protocol.
         }
     }
 }

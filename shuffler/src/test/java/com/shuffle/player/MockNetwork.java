@@ -12,7 +12,6 @@ import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.chan.ReceiveChan;
 import com.shuffle.chan.SendChan;
-import com.shuffle.protocol.message.Packet;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -200,7 +199,7 @@ public class MockNetwork implements Map<VerificationKey, SendChan<Packet>>, Rece
 
     @Override
     public Messages.SignedPacket receive(long l, TimeUnit u) throws InterruptedException {
-        com.shuffle.protocol.message.Packet p = received.poll();
+        Packet p = received.poll();
         if (p == null) return null;
         return new Messages.SignedPacket(p, me.makeSignature(p));
     }

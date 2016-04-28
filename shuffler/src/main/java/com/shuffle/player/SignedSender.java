@@ -3,7 +3,6 @@ package com.shuffle.player;
 import com.shuffle.chan.SendChan;
 import com.shuffle.p2p.Bytestring;
 import com.shuffle.p2p.Session;
-import com.shuffle.protocol.message.Packet;
 
 /**
  * Created by Daniel Krawisz on 4/13/16.
