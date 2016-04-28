@@ -8,17 +8,18 @@ import com.shuffle.protocol.Message;
 import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.crypto.KeyCrypter;
 import org.bitcoinj.kits.WalletAppKit;
 import org.bitcoinj.net.discovery.DnsDiscovery;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.wallet.DeterministicKeyChain;
 import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.KeyChain;
+import org.spongycastle.crypto.params.KeyParameter;
 
 import java.io.File;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
-import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
@@ -111,9 +112,8 @@ public class BitcoinCrypto implements Crypto {
 
     @Override
     public DecryptionKey makeDecryptionKey() {
-       ECKey newDecKey = new ECKey(sr);
-       kit.wallet().importKey(newDecKey);
-       return new DecryptionKeyImpl(new ECKey(sr));
+       ECKey newDecKey = kit.wallet().freshReceiveKey();
+       return new DecryptionKeyImpl(newDecKey);
     }
 
     @Override
@@ -128,27 +128,50 @@ public class BitcoinCrypto implements Crypto {
          return sr.nextInt(n);
     }
 
+   /**
+    * Phase 1: Key exchange
+    * Each participant (except for Alice) creates an key pair of a public key encryption scheme ( makeDecryptionKey() ), consisting of a public encryption key and a private decryption key. We call the public encryption keys ekB, ekC, and ekD. Each participant announces his public encryption key (EncryptionKey), signed with the signature key (SigningKey -> VerificationKey.Address() ) corresponding to his input address.
+    * <p>
+    * Phase 2: Shuffling
+    * Once everybody knows the public encryption key each other, the shuffling can start:
+    * <p>
+    * Alice encrypts her output address A' with all the encryption keys, in a layered manner. That is, Alice encrypts A' first for Dave, obtaining enc(ekD, A'). Then this ciphertext is encrypted for Charlie, obtaining enc(ekC, enc(ekD, A')) and so on for Dave. This resulting message is sent to Bob:
+    * Alice ⟶ Bob: enc(ekB, enc(ekC, enc(ekD, A')))
+    * <p>
+    * Bob gets the message, decrypts it, obtaining enc(ekC, enc(ekD, A')).
+    * He also creates a nested encryption of his address, obtaining enc(ekC, enc(ekD, B')).
+    * Now Bob has a list two ciphertexts, containing A' and B'. Bob shuffles this list randomly, i.e., either exchanges the two entries or leave them. Say we are in the case that they are exchanged. Bob sends the shuffled list to Charlie:
+    * Bob ⟶ Charlie: enc(ekC, enc(ekD, B')) ; enc(ekC, enc(ekD, A'))
+    * <p>
+    * Charlie does the same: He decrypts the two entries in the list, adds his own entry and shuffles the list:
+    * Charlie ⟶ Dave: enc(ekD, B') ; enc(ekD, C') ; enc(ekD, A')
+    * <p>
+    * Dave does the same again: He decrypts all entries, obtaining B', C', A'. He adds his own address D' and
+    * shuffles the list. The resulting shuffled list is sent to everybody:
+    * Dave ⟶ everybody: D', B', C', A'
+    **/
+
     @Override
     public Message hash(Message m) throws CryptographyError, InvalidImplementationError {
        // use KeyCrypter to encrypt message: encrypt(byte[] plainBytes, org.spongycastle.crypto.params.KeyParameter aesKey)
-       try {
-          MessageDigest md = MessageDigest.getInstance("SHA-256");
+
+       /**
+           * MessageDigest md = MessageDigest.getInstance("SHA-256");
           String message = m.toString();
           md.update(message.getBytes());
-          byte[] mHash = md.digest();
-          //TODO
-          return null;
+        byte[] mHash = md.digest();
+        //TODO
+        return null;
+        **/
 
-
-       } catch (NoSuchAlgorithmException e) {
-          e.printStackTrace();
-       }
-
-
-       // get the message bytes[] to encode
-
-             //get the key to encrypt to, attached to message
-             //      keyCrypter.encrypt();
+       KeyCrypter keyCrypter = kit.wallet().getKeyCrypter();
+       SigningKey sk = makeSigningKey();
+       VerificationKey vk = sk.VerificationKey();
+       Address address = vk.address();
+       KeyParameter keyParameter = keyCrypter.deriveKey(sk.toString());
+       String mInputString = m.toString();
+       byte[] enc = keyCrypter.encrypt(,keyParameter).encryptedBytes;
+       String encString = enc.toString();
        return null;
     }
 
