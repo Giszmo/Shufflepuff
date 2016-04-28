@@ -2,6 +2,7 @@ package com.shuffle.bitcoin;
 
 import com.shuffle.bitcoin.impl.DecryptionKeyImpl;
 import com.shuffle.bitcoin.impl.SigningKeyImpl;
+import com.shuffle.p2p.Bytestring;
 import com.shuffle.protocol.InvalidImplementationError;
 import com.shuffle.protocol.Message;
 
@@ -151,8 +152,8 @@ public class BitcoinCrypto implements Crypto {
     * Dave ⟶ everybody: D', B', C', A'
     **/
 
-    @Override
-    public Message hash(Message m) throws CryptographyError, InvalidImplementationError {
+
+   public Bytestring hash(com.shuffle.Message m) throws InvalidImplementationError {
        // use KeyCrypter to encrypt message: encrypt(byte[] plainBytes, org.spongycastle.crypto.params.KeyParameter aesKey)
 
        /**
@@ -170,9 +171,9 @@ public class BitcoinCrypto implements Crypto {
        Address address = vk.address();
        KeyParameter keyParameter = keyCrypter.deriveKey(sk.toString());
        String mInputString = m.toString();
-       byte[] enc = keyCrypter.encrypt(,keyParameter).encryptedBytes;
-       String encString = enc.toString();
-       return null;
+      byte[] enc = keyCrypter.encrypt(mInputString, keyParameter).encryptedBytes;
+      Bytestring encString = new Bytestring(enc);
+      return encString;
     }
 
 
