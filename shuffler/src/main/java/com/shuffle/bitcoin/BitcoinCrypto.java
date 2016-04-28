@@ -153,22 +153,11 @@ public class BitcoinCrypto implements Crypto {
 
 
    public Bytestring hash(com.shuffle.player.Messages.Message m) throws InvalidImplementationError {
-       // use KeyCrypter to encrypt message: encrypt(byte[] plainBytes, org.spongycastle.crypto.params.KeyParameter aesKey)
-
-       /**
-           * MessageDigest md = MessageDigest.getInstance("SHA-256");
-          String message = m.toString();
-          md.update(message.getBytes());
-        byte[] mHash = md.digest();
-        //TODO
-        return null;
-        **/
 
        KeyCrypter keyCrypter = kit.wallet().getKeyCrypter();
        SigningKey sk = makeSigningKey();
-       VerificationKey vk = sk.VerificationKey();
-       Address address = vk.address();
-       KeyParameter keyParameter = keyCrypter.deriveKey(sk.toString());
+
+      KeyParameter keyParameter = keyCrypter.deriveKey(sk.toString());
        String mInputString = m.toString();
       byte[] enc = keyCrypter.encrypt(mInputString.getBytes(), keyParameter).encryptedBytes;
       Bytestring encString = new Bytestring(enc);
