@@ -112,14 +112,13 @@ public class BitcoinCrypto implements Crypto {
 
     @Override
     public DecryptionKey makeDecryptionKey() {
-       ECKey newDecKey = kit.wallet().freshReceiveKey();
+       ECKey newDecKey = kit.wallet().freshKey(KeyChain.KeyPurpose.CHANGE);
        return new DecryptionKeyImpl(newDecKey);
     }
 
     @Override
     public SigningKey makeSigningKey() {
-       ECKey newSignKey = new ECKey(sr);
-       kit.wallet().importKey(newSignKey);
+       ECKey newSignKey = kit.wallet().freshKey(KeyChain.KeyPurpose.RECEIVE_FUNDS);
        return new SigningKeyImpl(newSignKey);
     }
 
