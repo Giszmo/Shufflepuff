@@ -8,457 +8,561 @@
 
 package com.shuffle.p2p;
 
-import junit.framework.Assert;
-
+import org.glassfish.tyrus.core.TyrusSession;
 import org.glassfish.tyrus.server.Server;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.shuffle.chan.BasicChan;
-import com.shuffle.chan.Chan;
-import com.shuffle.chan.ReceiveChan;
-import com.shuffle.chan.SendChan;
-import com.shuffle.p2p.WebsocketClientChannel;
-import com.shuffle.p2p.WebsocketServerChannel;
-import com.shuffle.player.Connect;
-
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
-import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
+import javax.websocket.ClientEndpoint;
+import javax.websocket.CloseReason;
+import javax.websocket.ContainerProvider;
 import javax.websocket.DeploymentException;
+import javax.websocket.MessageHandler;
+import javax.websocket.OnClose;
+import javax.websocket.OnMessage;
+import javax.websocket.OnOpen;
+import javax.websocket.Session;
+import javax.websocket.WebSocketContainer;
+import javax.websocket.server.ServerEndpoint;
+
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 /**
- * Tests for the websocket connection
- *
- * Created by Eugene Siegel on 4/26/16.
+ * Created by Eugene Siegel on 4/28/16.
  */
 
 public class TestWebsocketChannel {
 
-    Connection<Integer, Integer> conn;
+    Connection<InetAddress, Bytestring> conn;
+    WebsocketTestClient.WebsocketPeer.WebsocketSession clientSession;
+    WebsocketTestServer.WebsocketPeer.WebsocketSession serverSession;
+    WebsocketTestServer server;
+    WebsocketTestClient client;
 
-    Session<Integer, Integer> session;
+    public class WebsocketTestClient implements Channel<URI, Bytestring> {
 
-    WebsocketServerChannel channel2;
+        String globalMessage;
 
-    /*
-    private static class WebsocketTestClient implements Channel<Integer, Integer> {
+        @ClientEndpoint
+        public class WebsocketClientEndpoint {
 
-        private final WebsocketClientChannel client;
-        private final WebsocketClientChannel.WebsocketPeer peer;
-        private final Integer me;
+            Session userSession = null;
+            URI uri;
 
-        WebsocketTestClient(Integer me) throws URISyntaxException {
-            this.me = me;
-            this.client = new WebsocketClientChannel();
-            this.peer = new WebsocketClientChannel().new WebsocketPeer(new URI("ws://localhost:8080"));
+            public WebsocketClientEndpoint(URI endpointURI) {
+                this.uri = endpointURI;
+            }
+
+            public Session newSession() throws RuntimeException, DeploymentException, IOException {
+                WebSocketContainer container = ContainerProvider.getWebSocketContainer();
+                return container.connectToServer(this, this.uri);
+            }
+
+            @OnOpen
+            public void onOpen(Session userSession) {
+                this.userSession = userSession;
+            }
+
+            @OnMessage
+            public void onMessage(byte[] message, Session userSession) {
+                globalMessage = new String(message);
+                // TODO receiver?
+            }
+
+            @OnClose
+            public void onClose(Session userSession, CloseReason reason) {
+                this.userSession = null;
+            }
         }
 
-        private class WebsocketTestPeer implements Peer<Integer, Integer> {
+        private class Peers {
 
-            private final Peer<URI, Bytestring> peer;
+            private final Map<URI, WebsocketPeer> peers = new HashMap<>();
 
-            private WebsocketTestPeer(Peer<URI, Bytestring> peer) {
-                this.peer = peer;
+            public synchronized WebsocketPeer get(URI identity) {
+                WebsocketPeer peer = peers.get(identity);
+                if (peer == null) {
+                    peer = new WebsocketPeer(identity);
+                    peers.put(identity, peer);
+                }
+                return peer;
             }
+        }
 
-            @Override
-            public Integer identity() {
-                return 8080;
-            }
+        final Peers peers = new Peers();
 
-            @Override
-            public Session<Integer, Integer> openSession(Receiver<Integer> receiver) throws InterruptedException {
+        class OpenSessions {
 
-                Session<URI, Bytestring> p = peer.openSession(new WebsocketTestReceiver(receiver));
+            private Map<URI, WebsocketPeer.WebsocketSession> openSessions = new ConcurrentHashMap<>();
 
-                if (p == null) {
+            public synchronized WebsocketPeer.WebsocketSession putNewSession(URI identity, WebsocketPeer peer) {
+
+                WebsocketPeer.WebsocketSession openSession = openSessions.get(identity);
+                if (openSession != null) {
+                    if (openSession.session.isOpen()) {
+                        return null;
+                    }
+
+                    openSessions.remove(identity);
+                }
+
+                WebsocketPeer.WebsocketSession session = null;
+                try {
+                    session = peer.newSession();
+                } catch (DeploymentException e) {
                     return null;
                 }
 
-                Session<Integer, Integer> session = new WebsocketTestSession(p);
-
-                session.send(me);
+                openSessions.put(identity, session);
 
                 return session;
             }
 
+            public WebsocketPeer.WebsocketSession get(URI identity) {
+                return openSessions.get(identity);
+            }
+
+            public WebsocketPeer.WebsocketSession remove(URI identity) {
+                return openSessions.remove(identity);
+            }
+
+            public void closeAll() {
+                for (WebsocketPeer.WebsocketSession session : openSessions.values()) {
+                    session.close();
+                }
+            }
+        }
+
+        private OpenSessions openSessions = null;
+
+        public class WebsocketPeer extends FundamentalPeer<URI, Bytestring> {
+
+            WebsocketSession currentSession;
+
+            public WebsocketPeer(URI identity) { super(identity); }
+
+            private WebsocketPeer setSession(Session session) throws IOException {
+                currentSession = new WebsocketSession(session);
+                return this;
+            }
+
+            WebsocketSession newSession() throws DeploymentException {
+                URI identity = identity();
+                try {
+                    currentSession = new WebsocketPeer(identity).new WebsocketSession(new WebsocketClientEndpoint(identity).newSession());
+                    return currentSession;
+                } catch (IOException e) {
+                    return null;
+                }
+            }
+
             @Override
-            public boolean open() {
-                return peer.open();
+            public synchronized com.shuffle.p2p.Session<URI, Bytestring> openSession(final Receiver<Bytestring> receiver) {
+
+                synchronized (lock) { }
+
+                if (openSessions == null) {
+                    return null;
+                }
+
+                if (currentSession != null) {
+                    return null;
+                }
+
+                final WebsocketSession session = openSessions.putNewSession(identity(), this);
+                if (session == null) {
+                    return null;
+                }
+
+                session.session.addMessageHandler(new MessageHandler.Whole<byte[]>() {
+                    public void onMessage(byte[] message) {
+                        try {
+                            receiver.receive(new Bytestring(message));
+                        } catch (InterruptedException e) {
+                            session.close();
+                        }
+                    }
+                });
+
+                return session;
+            }
+
+            public class WebsocketSession implements com.shuffle.p2p.Session<URI, Bytestring> {
+                Session session;
+
+                public WebsocketSession(Session session) throws IOException {
+                    this.session = session;
+                }
+
+                @Override
+                public synchronized boolean send(Bytestring message) {
+
+                    synchronized (lock) { }
+
+                    if (!session.isOpen()) {
+                        return false;
+                    }
+
+                    try {
+                        ByteBuffer buf = ByteBuffer.wrap(message.bytes);
+                        session.getBasicRemote().sendBinary(buf);
+                    } catch (IOException e) {
+                        return false;
+                    }
+                    return true;
+                }
+
+                @Override
+                public synchronized void close() {
+                    try {
+                        session.close();
+                    } catch (IOException e) {
+
+                    }
+                    session = null;
+                    WebsocketPeer.this.currentSession = null;
+                    openSessions.remove(WebsocketPeer.this.identity());
+                }
+
+                @Override
+                public synchronized boolean closed() {
+                    return session == null || !session.isOpen();
+                }
+
+                @Override
+                public Peer<URI, Bytestring> peer() {
+                    return WebsocketPeer.this;
+                }
+            }
+        }
+
+        private boolean running = false;
+        private final Object lock = new Object();
+
+        public WebsocketTestClient() {
+
+        }
+
+        private class WebsocketConnection implements Connection<URI, Bytestring> {
+
+            @Override
+            public URI identity() {
+                // TODO
+                throw new NotImplementedException();
             }
 
             @Override
             public void close() {
-                peer.close();
+                synchronized (lock) {
+                    openSessions.closeAll();
+                    openSessions = null;
+                    running = false;
+                }
             }
         }
 
-        private class WebsocketTestSession implements Session<Integer, Integer> {
-
-            private final Session<URI, Bytestring> session;
-
-            private WebsocketTestSession(Session<URI, Bytestring> session) {
-                this.session = session;
-            }
-
-            @Override
-            public boolean closed() {
-                return session.closed();
-            }
-
-            @Override
-            public Peer<Integer, Integer> peer() {
-                return new WebsocketTestPeer(session.peer());
-            }
-
-            @Override
-            public boolean send(Integer integer) throws InterruptedException {
-                return session.send(new Bytestring(ByteBuffer.allocate(4).putInt(integer).array()));
-            }
-
-            @Override
-            public void close() {
-                session.close();
+        @Override
+        public Connection<URI, Bytestring> open(Listener<URI, Bytestring> listener) {
+            synchronized (lock) {
+                if (running) return null;
+                running = true;
+                openSessions = new OpenSessions();
+                return new WebsocketConnection();
             }
         }
 
-        private class WebsocketTestListener implements Listener<URI, Bytestring> {
+        @Override
+        public Peer<URI, Bytestring> getPeer(URI you) {
+            return peers.get(you);
+        }
+    }
 
-            private final Listener<Integer, Integer> inner;
+    public static class WebsocketTestServer implements Channel<InetAddress, Bytestring> {
 
-            private WebsocketTestListener(Listener<Integer, Integer> inner) {
-                this.inner = inner;
+        static Listener<InetAddress, Bytestring> globalListener = null;
+        static Receiver<Bytestring> globalReceiver = null;
+        static String globalMessage = null;
+
+        @ServerEndpoint("/")
+        public static class WebsocketServerEndpoint {
+
+            Session userSession;
+
+            @OnOpen
+            public void onOpen(Session userSession) throws InterruptedException {
+                this.userSession = userSession;
+                String clientIp = ((TyrusSession)this.userSession).getRemoteAddr();
+                InetAddress identity;
+                try {
+                    identity = InetAddress.getByName(clientIp);
+                } catch (UnknownHostException e) {
+                    try {
+                        this.userSession.close();
+                    } catch (IOException er) {
+                        return;
+                    }
+                    this.userSession = null;
+                    return;
+                }
+
+                WebsocketPeer.WebsocketSession session = openSessions.putOpenSession(identity, this.userSession);
+                globalReceiver = globalListener.newSession(session);
             }
 
-            @Override
-            public Receiver<Bytestring> newSession(Session<URI, Bytestring> session) throws InterruptedException {
-                return new WebsocketTestReceiver(inner.newSession(new WebsocketTestSession(session)));
+            @OnMessage
+            public void onMessage(byte[] message, Session userSession) throws InterruptedException {
+                globalMessage = new String(message);
+                Bytestring bytestring = new Bytestring(message);
+                globalReceiver.receive(bytestring);
+            }
+
+            @OnClose
+            public void onClose(Session userSession, CloseReason reason) {
+
+                String sessionIp = ((TyrusSession)this.userSession).getRemoteAddr();
+                InetAddress identity;
+
+                try {
+                    identity = InetAddress.getByName(sessionIp);
+                } catch (UnknownHostException er) {
+                    return;
+                }
+
+                try {
+                    this.userSession.close();
+                } catch (IOException e) {
+                    return;
+                }
+
+                openSessions.remove(identity);
+                this.userSession = null;
             }
         }
 
-        private class WebsocketTestConnection implements Connection<Integer, Integer> {
+        private class Peers {
 
-            private final Connection<URI, Bytestring> conn;
+            private final Map<InetAddress, WebsocketPeer> peers = new HashMap<>();
 
-            private WebsocketTestConnection(Connection<URI, Bytestring> conn) {
-                this.conn = conn;
+            public synchronized WebsocketPeer get(InetAddress identity) {
+                WebsocketPeer peer = peers.get(identity);
+                if (peer == null) {
+                    peer = new WebsocketPeer(identity);
+                    peers.put(identity, peer);
+                }
+
+                return peer;
+            }
+        }
+
+        final Peers peers = new Peers();
+
+        class OpenSessions {
+
+            private Map<InetAddress, WebsocketPeer.WebsocketSession> openSessions = new ConcurrentHashMap<>();
+
+            public synchronized WebsocketPeer.WebsocketSession putOpenSession(InetAddress identity, Session session) {
+                WebsocketPeer.WebsocketSession openSession = openSessions.get(identity);
+                if (openSession != null) {
+                    if (openSession.session.isOpen()) {
+                        return null;
+                    }
+
+                    openSessions.remove(identity);
+                }
+
+                WebsocketPeer peer;
+                try {
+                    peer = peers.get(identity).setSession(session);
+                } catch (IOException e) {
+                    return null;
+                }
+
+                openSessions.put(identity, peer.currentSession);
+
+                return peer.currentSession;
+            }
+
+            public WebsocketPeer.WebsocketSession get(InetAddress identity) {
+                return openSessions.get(identity);
+            }
+
+            public WebsocketPeer.WebsocketSession remove(InetAddress identity) {
+                return openSessions.remove(identity);
+            }
+
+            public void closeAll() {
+                for (WebsocketPeer.WebsocketSession session : openSessions.values()) {
+                    session.close();
+                }
+            }
+        }
+
+        private static OpenSessions openSessions = null;
+
+        public class WebsocketPeer extends FundamentalPeer<InetAddress, Bytestring> {
+
+            WebsocketSession currentSession;
+
+            public WebsocketPeer(InetAddress identity) {
+                super(identity);
+            }
+
+            private WebsocketPeer setSession(Session session) throws IOException {
+                currentSession = new WebsocketSession(session);
+                return this;
             }
 
             @Override
-            public Integer identity() {
+            public synchronized com.shuffle.p2p.Session<InetAddress, Bytestring> openSession(final Receiver<Bytestring> receiver) {
+                return null;
+            }
+
+            public class WebsocketSession implements com.shuffle.p2p.Session<InetAddress, Bytestring> {
+
+                Session session;
+
+                public WebsocketSession(Session session) throws IOException {
+                    this.session = session;
+                }
+
+                @Override
+                public synchronized boolean send(Bytestring message) {
+
+                    synchronized (lock) { }
+
+                    if (!session.isOpen()) {
+                        return false;
+                    }
+
+                    try {
+                        ByteBuffer buf = ByteBuffer.wrap(message.bytes);
+                        session.getBasicRemote().sendBinary(buf);
+                    } catch (IOException e) {
+                        return false;
+                    }
+                    return true;
+                }
+
+                @Override
+                public synchronized void close() {
+                    try {
+                        session.close();
+                    } catch (IOException e) {
+                        return;
+                    }
+                    session = null;
+                    WebsocketPeer.this.currentSession = null;
+                    openSessions.remove(WebsocketPeer.this.identity());
+                }
+
+                @Override
+                public synchronized boolean closed() {
+                    return session == null || !session.isOpen();
+                }
+
+                @Override
+                public Peer<InetAddress, Bytestring> peer() {
+                    return WebsocketPeer.this;
+                }
+            }
+        }
+
+        private final int port;
+        private final String hostName;
+        private final InetAddress me;
+        private Server server;
+        private boolean running = false;
+        private final Object lock = new Object();
+
+        public WebsocketTestServer(int port, String hostName, InetAddress me) {
+
+            if (me == null) {
+                throw new NullPointerException();
+            }
+
+            this.port = port;
+            this.hostName = hostName;
+            this.me = me;
+        }
+
+        private class WebsocketConnection implements Connection<InetAddress, Bytestring> {
+
+            public InetAddress identity() {
                 return me;
             }
 
             @Override
             public void close() {
-                conn.close();
-            }
-        }
-
-        @Override
-        public Peer<Integer, Integer> getPeer(Integer you) {
-            try {
-
-                Peer<URI, Bytestring> p = client.getPeer(new URI("ws://localhost:8080"));
-
-                if (p == null) return null;
-                return new WebsocketTestPeer(p);
-
-            } catch (URISyntaxException e) {
-                return null;
-            }
-        }
-
-        @Override
-        public Connection<Integer, Integer> open(Listener<Integer, Integer> listener) {
-            return new WebsocketTestConnection(client.open(new WebsocketTestListener(listener)));
-        }
-    }*/
-
-
-    private static class WebsocketTestChannel implements Channel<Integer, Integer> {
-
-        private final WebsocketServerChannel server;
-        private final Integer me;
-        private final int[] ports;
-
-        WebsocketTestChannel(Integer me, int[] ports) throws UnknownHostException {
-            this.me = me;
-            this.ports = ports;
-            this.server = new WebsocketServerChannel(ports[me], "localhost", InetAddress.getLocalHost());
-        }
-
-        private class WebsocketTestPeer implements Peer<Integer, Integer> {
-
-            private final Peer<InetAddress, Bytestring> peer;
-
-            private WebsocketTestPeer(Peer<InetAddress, Bytestring> peer) {
-                this.peer = peer;
-            }
-
-            @Override
-            public Integer identity() {
-                return ports[me];
-            }
-
-            @Override
-            public Session<Integer, Integer> openSession(Receiver<Integer> receiver) throws InterruptedException {
-
-                Session<InetAddress, Bytestring> p = peer.openSession(new WebsocketTestReceiver(receiver));
-
-                if (p == null) {
-                    return null;
-                }
-
-                Session<Integer, Integer> session = new WebsocketTestSession(p);
-
-                // Tell them who we are
-                session.send(me);
-
-                return session;
-            }
-
-            @Override
-            public boolean open() {
-                return peer.open();
-            }
-
-            @Override
-            public void close() {
-                peer.close();
-            }
-        }
-
-        private class WebsocketTestSession implements Session<Integer, Integer> {
-
-            private final Session<InetAddress, Bytestring> session;
-
-            private WebsocketTestSession(Session<InetAddress, Bytestring> session) {
-                this.session = session;
-            }
-
-            @Override
-            public boolean closed() {
-                return session.closed();
-            }
-
-            @Override
-            public Peer<Integer, Integer> peer() {
-                return new WebsocketTestPeer(session.peer());
-            }
-
-            @Override
-            public boolean send(Integer integer) throws InterruptedException {
-                return session.send(new Bytestring(ByteBuffer.allocate(4).putInt(integer).array()));
-            }
-
-            @Override
-            public void close() {
-                session.close();
-            }
-        }
-
-        private class WebsocketTestListener implements Listener<InetAddress, Bytestring> {
-
-            private final Listener<Integer, Integer> inner;
-
-            private WebsocketTestListener(Listener<Integer, Integer> inner) {
-                this.inner = inner;
-            }
-
-            @Override
-            public Receiver<Bytestring> newSession(Session<InetAddress, Bytestring> session) throws InterruptedException {
-                return new WebsocketTestReceiver(inner.newSession(new WebsocketTestSession(session)));
-            }
-        }
-
-        private class WebsocketTestConnection implements Connection<Integer, Integer> {
-
-            private final Connection<InetAddress, Bytestring> conn;
-
-            private WebsocketTestConnection(Connection<InetAddress, Bytestring> conn) {
-                this.conn = conn;
-            }
-
-            @Override
-            public Integer identity() {
-                return me;
-            }
-
-            @Override
-            public void close() {
-                conn.close();
-            }
-        }
-
-        @Override
-        public Peer<Integer, Integer> getPeer(Integer you) {
-            try {
-                int port = ports[you];
-
-                // this is messed up because both client and server are localhost...
-                Peer<InetAddress, Bytestring> p = server.getPeer(InetAddress.getLocalHost());
-
-                if (p == null) return null;
-                return new WebsocketTestPeer(p);
-
-            } catch (UnknownHostException e) {
-                return null;
-            }
-        }
-
-        @Override
-        public Connection<Integer, Integer> open(Listener<Integer, Integer> listener) {
-            return new WebsocketTestConnection(server.open(new WebsocketTestListener(listener)));
-        }
-
-    }
-
-    private static class WebsocketTestReceiver implements Receiver<Bytestring> {
-
-        private final Receiver<Integer> inner;
-        int last = 0;
-        int i = 0;
-
-        private WebsocketTestReceiver(Receiver<Integer> inner) {
-            this.inner = inner;
-        }
-
-        @Override
-        public void receive(Bytestring bytestring) throws InterruptedException {
-            byte[] bytes = bytestring.bytes;
-
-            for (byte b : bytes) {
-                last = (last << 8) + b;
-                i ++;
-                if (i == 4) {
-                    i = 0;
-                    inner.receive(last);
-                    last = 0;
+                synchronized (lock) {
+                    if (server != null) {
+                        server.stop();
+                        openSessions.closeAll();
+                        openSessions = null;
+                        running = false;
+                        server = null;
+                        globalListener = null;
+                    }
                 }
             }
-        }
-    }
 
-    private static class IntegerTestReceiver implements Receiver<Integer> {
-
-        private final SendChan<Integer>[] send;
-        private final Chan<Session<Integer, Integer>> sch;
-        private final Session<Integer, Integer> s;
-        private final int to;
-        private int from = -1;
-
-        private IntegerTestReceiver(Integer to, SendChan<Integer>[] send, Chan<Session<Integer, Integer>> sch, Session<Integer, Integer> s) {
-            this.to = to;
-            this.send = send;
-            this.sch = sch;
-            this.s = s;
-        }
-
-        private IntegerTestReceiver(Integer to, int from, SendChan<Integer>[] send) {
-            this.to = to;
-            this.send = send;
-            this.from = from;
-            sch = null;
-            s = null;
         }
 
         @Override
-        public void receive(Integer i) throws InterruptedException {
+        public Connection<InetAddress, Bytestring> open(Listener<InetAddress, Bytestring> listener) {
 
-            if (from == -1) {
-                if (!(i >= 0 && i < 4)) {
-                    throw new InterruptedException();
+            if (listener == null) {
+                throw new NullPointerException();
+            }
+
+            globalListener = listener;
+
+            synchronized (lock) {
+                if (running) return null;
+
+                if (server == null) {
+                    try {
+                        server = new Server(hostName, port, "", new HashMap<String, Object>(), WebsocketServerEndpoint.class);
+                        server.start();
+                    } catch (DeploymentException e) {
+                        return null;
+                    }
                 }
-                from = i;
-                sch.send(s);
-            } else {
-                Assert.assertNotNull(send[i]);
 
-                send[i].send(i);
+                running = true;
+                openSessions = new OpenSessions();
+                return new WebsocketConnection();
             }
-        }
-    }
-
-    private static class TestListener implements Listener<Integer, Integer> {
-
-        private final SendChan<Integer>[] senders;
-        private final Chan<Session<Integer, Integer>> sch;
-        private final int me;
-
-        private TestListener(Integer me, SendChan<Integer>[] senders, Chan<Session<Integer, Integer>> sch) {
-            this.me = me;
-            this.sch = sch;
-            this.senders = senders;
         }
 
         @Override
-        public Receiver<Integer> newSession(Session<Integer, Integer> session) throws InterruptedException {
-            return new IntegerTestReceiver(me, senders, sch, session);
-        }
-    }
+        public Peer<InetAddress, Bytestring> getPeer(InetAddress you) {
 
-    public class temp implements Runnable {
+            if (you.equals(me)) return null;
 
-        public temp() {}
-
-        public void run() {
-            try {
-                WebsocketClientChannel client = new WebsocketClientChannel();
-                WebsocketClientChannel.WebsocketPeer peer3 = client.new WebsocketPeer(new URI("ws://localhost:8080"));
-                WebsocketClientChannel.WebsocketPeer.WebsocketSession session4 = peer3.newSession();
-                String message = "test message";
-                //Bytestring bytestring = new Bytestring(message.getBytes());
-                //session4.send(bytestring);
-                session4.session.getBasicRemote().sendText(message);
-                Assert.assertTrue(session4.session.isOpen());
-                Assert.assertTrue(!session4.closed());
-                Thread.sleep(2000);
-                Assert.assertEquals(client.globalMessage, message);
-            } catch (Exception e) {
-
-            }
+            return peers.get(you);
         }
     }
 
     @Before
-    public void setup() throws InterruptedException, UnknownHostException, URISyntaxException, DeploymentException, IOException {
-        int[] numbers = new int[]{0};
-        int[] port = new int[]{8080};
-        InetAddress[] addresses = new InetAddress[1];
+    public void setup() throws UnknownHostException, URISyntaxException, DeploymentException, InterruptedException {
 
-        for (int i : numbers) {
-            addresses[i] = InetAddress.getLocalHost();
-        }
+        server = new WebsocketTestServer(8080, "localhost", InetAddress.getLocalHost());
 
-        Chan<Integer> chan[][] = (Chan<Integer>[][]) new Chan[1][1];
-        chan[0][0] = new BasicChan<>(2);
-
-        Chan<Session<Integer, Integer>>[] sch = new Chan[1];
-        sch[0] = new BasicChan<>();
-
-        TestListener listen = new TestListener(0, chan[0], sch[0]);
-        //WebsocketTestChannel channel = new WebsocketTestChannel(0, port);
-
-        //WebsocketTestClient client = new WebsocketTestClient(8080);
-
-        //conn = channel.open(listen);
-
-        //Server server = new Server("localhost", 8080, "", new HashMap<String, Object>(), WebsocketServerChannel.WebsocketServerEndpoint.class);
-        //server.start();
-
-        channel2 = new WebsocketServerChannel(8080, "localhost", InetAddress.getLocalHost());
-        Listener<InetAddress, Bytestring> listener2 = new Listener<InetAddress, Bytestring>() {
+        Listener<InetAddress, Bytestring> serverListener = new Listener<InetAddress, Bytestring>() {
             @Override
-            public Receiver<Bytestring> newSession(Session<InetAddress, Bytestring> session) throws InterruptedException {
+            public Receiver<Bytestring> newSession(com.shuffle.p2p.Session<InetAddress, Bytestring> session) throws InterruptedException {
                 return new Receiver<Bytestring>() {
                     @Override
                     public void receive(Bytestring bytestring) throws InterruptedException {
@@ -467,37 +571,52 @@ public class TestWebsocketChannel {
                 };
             }
         };
-        channel2.open(listener2);
 
-        final temp tt = new temp();
-        Thread t1 = new Thread(tt);
-        t1.start();
+        Listener<URI, Bytestring> clientListener = new Listener<URI, Bytestring>() {
+            @Override
+            public Receiver<Bytestring> newSession(com.shuffle.p2p.Session<URI, Bytestring> session) throws InterruptedException {
+                return new Receiver<Bytestring>() {
+                    @Override
+                    public void receive(Bytestring bytestring) throws InterruptedException {
+                        return;
+                    }
+                };
+            }
+        };
 
-        Thread.sleep(5000);
+        conn = server.open(serverListener);
 
-        /*
-        WebsocketClientChannel.WebsocketPeer peer3 = new WebsocketClientChannel().new WebsocketPeer(new URI("ws://localhost:8080"));
-        WebsocketClientChannel.WebsocketPeer.WebsocketSession session4 = peer3.newSession();
-        String message = "test message";
+        client = new WebsocketTestClient();
+        client.open(clientListener);
+        WebsocketTestClient.WebsocketPeer peer = client.new WebsocketPeer(new URI("ws://localhost:8080"));
+        clientSession = peer.newSession();
+        String message = "Shufflepuff";
         Bytestring bytestring = new Bytestring(message.getBytes());
-        session4.send(bytestring);
-        Assert.assertTrue(session4.session.isOpen());
-        Assert.assertTrue(!session4.closed());
-        */
-        //Assert.assertNotNull(channel.server.globalListener);
-        //Assert.assertNotNull(channel.server.globalReceiver);
+        clientSession.send(bytestring);
 
-        Assert.assertNotNull(channel2.globalListener);
-        Assert.assertNotNull(channel2.globalReceiver);
+        Thread.sleep(2000);
 
-        Thread.sleep(8000);
-        //Assert.assertNotNull(conn);
+        String message2 = "Slytherin";
+        serverSession = server.openSessions.get(InetAddress.getByName("127.0.0.1"));
+        Bytestring bytestring2 = new Bytestring(message2.getBytes());
+        serverSession.send(bytestring2);
+
+        Thread.sleep(2000);
+        Assert.assertEquals(message2, client.globalMessage);
+        Assert.assertEquals(message, server.globalMessage);
+
+        //Assert.assertNotNull(server.globalListener);
+        //Assert.assertNotNull(server.globalReceiver);
 
     }
 
     @After
     public void shutdown() {
-        //conn.close();
+        clientSession.close();
+        serverSession.close();
+        conn.close();
+        Assert.assertTrue(clientSession.closed());
+        Assert.assertTrue(serverSession.closed());
     }
 
     @Test

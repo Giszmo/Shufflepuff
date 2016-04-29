@@ -46,8 +46,6 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
      *  Necessary class to use the javax.websocket library.
      */
 
-    public String globalMessage;
-
     @ClientEndpoint
     public class WebsocketClientEndpoint {
 
@@ -70,7 +68,7 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
 
         @OnMessage
         public void onMessage(String message, Session userSession)  {
-            globalMessage = message;
+            // global Listener & Receiver??
         }
 
         @OnClose
@@ -165,8 +163,8 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
         WebsocketPeer.WebsocketSession newSession() throws DeploymentException {
             URI identity = identity();
             try {
-                return new WebsocketPeer(identity).new
-                        WebsocketSession(new WebsocketClientEndpoint(identity).newSession());
+                currentSession = new WebsocketPeer(identity).new WebsocketSession(new WebsocketClientEndpoint(identity).newSession());
+                return currentSession;
             } catch (IOException e) {
                 return null;
             }

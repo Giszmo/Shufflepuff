@@ -43,8 +43,8 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
      *  Necessary class to listen for remote websocket peers
      */
 
+    // multiple peers cannot connect to one instance, right?
     static Listener<InetAddress, Bytestring> globalListener = null;
-
     static Receiver<Bytestring> globalReceiver = null;
 
     // path variable here?
@@ -79,10 +79,10 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
             globalReceiver = globalListener.newSession(session);
         }
 
-        // @OnMessage? Will this receive any messages?
         @OnMessage
-        public void onMessage(String message, Session userSession) throws InterruptedException {
-            Bytestring bytestring = new Bytestring(message.getBytes());
+        public void onMessage(byte[] message, Session userSession) throws InterruptedException {
+            // should the globalReceiver receive messages here?
+            Bytestring bytestring = new Bytestring(message);
             globalReceiver.receive(bytestring);
         }
 
