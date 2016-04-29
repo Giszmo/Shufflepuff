@@ -8,11 +8,11 @@ import com.shuffle.protocol.InvalidImplementationError;
 import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.crypto.HDUtils;
 import org.bitcoinj.crypto.KeyCrypter;
 import org.bitcoinj.kits.WalletAppKit;
 import org.bitcoinj.net.discovery.DnsDiscovery;
 import org.bitcoinj.params.TestNet3Params;
-import org.bitcoinj.wallet.DeterministicKeyChain;
 import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.KeyChain;
 import org.spongycastle.crypto.params.KeyParameter;
@@ -24,6 +24,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
+import java.util.List;
 
 
 public class BitcoinCrypto implements Crypto {
@@ -34,10 +35,6 @@ public class BitcoinCrypto implements Crypto {
    WalletAppKit kit;
 
 
-   // if we generate new keys no need for mnemonic
-   //List<String> mnemonicCode = seed.getMnemonicCode();
-
-
    //Generate Keypair using HMAC
    KeyPairGenerator keyPG = getKeyPGen();
    KeyPair keys = getKeyPair();
@@ -45,21 +42,19 @@ public class BitcoinCrypto implements Crypto {
    PrivateKey privKey = keyPair.getPrivate();
    PublicKey pubKey = keyPair.getPublic();
 
-
-
    DeterministicSeed seed = kit.wallet().getKeyChainSeed();
+   // if we generate new keys no need for mnemonic, apparently we don't
+   List<String> mnemonicCode = seed.getMnemonicCode();
    SecureRandom sr = new SecureRandom(seed.getSeedBytes());
-   ECKey ecKey = new ECKey(sr);
-   DeterministicKeyChain keyChain = new DeterministicKeyChain(sr, 256);
-
-   //using bitcoinj
-   org.bitcoinj.core.Address pvK = kit.wallet().freshAddress(KeyChain.KeyPurpose.AUTHENTICATION);
-   //using ECkey
-   org.bitcoinj.core.Address ecaddress = ecKey.toAddress(params);
 
    public NetworkParameters getParams() {
       return params;
    }
+
+   // create derivation path for shuffle keys
+   HDUtils hdUtils = new HDUtils();
+   String path = HDUtils.formatPath(HDUtils.parsePath("ShuffleAuth/"));
+   int decKeyCounter = 0;
 
    public void initKit() {
       //initialize files and stuff here, add our address to the watched ones
@@ -71,6 +66,7 @@ public class BitcoinCrypto implements Crypto {
       kit.awaitRunning();
       kit.peerGroup().addPeerDiscovery(new DnsDiscovery(params));
    }
+
 
    public boolean isValidAddress(String address) {
       org.bitcoinj.core.Address paddress;
@@ -108,11 +104,23 @@ public class BitcoinCrypto implements Crypto {
       return keys;
    }
 
+   public int getDecKeyCounter() {
+      return decKeyCounter;
+   }
 
+   public String getCurrentPathAsString() {
+      StringBuilder stringBuilder = new StringBuilder();
+      stringBuilder.append(path);
+      stringBuilder.append(getDecKeyCounter());
+      String fpath = stringBuilder.toString();
+      return fpath;
+   }
 
     @Override
     public DecryptionKey makeDecryptionKey() {
-       ECKey newDecKey = kit.wallet().freshKey(KeyChain.KeyPurpose.CHANGE);
+       String ppath = getCurrentPathAsString();
+       ECKey newDecKey = kit.wallet().getKeyByPath(HDUtils.parsePath(ppath));
+       decKeyCounter++;
        return new DecryptionKeyImpl(newDecKey);
     }
 
