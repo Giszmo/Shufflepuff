@@ -47,7 +47,7 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
      */
 
     @ClientEndpoint
-    public class WebsocketClientEndpoint {
+    private class WebsocketClientEndpoint {
 
         Session userSession = null;
         URI uri;

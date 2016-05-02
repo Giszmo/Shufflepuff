@@ -44,8 +44,8 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
      */
 
     // multiple peers cannot connect to one instance, right?
-    static Listener<InetAddress, Bytestring> globalListener = null;
-    static Receiver<Bytestring> globalReceiver = null;
+    private Listener<InetAddress, Bytestring> globalListener = null;
+    private Receiver<Bytestring> globalReceiver = null;
 
     // path variable here?
     // The below class sets up the WebsocketServer, available at "ws://localhost:port/path"
@@ -53,7 +53,7 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
     // but I will check the Tyrus Glassfish documentation.
     // TODO
     @ServerEndpoint("/")
-    public static class WebsocketServerEndpoint {
+    private class WebsocketServerEndpoint {
 
         Session userSession;
 
@@ -176,7 +176,7 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
 
     }
 
-    private static OpenSessions openSessions = null;
+    private OpenSessions openSessions = null;
 
     public class WebsocketPeer extends FundamentalPeer<InetAddress, Bytestring> {
 
