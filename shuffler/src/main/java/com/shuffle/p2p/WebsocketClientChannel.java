@@ -45,11 +45,14 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
      *  Necessary class to use the javax.websocket library.
      */
 
+    private Listener<URI, Bytestring> globalListener = null;
+
     @ClientEndpoint
     public class WebsocketClientEndpoint {
 
         Session userSession = null;
         URI uri;
+        Receiver<Bytestring> receiver = null;
 
         public WebsocketClientEndpoint(URI endpointUri) {
             this.uri = endpointUri;
@@ -63,16 +66,20 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
         @OnOpen
         public void onOpen(Session userSession) {
             this.userSession = userSession;
+            // WebsocketSession
+            // set receiver
         }
 
         @OnMessage
         public void onMessage(byte[] message, Session userSession)  {
-            // global Listener & Receiver??
+            Bytestring bytestring = new Bytestring(message);
+            // receiver.receive(bytestring);
         }
 
         @OnClose
         public void onClose(Session userSession, CloseReason reason) {
             this.userSession = null;
+            // remove receiver, peer, session?
         }
     }
 
@@ -288,6 +295,7 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
             if (running) return null;
             running = true;
             openSessions = new OpenSessions();
+            globalListener = listener;
             return new WebsocketConnection();
         }
     }
