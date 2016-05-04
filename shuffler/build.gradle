@@ -17,6 +17,8 @@ dependencies {
     compile 'commons-codec:commons-codec:1.10'
     compile 'org.glassfish.tyrus:tyrus-server:1.12'
     compile 'org.glassfish.tyrus:tyrus-container-grizzly-server:1.12'
+    compile 'org.glassfish.tyrus.ext:tyrus-extension-deflate:1.12'
+    compile 'org.glassfish.tyrus.tests:tyrus-test-tools:1.12'
 }
 
 project.pmd.ignoreFailures = true

@@ -12,7 +12,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -47,7 +46,7 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
      */
 
     @ClientEndpoint
-    private class WebsocketClientEndpoint {
+    public class WebsocketClientEndpoint {
 
         Session userSession = null;
         URI uri;
@@ -67,7 +66,7 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
         }
 
         @OnMessage
-        public void onMessage(String message, Session userSession)  {
+        public void onMessage(byte[] message, Session userSession)  {
             // global Listener & Receiver??
         }
 
@@ -185,6 +184,7 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
             }
 
             final WebsocketSession session = openSessions.putNewSession(identity(), this);
+
             if (session == null) {
                 return null;
             }

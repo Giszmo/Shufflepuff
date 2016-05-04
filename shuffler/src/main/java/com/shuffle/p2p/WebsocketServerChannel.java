@@ -12,20 +12,36 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.websocket.CloseReason;
 import javax.websocket.DeploymentException;
+import javax.websocket.Endpoint;
+import javax.websocket.EndpointConfig;
+import javax.websocket.Extension;
+import javax.websocket.MessageHandler;
 import javax.websocket.OnClose;
 import javax.websocket.OnMessage;
 import javax.websocket.OnOpen;
 import javax.websocket.Session;
+import javax.websocket.server.ServerApplicationConfig;
 import javax.websocket.server.ServerEndpoint;
+import javax.websocket.server.ServerEndpointConfig;
+
 import org.glassfish.tyrus.core.TyrusSession;
 import org.glassfish.tyrus.server.Server;
 import org.glassfish.tyrus.container.grizzly.server.*;
+
+import org.glassfish.tyrus.core.TyrusWebSocketEngine;
+import org.glassfish.tyrus.test.tools.TestContainer;
+import org.glassfish.tyrus.ext.extension.deflate.PerMessageDeflateExtension;
+import org.glassfish.tyrus.ext.extension.deflate.XWebkitDeflateExtension;
 
 /**
  * Created by Eugene Siegel on 4/1/16.
@@ -47,13 +63,14 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
     private Listener<InetAddress, Bytestring> globalListener = null;
     private Receiver<Bytestring> globalReceiver = null;
 
+
     // path variable here?
     // The below class sets up the WebsocketServer, available at "ws://localhost:port/path"
     // It seems impossible to be able to assign a variable to the @ServerEndpoint annotation,
     // but I will check the Tyrus Glassfish documentation.
     // TODO
     @ServerEndpoint("/")
-    private class WebsocketServerEndpoint {
+    public static class WebsocketServerEndpoint{
 
         Session userSession;
 
@@ -75,15 +92,18 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
                 return;
             }
 
-            WebsocketPeer.WebsocketSession session = openSessions.putOpenSession(identity,this.userSession);
-            globalReceiver = globalListener.newSession(session);
+            //WebsocketPeer.WebsocketSession session = openSessions.putOpenSession(identity,this.userSession);
+            //globalReceiver = globalListener.newSession(session);
+
+            WebsocketPeer.WebsocketSession session = staticOpenSessions.putOpenSession(identity, this.userSession);
+
         }
 
         @OnMessage
         public void onMessage(byte[] message, Session userSession) throws InterruptedException {
             // should the globalReceiver receive messages here?
             Bytestring bytestring = new Bytestring(message);
-            globalReceiver.receive(bytestring);
+            //globalReceiver.receive(bytestring);
         }
 
         // Callback for when a peer disconnects from the WebsocketServer
@@ -105,7 +125,8 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
                 return;
             }
 
-            openSessions.remove(identity);
+            //openSessions.remove(identity);
+            staticOpenSessions.remove(identity);
             this.userSession = null;
         }
 
@@ -177,6 +198,8 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
     }
 
     private OpenSessions openSessions = null;
+
+    public static OpenSessions staticOpenSessions = null;
 
     public class WebsocketPeer extends FundamentalPeer<InetAddress, Bytestring> {
 
@@ -319,6 +342,7 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
 
             running = true;
             openSessions = new OpenSessions();
+            staticOpenSessions = openSessions;
             return new WebsocketConnection();
         }
     }
