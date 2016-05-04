@@ -28,8 +28,8 @@ import java.util.Map;
  * Created by Daniel Krawisz on 3/4/16.
  */
 public class TestMockChannel {
+
     public class MockListener implements Listener<Integer, String> {
-        public final Map<Integer, Session<Integer, String>> openSessions = new HashMap<>();
         public final Map<Integer, Send<String>> receivers = new HashMap<>();
 
         public Send<String> getSend(Integer from) {

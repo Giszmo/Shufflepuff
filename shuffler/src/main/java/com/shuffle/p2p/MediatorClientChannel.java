@@ -47,6 +47,7 @@ public class MediatorClientChannel<Name, Address, Payload> implements Channel<Na
 
     // This is the corresponding session.
     private Session<Address, Mediator.Envelope<Name, Payload>> session;
+    private boolean open = false;
 
     private final Name me;
     private final Object lock = new Object();
@@ -87,7 +88,7 @@ public class MediatorClientChannel<Name, Address, Payload> implements Channel<Na
                 if (pendingSessions.containsKey(you) || openSessions.containsKey(you)) return false;
 
                 // Put in pending sessions.
-                pendingSessions.put(you, new PendingSession(r, new BasicChan<Void>(0)));
+                pendingSessions.put(you, new PendingSession(r, new BasicChan<Void>()));
             }
 
             session.send(OpenSessionRequest(you));
@@ -190,6 +191,9 @@ public class MediatorClientChannel<Name, Address, Payload> implements Channel<Na
         @Override
         public Session<Name, Payload> openSession(Send<Payload> send)
                 throws InterruptedException {
+
+            // If the channel is not open, do not open a session.
+            if (!open) return null;
 
             // If we are already connected, don't open a new one.
             if (openSessions.connected(you)) return null;
@@ -324,10 +328,10 @@ public class MediatorClientChannel<Name, Address, Payload> implements Channel<Na
 
             if (session == null) return null;
 
+            open = true;
             return new MediatorClientConnection();
         }
     }
-
 
     public Peer<Name,Payload> getPeer(Name you) {
         return new MediatorClientPeer(you);

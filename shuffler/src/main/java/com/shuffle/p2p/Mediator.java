@@ -341,8 +341,9 @@ public class Mediator<Name, Address, Payload> implements Connection<Address, Med
                 Session<Address, Envelope<Name, Payload>> session
         ) throws InterruptedException {
 
+            if (session == null) throw new NullPointerException();
 
-            return null;
+            return new MediatorSend(session);
         }
     }
 
@@ -353,6 +354,9 @@ public class Mediator<Name, Address, Payload> implements Connection<Address, Med
         this.clients = clients;
         conn = clients.open(new MediatorListener());
 
+        if (conn == null) {
+            throw new IllegalArgumentException();
+        }
     }
 
     @Override

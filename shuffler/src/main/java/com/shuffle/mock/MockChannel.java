@@ -17,6 +17,8 @@ import com.shuffle.p2p.Peer;
 import com.shuffle.p2p.Session;
 
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -83,30 +85,27 @@ public class MockChannel<Q, X> implements Channel<Q, X> {
         // called when a X is received.
         public synchronized Session<Q, X> openSession(Send<X> send)
                 throws InterruptedException {
+
+            if (send == null) throw new NullPointerException();
+
             // if there is already an open session, fail.
-            if (currentSession != null) {
-                return null;
-            }
+            if (currentSession != null) return null;
 
             Q identity = identity();
 
             // Do we know this remote peer?
             MockChannel<Q, X> remote = knownHosts.get(identity);
-            if (remote == null) {
-                return null;
-            }
-
-            if (!equals(peers.get(identity))) {
-                return null;
-            }
+            if (remote == null) return null;
+            if (!equals(peers.get(identity))) return null;
 
             // Create a new session and register it with the remote peer.
-            MockSession session = this.new MockSession(remote.connect(me, send));
+            Send<X> r = remote.connect(me, send);
+            if (r == null) return null;
+
+            MockSession session = this.new MockSession(r);
 
             // If the session is not open, the connection didn't work for some reason.
-            if (session.closed()) {
-                return null;
-            }
+            if (session.closed()) return null;
 
             // Set the new session as the officially connected one for this peer.
             this.currentSession = session;
@@ -118,18 +117,16 @@ public class MockChannel<Q, X> implements Channel<Q, X> {
             boolean closed;
 
             MockSession(Send<X> send) {
+
+                if (send == null) throw new NullPointerException();
+
                 this.send = send;
-                closed = send == null;
+                closed = false;
             }
 
             @Override
             public boolean send(X x) throws InterruptedException {
-                if (send == null) {
-                    return false;
-                }
-
-                send.send(x);
-                return true;
+                return !closed && send.send(x);
             }
 
             @Override
@@ -172,9 +169,8 @@ public class MockChannel<Q, X> implements Channel<Q, X> {
 
     @Override
     public Connection<Q, X> open(Listener<Q, X> listener) {
-        if (this.listener != null) {
-            return null;
-        }
+
+        if (this.listener != null) throw new NullPointerException();
         this.listener = listener;
 
         this.connection = new MockConnection();
@@ -184,23 +180,20 @@ public class MockChannel<Q, X> implements Channel<Q, X> {
     Send<X> connect(Q you, Send<X> send) throws InterruptedException {
         Thread.sleep(100);
 
-        if (listener == null || send == null) {
-            return null;
-        }
+        if (you == null || send == null) throw new NullPointerException();
+
+        if (listener == null) return null;
 
         // Do we know this remote peer?
         MockPeer peer = (MockPeer) getPeer(you);
-        if (peer == null) {
-            return null;
-        }
+        if (peer == null) return null;
 
         // An open session already exists.
-        if (peer.open()) {
-            return null;
-        }
+        if (peer.open()) return null;
 
         peer.setSession(peer.new MockSession(send));
 
         return listener.newSession(peer.getSession());
     }
+
 }

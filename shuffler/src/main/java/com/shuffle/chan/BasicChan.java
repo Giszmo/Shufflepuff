@@ -42,6 +42,8 @@ public class BasicChan<X> implements Chan<X> {
     private final LinkedBlockingQueue<Message> queue;
 
     public BasicChan(int n) {
+        if (n < 1) throw new IllegalArgumentException();
+
         queue = new LinkedBlockingQueue<>(n);
     }
 
