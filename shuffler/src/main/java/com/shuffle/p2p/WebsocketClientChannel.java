@@ -46,6 +46,7 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
      */
 
     private Listener<URI, Bytestring> globalListener = null;
+    private Receiver<Bytestring> globalReceiver = null;
 
     @ClientEndpoint
     public class WebsocketClientEndpoint {
@@ -66,6 +67,9 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
         @OnOpen
         public void onOpen(Session userSession) {
             this.userSession = userSession;
+            // Can you only connect to ONE Server with WebsocketClientChannel?
+            // ???
+            // WebsocketPeer.WebsocketSession session = peers.get(this.uri).currentSession;
             // WebsocketSession
             // set receiver
         }
@@ -197,6 +201,8 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
             }
 
             // if the session receives a message, it is passed to the receiver.
+            // ??? is this correct? We already have a MessageHandler in @OnMessage (ESSENTIALLY)
+
             session.session.addMessageHandler(new MessageHandler.Whole<byte[]>() {
                 public void onMessage(byte[] message) {
                     try {
@@ -206,6 +212,7 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
                     }
                 }
             });
+            //globalReceiver = receiver; ???
 
             return session;
 

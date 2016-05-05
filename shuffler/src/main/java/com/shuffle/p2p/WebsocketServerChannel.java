@@ -133,7 +133,7 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
         }
     }
 
-    final Peers peers = new Peers();
+    private final Peers peers = new Peers();
 
     class OpenSessions {
 
