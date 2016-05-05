@@ -46,6 +46,7 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
      */
 
     private Listener<URI, Bytestring> globalListener = null;
+    // globalReceiver is not used.
     private Receiver<Bytestring> globalReceiver = null;
 
     @ClientEndpoint
@@ -66,24 +67,46 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
 
         @OnOpen
         public void onOpen(Session userSession) {
+
             this.userSession = userSession;
-            // Can you only connect to ONE Server with WebsocketClientChannel?
-            // ???
-            // WebsocketPeer.WebsocketSession session = peers.get(this.uri).currentSession;
-            // WebsocketSession
-            // set receiver
+
+            // This creates a new peer because peers does not contain <this.uri, WebsocketPeer>
+            // We shouldn't do this though, I think?
+            WebsocketPeer peer = peers.get(this.uri);
+            try {
+                peer.setSession(this.userSession);
+            } catch (IOException e) {
+                return;
+            }
+            WebsocketPeer.WebsocketSession session = peer.currentSession;
+
+            try {
+                receiver = globalListener.newSession(session);
+            } catch (InterruptedException er) {
+                return;
+            }
+
+            // I COULD use a HashMap to store the receivers, but if the WebsocketClientChannel
+            // only connects to one server, then it's unnecessary.  Also I would then need to
+            // synchronize (lock) the global receiver?
+
         }
 
         @OnMessage
         public void onMessage(byte[] message, Session userSession)  {
             Bytestring bytestring = new Bytestring(message);
-            // receiver.receive(bytestring);
+            try {
+                receiver.receive(bytestring);
+            } catch (InterruptedException e) {
+                return;
+            }
         }
 
         @OnClose
         public void onClose(Session userSession, CloseReason reason) {
             this.userSession = null;
-            // remove receiver, peer, session?
+            receiver = null;
+            // remove <URI, WebsocketPeer> in peers?
         }
     }
 
@@ -100,6 +123,8 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
             }
             return peer;
         }
+
+        // should we have a remove(URI identity) method?
     }
 
     final Peers peers = new Peers();
@@ -171,15 +196,16 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
         }
 
         WebsocketPeer.WebsocketSession newSession() throws DeploymentException {
-            URI identity = identity();
             try {
-                currentSession = new WebsocketPeer(identity).new WebsocketSession(new WebsocketClientEndpoint(identity).newSession());
+                currentSession = this.new WebsocketSession(new WebsocketClientEndpoint(identity()).newSession());
                 return currentSession;
             } catch (IOException e) {
                 return null;
             }
         }
 
+
+        // What is openSession() used for?
         @Override
         public synchronized com.shuffle.p2p.Session<URI, Bytestring> openSession(
                 final Receiver<Bytestring> receiver) {

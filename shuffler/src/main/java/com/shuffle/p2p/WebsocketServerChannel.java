@@ -111,6 +111,7 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
             }
 
             // anything else to remove??
+            // remove from peers?
             staticOpenSessions.remove(identity);
             receiveMap.remove(userSession);
             this.userSession = null;
