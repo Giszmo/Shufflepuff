@@ -29,6 +29,8 @@ public class TestWebsocketChannel {
     Connection<URI, Bytestring> clientConn;
     WebsocketServerChannel.WebsocketPeer.WebsocketSession serverSession;
     WebsocketClientChannel.WebsocketPeer.WebsocketSession clientSession;
+    String serverMessage;
+    String clientMessage;
 
     @Before
     public void setup() throws UnknownHostException, URISyntaxException, DeploymentException, InterruptedException, NoSuchMethodException, InvocationTargetException, IllegalAccessException {
@@ -42,6 +44,7 @@ public class TestWebsocketChannel {
                 return new Receiver<Bytestring>() {
                     @Override
                     public void receive(Bytestring bytestring) throws InterruptedException {
+                        TestWebsocketChannel.this.serverMessage = new String(bytestring.bytes);
                         return;
                     }
                 };
@@ -60,15 +63,24 @@ public class TestWebsocketChannel {
             }
         };
 
+        Receiver<Bytestring> clientReceiver = new Receiver<Bytestring>() {
+            @Override
+            public void receive(Bytestring bytestring) throws InterruptedException {
+                TestWebsocketChannel.this.clientMessage = new String(bytestring.bytes);
+                return;
+            }
+        };
+
         serverConn = server.open(serverListener);
 
         // must call 'open' with client before clientSession can call 'close'
         clientConn = client.open(clientListener);
 
-        Thread.sleep(2000);
-
         WebsocketClientChannel.WebsocketPeer peer = client.new WebsocketPeer(new URI("ws://localhost:8025"));
-        clientSession = peer.newSession();
+        peer.openSession(clientReceiver);
+        clientSession = peer.currentSession;
+
+        Assert.assertNotNull(clientSession);
         Assert.assertTrue(!clientSession.closed());
         Assert.assertTrue(clientSession.session.isOpen());
 
@@ -77,10 +89,22 @@ public class TestWebsocketChannel {
         Boolean clientSent = clientSession.send(bytestring);
         Assert.assertTrue(clientSent);
 
+
+
         serverSession = server.staticOpenSessions.get(InetAddress.getByName("127.0.0.1"));
+
         Assert.assertNotNull(serverSession);
-        Boolean serverSent = serverSession.send(bytestring);
+        Assert.assertTrue(!serverSession.closed());
+        Assert.assertTrue(serverSession.session.isOpen());
+
+        String message2 = "houston, we have a problem";
+        Bytestring bytestring2 = new Bytestring(message2.getBytes());
+        Boolean serverSent = serverSession.send(bytestring2);
         Assert.assertTrue(serverSent);
+
+        Thread.sleep(2000);
+        Assert.assertEquals(message, this.serverMessage); // the server receives this message
+        Assert.assertEquals(message2, this.clientMessage); // the client receives this message
 
     }
 

@@ -50,9 +50,7 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
     @ClientEndpoint
     public class WebsocketClientEndpoint {
 
-        Session userSession = null;
         URI uri;
-        Receiver<Bytestring> receiver = null;
 
         public WebsocketClientEndpoint(URI endpointUri) {
             this.uri = endpointUri;
@@ -63,39 +61,6 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
             return container.connectToServer(this, this.uri);
         }
 
-        @OnOpen
-        public void onOpen(Session userSession) {
-            this.userSession = userSession;
-            // receiver cannot be initialized here because @OnOpen is called before
-            // the associated WebsocketSession is added to openSessions, resulting in
-            // a NullPointerException.
-        }
-
-        @OnMessage
-        public void onMessage(byte[] message, Session userSession)  {
-            Bytestring bytestring = new Bytestring(message);
-
-            if (receiver == null) {
-                WebsocketPeer.WebsocketSession session = openSessions.get(this.uri);
-                try {
-                    receiver = globalListener.newSession(session);
-                } catch (InterruptedException e) {
-                    return;
-                }
-            }
-
-            try {
-                receiver.receive(bytestring);
-            } catch (InterruptedException e) {
-                return;
-            }
-        }
-
-        @OnClose
-        public void onClose(Session userSession, CloseReason reason) {
-            this.userSession = null;
-            receiver = null;
-        }
     }
 
     // Only one object representing each peer is allowed at a time.
@@ -150,10 +115,6 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
             return session;
         }
 
-        public void add(URI identity, WebsocketPeer.WebsocketSession session) {
-            openSessions.put(identity, session);
-        }
-
         public WebsocketPeer.WebsocketSession get(URI identity) {
             return openSessions.get(identity);
         }
@@ -182,20 +143,9 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
             super(identity);
         }
 
-        private WebsocketPeer setSession(javax.websocket.Session session) throws IOException {
-            // this doesn't add to openSessions... the way class OpenSessions is constructed, it can't.
-            // add() function now exists in OpenSessions, is this okay?
-            currentSession = new WebsocketSession(session);
-            openSessions.add(identity(), currentSession);
-            return this;
-        }
-
-        WebsocketPeer.WebsocketSession newSession() throws DeploymentException {
+        private WebsocketPeer.WebsocketSession newSession() throws DeploymentException {
             try {
-                // this doesn't add to openSessions either.
-                // add() function now exists in OpenSessions, is this okay?
                 currentSession = this.new WebsocketSession(new WebsocketClientEndpoint(identity()).newSession());
-                openSessions.add(identity(), currentSession);
                 return currentSession;
             } catch (IOException e) {
                 return null;
@@ -222,8 +172,6 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
                 return null;
             }
 
-            // is this necessary?
-            // not quite sure of this function's purpose.
             session.session.addMessageHandler(new MessageHandler.Whole<byte[]>() {
                 public void onMessage(byte[] message) {
                     try {

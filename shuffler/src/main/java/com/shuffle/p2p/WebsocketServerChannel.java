@@ -28,6 +28,7 @@ import org.glassfish.tyrus.core.TyrusSession;
 import org.glassfish.tyrus.server.Server;
 import org.glassfish.tyrus.container.grizzly.server.*;
 
+
 /**
  * Created by Eugene Siegel on 4/1/16.
  */
@@ -44,7 +45,6 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
      *  Necessary class to listen for remote websocket peers
      */
 
-    // multiple peers cannot connect to one instance, right?
     private Listener<InetAddress, Bytestring> globalListener = null;
     private static Listener<InetAddress, Bytestring> staticGlobalListener = null;
 
@@ -57,30 +57,29 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
     @ServerEndpoint("/")
     public static class WebsocketServerEndpoint{
 
-        Session userSession;
+        Listener<InetAddress, Bytestring> listener = staticGlobalListener;
+        OpenSessions localOpenSessions = staticOpenSessions;
+        Peers localPeers = staticPeers;
         HashMap<Session, Receiver> receiveMap = new HashMap<>();
 
         // Callback for when a peer connects to the WebsocketServer.
         @OnOpen
         public void onOpen(Session userSession) throws InterruptedException {
-            this.userSession = userSession;
-            String clientIp = ((TyrusSession)this.userSession).getRemoteAddr();
+            String clientIp = ((TyrusSession)userSession).getRemoteAddr();
             InetAddress identity;
             try {
                 identity = InetAddress.getByName(clientIp);
             } catch (UnknownHostException e) {
                 try {
-                    this.userSession.close();
+                    userSession.close();
                 } catch (IOException er) {
                     return;
                 }
-                this.userSession = null;
                 return;
             }
 
-
-            WebsocketPeer.WebsocketSession session = staticOpenSessions.putOpenSession(identity, this.userSession);
-            Receiver<Bytestring> receiver = staticGlobalListener.newSession(session);
+            WebsocketPeer.WebsocketSession session = localOpenSessions.putOpenSession(identity, userSession);
+            Receiver<Bytestring> receiver = listener.newSession(session);
             receiveMap.put(userSession, receiver);
         }
 
@@ -95,7 +94,7 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
         @OnClose
         public void onClose(Session userSession, CloseReason reason) {
 
-            String sessionIp = ((TyrusSession)this.userSession).getRemoteAddr();
+            String sessionIp = ((TyrusSession)userSession).getRemoteAddr();
             InetAddress identity;
 
             try {
@@ -105,16 +104,14 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
             }
 
             try {
-                this.userSession.close();
+                userSession.close();
             } catch (IOException e) {
                 return;
             }
 
-            // anything else to remove??
-            // remove from peers?
-            staticOpenSessions.remove(identity);
+            localOpenSessions.remove(identity);
+            localPeers.remove(identity);
             receiveMap.remove(userSession);
-            this.userSession = null;
         }
 
     }
@@ -133,10 +130,14 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
             return peer;
         }
 
-        // remove function?
+        public synchronized void remove(InetAddress identity) {
+            peers.remove(identity);
+        }
+
     }
 
     private final Peers peers = new Peers();
+    public static Peers staticPeers = null;
 
     class OpenSessions {
 
@@ -332,6 +333,7 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
             openSessions = new OpenSessions();
             staticOpenSessions = openSessions;
             staticGlobalListener = globalListener;
+            staticPeers = peers;
             return new WebsocketConnection();
         }
     }
