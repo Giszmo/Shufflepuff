@@ -132,6 +132,8 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
 
             return peer;
         }
+
+        // remove function?
     }
 
     private final Peers peers = new Peers();

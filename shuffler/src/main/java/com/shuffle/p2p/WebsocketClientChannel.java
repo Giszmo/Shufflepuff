@@ -46,8 +46,6 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
      */
 
     private Listener<URI, Bytestring> globalListener = null;
-    // globalReceiver is not used.
-    private Receiver<Bytestring> globalReceiver = null;
 
     @ClientEndpoint
     public class WebsocketClientEndpoint {
@@ -67,34 +65,25 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
 
         @OnOpen
         public void onOpen(Session userSession) {
-
             this.userSession = userSession;
-
-            // This creates a new peer because peers does not contain <this.uri, WebsocketPeer>
-            // We shouldn't do this though, I think?
-            WebsocketPeer peer = peers.get(this.uri);
-            try {
-                peer.setSession(this.userSession);
-            } catch (IOException e) {
-                return;
-            }
-            WebsocketPeer.WebsocketSession session = peer.currentSession;
-
-            try {
-                receiver = globalListener.newSession(session);
-            } catch (InterruptedException er) {
-                return;
-            }
-
-            // I COULD use a HashMap to store the receivers, but if the WebsocketClientChannel
-            // only connects to one server, then it's unnecessary.  Also I would then need to
-            // synchronize (lock) the global receiver?
-
+            // receiver cannot be initialized here because @OnOpen is called before
+            // the associated WebsocketSession is added to openSessions, resulting in
+            // a NullPointerException.
         }
 
         @OnMessage
         public void onMessage(byte[] message, Session userSession)  {
             Bytestring bytestring = new Bytestring(message);
+
+            if (receiver == null) {
+                WebsocketPeer.WebsocketSession session = openSessions.get(this.uri);
+                try {
+                    receiver = globalListener.newSession(session);
+                } catch (InterruptedException e) {
+                    return;
+                }
+            }
+
             try {
                 receiver.receive(bytestring);
             } catch (InterruptedException e) {
@@ -106,7 +95,6 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
         public void onClose(Session userSession, CloseReason reason) {
             this.userSession = null;
             receiver = null;
-            // remove <URI, WebsocketPeer> in peers?
         }
     }
 
@@ -124,7 +112,7 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
             return peer;
         }
 
-        // should we have a remove(URI identity) method?
+        // remove function?
     }
 
     final Peers peers = new Peers();
@@ -162,6 +150,10 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
             return session;
         }
 
+        public void add(URI identity, WebsocketPeer.WebsocketSession session) {
+            openSessions.put(identity, session);
+        }
+
         public WebsocketPeer.WebsocketSession get(URI identity) {
             return openSessions.get(identity);
         }
@@ -191,21 +183,25 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
         }
 
         private WebsocketPeer setSession(javax.websocket.Session session) throws IOException {
+            // this doesn't add to openSessions... the way class OpenSessions is constructed, it can't.
+            // add() function now exists in OpenSessions, is this okay?
             currentSession = new WebsocketSession(session);
+            openSessions.add(identity(), currentSession);
             return this;
         }
 
         WebsocketPeer.WebsocketSession newSession() throws DeploymentException {
             try {
+                // this doesn't add to openSessions either.
+                // add() function now exists in OpenSessions, is this okay?
                 currentSession = this.new WebsocketSession(new WebsocketClientEndpoint(identity()).newSession());
+                openSessions.add(identity(), currentSession);
                 return currentSession;
             } catch (IOException e) {
                 return null;
             }
         }
 
-
-        // What is openSession() used for?
         @Override
         public synchronized com.shuffle.p2p.Session<URI, Bytestring> openSession(
                 final Receiver<Bytestring> receiver) {
@@ -226,9 +222,8 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
                 return null;
             }
 
-            // if the session receives a message, it is passed to the receiver.
-            // ??? is this correct? We already have a MessageHandler in @OnMessage (ESSENTIALLY)
-
+            // is this necessary?
+            // not quite sure of this function's purpose.
             session.session.addMessageHandler(new MessageHandler.Whole<byte[]>() {
                 public void onMessage(byte[] message) {
                     try {
@@ -238,7 +233,6 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
                     }
                 }
             });
-            //globalReceiver = receiver; ???
 
             return session;
 
