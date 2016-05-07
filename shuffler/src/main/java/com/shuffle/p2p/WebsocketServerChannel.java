@@ -57,10 +57,17 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
     @ServerEndpoint("/")
     public static class WebsocketServerEndpoint{
 
-        Listener<InetAddress, Bytestring> listener = staticGlobalListener;
-        OpenSessions localOpenSessions = staticOpenSessions;
-        Peers localPeers = staticPeers;
-        HashMap<Session, Receiver> receiveMap = new HashMap<>();
+        Listener<InetAddress, Bytestring> listener;
+        OpenSessions localOpenSessions;
+        Peers localPeers;
+        HashMap<Session, Receiver> receiveMap;
+
+        public WebsocketServerEndpoint() {
+            listener = staticGlobalListener;
+            localOpenSessions = staticOpenSessions;
+            localPeers = staticPeers;
+            receiveMap = new HashMap<>();
+        }
 
         // Callback for when a peer connects to the WebsocketServer.
         @OnOpen
@@ -313,27 +320,35 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
             throw new NullPointerException();
         }
 
-        globalListener = listener;
-
         synchronized (lock) {
             if (running) return null;
 
-            if (server == null) {
-                try {
-                    // rootPath variable?
-                    // initializes and starts the Websocket Server at the specified hostName and port
-                    server = new Server(hostName, port, "", new HashMap<String, Object>(), WebsocketServerEndpoint.class);
-                    server.start();
-                } catch (DeploymentException e) {
-                    return null;
+            synchronized (lock) {
+
+                running = true;
+                openSessions = new OpenSessions();
+                globalListener = listener;
+                staticOpenSessions = openSessions;
+                staticGlobalListener = globalListener;
+                staticPeers = peers;
+
+                if (server == null) {
+                    try {
+                        // rootPath variable?
+                        // initializes and starts the Websocket Server at the specified hostName and port
+                        server = new Server(hostName, port, "", new HashMap<String, Object>(), WebsocketServerEndpoint.class);
+                        server.start();
+                    } catch (DeploymentException e) {
+                        running = false;
+                        openSessions = null;
+                        globalListener = null;
+                        staticOpenSessions = null;
+                        staticGlobalListener = null;
+                        staticPeers = null;
+                        return null;
+                    }
                 }
             }
-
-            running = true;
-            openSessions = new OpenSessions();
-            staticOpenSessions = openSessions;
-            staticGlobalListener = globalListener;
-            staticPeers = peers;
             return new WebsocketConnection();
         }
     }

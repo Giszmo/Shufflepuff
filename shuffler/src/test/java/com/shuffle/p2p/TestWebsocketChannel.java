@@ -102,6 +102,7 @@ public class TestWebsocketChannel {
         Boolean serverSent = serverSession.send(bytestring2);
         Assert.assertTrue(serverSent);
 
+        // Sleep because it takes (miniscule) time to receive a message.
         Thread.sleep(2000);
         Assert.assertEquals(message, this.serverMessage); // the server receives this message
         Assert.assertEquals(message2, this.clientMessage); // the client receives this message
