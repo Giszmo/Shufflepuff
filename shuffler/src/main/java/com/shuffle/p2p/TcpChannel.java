@@ -306,16 +306,21 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
 
                     if (total < msg.length) {
                         session.close();
-                        return;
+                        break;
                     }
 
                     send.send(new Bytestring(msg));
 
                 } catch (IOException | InterruptedException e) {
                     session.close();
-                    send.close();
-                    return;
+                    break;
                 }
+            }
+
+            try {
+                send.close();
+            } catch (InterruptedException e) {
+
             }
         }
     }

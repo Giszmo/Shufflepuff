@@ -15,6 +15,14 @@ import java.util.Map;
 
 /**
  * Created by Daniel Krawisz on 5/3/16.
+ *
+ * Why is this file written like this? Java often has constructs in which one defines a variable
+ * with [type] [name]. I've been tending to write code with very long type names, so I had
+ * been attempting to see if I could format the code in a way more adapted to very long typenames.
+ *
+ * In this code, I have attempted to align variable declarations so as to be aligned along the
+ * division between type name and variable name.
+ *
  */
                                                         public class TestMediator {
 
@@ -51,6 +59,20 @@ import java.util.Map;
                                                                 @Override
                                                     public void close() throws InterruptedException {
                                                                     ch.close();
+                                                                }
+                                                            }
+
+                                                            class DummyTestReceiver implements Send<Integer> {
+                                                                boolean open = true;
+
+                                                                @Override
+                                                 public boolean send(Integer integer) throws InterruptedException {
+                                                                    return open;
+                                                                }
+
+                                                                @Override
+                                                    public void close() {
+                                                                    open = false;
                                                                 }
                                                             }
 
@@ -110,6 +132,7 @@ import java.util.Map;
 
                                                                 mediator = new Mediator<>(hosts.get(0));
 
+                                                                // Now connect the clients to the mediator server.
                                                                 for (int i = 1; i < 4; i ++ ) {
 
                                                              String name = names.get(i);
@@ -122,6 +145,7 @@ import java.util.Map;
                               Map<String, Session<String, Integer>> openSessions = new HashMap<>();
                                                                     sessions.put(name, openSessions);
 
+                                                                    // Open client.
             Connection<Integer, Mediator.Envelope<String, Integer>> mock = host.open(
                                                                             new Listener<Integer, Mediator.Envelope<String, Integer>>(){
                                                                                 // The listener doesn't need to do anything because the
@@ -151,33 +175,59 @@ import java.util.Map;
 
                                                             }
 
-                                                public void openSession(String from, String to) throws InterruptedException {
+                                                public void openSessionFail(String from, String to) throws InterruptedException {
 
-                                                                // Open session.
-                                                                clients.get(from).getPeer(to).openSession(new TestSend(from, to));
-
-                                                                // Session should exist in openSessions.
                                                                 try {
-                                                                    Assert.assertFalse(sessions.get(from).get(to).closed());
-                                                                    Assert.assertFalse(sessions.get(to).get(from).closed());
-                                                                } catch (NullPointerException e) {
-                                                                    Assert.fail("Session not opened properly.");
+                                                                    // Open session.
+                                           Session<String, Integer> ss = clients.get(from).getPeer(to).openSession(new DummyTestReceiver());
+
+                                                                    Assert.assertNull(ss);
+
+                                                                } catch (NullPointerException | IllegalArgumentException e) {
+                                                                    Assert.fail("Null pointer intercepted.");
                                                                 }
+                                                            }
+
+                                             public boolean openSessionSucceed(String from, String to) throws InterruptedException {
+
+                                                                try {
+                                                                    // Open session.
+                                           Session<String, Integer> ss = clients.get(from).getPeer(to).openSession(new TestSend(from, to));
+
+                                                                    if (ss == null) {
+                                                                        Assert.fail("Null session returned; expected success.");
+                                                                        return false;
+                                                                    }
+
+                                                                    // Session should be open.
+                                                                    if (ss.closed()) {
+                                                                        Assert.fail("Session is closed.");
+                                                                        return true;
+                                                                    }
+
+                                                                    // Session should exist in openSessions.
+                                                                    Assert.assertFalse(sessions.get(to).get(from).closed());
+                                                                } catch (NullPointerException | IllegalArgumentException e) {
+                                                                    Assert.fail("Session not opened properly.");
+                                                                    return false;
+                                                                }
+
+                                                                return true;
                                                             }
 
                                                             @Test
                                                             public void TestOpenSessions() throws InterruptedException {
+
+                                                                // There is no shemp, so a session to him cannot be opened.
+                                                                openSessionFail("Moe", "Shemp");
+
                                                                 // Moe opens a session to Larry.
-                                                                openSession("Moe", "Larry");
-
-
-
-                                                                // Moe opens a session to Curly.
+                                                                openSessionSucceed("Moe", "Larry");
                                                             }
 
                                                             @Test
                                                             public void TestSendMessage() {
-
+                                                                // TODO
                                                             }
 
                                                             @After

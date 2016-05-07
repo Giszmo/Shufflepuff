@@ -100,6 +100,8 @@ public class MediatorClientChannel<Name, Address, Payload> implements Channel<Na
             synchronized (lock) {
                 if (pendingSessions.containsKey(you) || openSessions.containsKey(you)) return false;
 
+                session.send(OpenSessionResponse(you));
+
                 Send<Payload> r = listener.newSession(new MediatorClientSession(you));
 
                 if (r == null) return false;
@@ -327,6 +329,8 @@ public class MediatorClientChannel<Name, Address, Payload> implements Channel<Na
             session = virtualChannel.openSession(new MediatorClientSend(listener));
 
             if (session == null) return null;
+
+            session.send(ServerRegistration());
 
             open = true;
             return new MediatorClientConnection();

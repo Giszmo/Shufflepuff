@@ -25,7 +25,7 @@ import java.util.TreeSet;
  *
  * Created by Daniel Krawisz on 1/26/16.
  */
-public class Mediator<Name, Address, Payload> implements Connection<Address, Mediator.Envelope<Name, Payload>> {
+public class Mediator<Name extends Comparable<Name>, Address, Payload> implements Connection<Address, Mediator.Envelope<Name, Payload>> {
 
     public static class Envelope<Name, Payload> {
         public final Name to; // Null means to the mediator.
@@ -41,7 +41,8 @@ public class Mediator<Name, Address, Payload> implements Connection<Address, Med
         public final boolean closeSession;
         public final boolean register;
 
-        Envelope(Name to, Name from, Payload payload) {
+        // Create a regular message.
+        Envelope(Name from, Name to, Payload payload) {
 
             if (from == null || payload == null || to == null) {
                 throw new NullPointerException();
@@ -102,16 +103,71 @@ public class Mediator<Name, Address, Payload> implements Connection<Address, Med
         }
     }
 
+    private static class VirtualConnection<Name extends Comparable<Name>>
+            implements Comparable<VirtualConnection<Name>> {
+
+        public final Name a;
+        public final Name b;
+
+        private VirtualConnection(Name a, Name b) {
+            int compare = a.compareTo(b);
+
+            if (compare == 0) throw new IllegalArgumentException();
+
+            if (compare < 0) {
+
+                this.a = a;
+                this.b = b;
+            } else {
+                this.a = b;
+                this.b = a;
+            }
+        }
+
+        @Override
+        public int compareTo(VirtualConnection<Name> c) {
+            int compA = a.compareTo(c.a);
+
+            if (compA != 0) {
+                return compA;
+            }
+
+            return b.compareTo(c.b);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (!(o instanceof VirtualConnection)) return false;
+
+            VirtualConnection c = (VirtualConnection)o;
+
+            return a.equals(c.a) && b.equals(c.b);
+        }
+
+        @Override
+        public int hashCode() {
+            return a.hashCode() * 15 + b.hashCode();
+        }
+
+        public Name other(Name o) {
+            if (a.equals(o)) return b;
+
+            if (b.equals(o)) return a;
+
+            return null;
+        }
+    }
+
     private class OpenSessions {
         private final Map<Name, Session<Address, Envelope<Name, Payload>>> openSessions = new HashMap<>();
 
-        private final Set<SortedSet<Name>> connections = new TreeSet<>();
+        private final Set<VirtualConnection<Name>> connections = new HashSet<>();
 
         private final Map<Name, SortedSet<Name>> pending = new HashMap<>();
 
         // Drop a peer and all his connections.
         public void drop(Name name) throws InterruptedException {
-            SortedSet<Name> notify =  new TreeSet<Name>();
+            SortedSet<Name> notify =  new TreeSet<>();
 
             // Remove from openSessions
             openSessions.remove(name);
@@ -131,16 +187,11 @@ public class Mediator<Name, Address, Payload> implements Connection<Address, Med
             }
 
             // Remove from connections.
-            for (SortedSet<Name> x : connections) {
-                if (x.contains(name)) {
-                    connections.remove(x);
+            for (VirtualConnection<Name> x : connections) {
+                Name n = x.other(name);
 
-                    x.remove(name);
-                    Name n = x.first();
-
-                    if (n != null) {
-                        notify.add(n);
-                    }
+                if (n != null) {
+                    notify.add(n);
                 }
             }
 
@@ -188,11 +239,7 @@ public class Mediator<Name, Address, Payload> implements Connection<Address, Med
             if (!openSessions.containsKey(a) || !openSessions.containsKey(b)) return false;
 
             // Must not be in connections.
-            SortedSet<Name> check = new TreeSet<>();
-            check.add(a);
-            check.add(b);
-
-            if (connections.contains(check)) return false;
+            if (connections.contains(new VirtualConnection<>(a, b))) return false;
 
             // Put in pending.
             SortedSet<Name> l = pending.get(a);
@@ -203,9 +250,11 @@ public class Mediator<Name, Address, Payload> implements Connection<Address, Med
             }
 
             if (l.contains(b)) return false;
-            Session<Address, Envelope<Name, Payload>> s = openSessions.get(a);
+            l.add(b);
+
+            Session<Address, Envelope<Name, Payload>> s = openSessions.get(b);
             if (s.closed()) {
-                drop(a);
+                drop(b);
                 return false;
             }
 
@@ -217,25 +266,34 @@ public class Mediator<Name, Address, Payload> implements Connection<Address, Med
         }
 
         // Open a connection between two registered peers.
-        public boolean completeConnection(Name a, Name b) {
+        public boolean completeConnection(Name a, Name b) throws InterruptedException {
             if (a == null || b == null) throw new NullPointerException();
 
             if (a.equals(b)) return false;
+
+            // Must not already exist.
+            VirtualConnection<Name> check = new VirtualConnection<>(a, b);
+            if (connections.contains(check)) return false;
 
             // Must already be in pending.
             SortedSet<Name> l = pending.get(a);
 
             if (l == null || !l.contains(b)) return false;
 
-            // Now put in connections.
-            SortedSet<Name> check = new TreeSet<>();
-            check.add(a);
-            check.add(b);
+            // Remove from pending.
+            l.remove(b);
 
-            // Add the connection.
-            if (!connections.contains(check)) {
-                connections.add(check);
+            // Send response.
+            Session<Address, Envelope<Name, Payload>> session = openSessions.get(a);
+            if (session == null) {
+                drop(a);
+                return false;
             }
+
+            session.send(new Envelope<Name, Payload>(b, a, false, true, false));
+
+            // Put in connections.
+            connections.add(check);
 
             return true;
         }
@@ -246,12 +304,8 @@ public class Mediator<Name, Address, Payload> implements Connection<Address, Med
 
             if (a.equals(b)) return true;
 
-            SortedSet<Name> check = new TreeSet<>();
-            check.add(a);
-            check.add(b);
-
             // Add the connection.
-            connections.remove(check);
+            connections.remove(new VirtualConnection<Name>(a, b));
 
             return true;
         }
@@ -259,12 +313,9 @@ public class Mediator<Name, Address, Payload> implements Connection<Address, Med
         public boolean send(Envelope<Name, Payload> en) throws InterruptedException {
             if (en.to == null) return false;
 
-            SortedSet<Name> check = new TreeSet<>();
-            check.add(en.to);
-            check.add(en.from);
-
-            // If a session exists, pass on the message.
-            if (!connections.contains(check)) return false;
+            // The message may only be sent if a session exists between the two clients
+            // or if this is a close session message.
+            if (!(connections.contains(new VirtualConnection<Name>(en.from, en.to)) || en.closeSession)) return false;
 
             Session<Address, Envelope<Name, Payload>> s = openSessions.get(en.to);
 
@@ -317,14 +368,19 @@ public class Mediator<Name, Address, Payload> implements Connection<Address, Med
 
             // This is an open session response.
             if (en.openSessionResponse) {
-                return openSessions.completeConnection(en.to, name);
+                // Send failure messages to both.
+                return openSessions.completeConnection(en.to, name)
+                        || openSessions.send(new Envelope<Name, Payload>(en.to, en.from, false, false, true))
+                        && openSessions.send(new Envelope<Name, Payload>(en.from, en.to, false, false, true));
             }
 
             // open session request.
             if (en.openSessionRequest) {
-                return openSessions.initiateConnection(name, en.to);
+                if (!openSessions.initiateConnection(name, en.to)) {
+                    // Send a close session message.
+                    return openSessions.send(new Envelope<Name, Payload>(en.to, en.from, false, false, true));
+                }
             }
-
             return false;
         }
 
