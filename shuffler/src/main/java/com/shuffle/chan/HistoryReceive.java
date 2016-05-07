@@ -7,11 +7,11 @@ import java.util.concurrent.TimeUnit;
 /**
  * Created by Daniel Krawisz on 4/25/16.
  */
-public class HistoryReceiveChan<X> implements ReceiveChan<X> {
-    private final ReceiveChan<X> chan;
+public class HistoryReceive<X> implements Receive<X> {
+    private final Receive<X> chan;
     private final List<X> history = new LinkedList<>();
 
-    public HistoryReceiveChan(ReceiveChan<X> chan) {
+    public HistoryReceive(Receive<X> chan) {
         this.chan = chan;
     }
 

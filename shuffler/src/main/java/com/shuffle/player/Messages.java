@@ -13,17 +13,14 @@ import com.shuffle.bitcoin.EncryptionKey;
 import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
-import com.shuffle.chan.HistoryReceiveChan;
-import com.shuffle.chan.ReceiveChan;
-import com.shuffle.chan.SendChan;
+import com.shuffle.chan.HistoryReceive;
+import com.shuffle.chan.Receive;
+import com.shuffle.chan.Send;
 import com.shuffle.protocol.FormatException;
 import com.shuffle.protocol.InvalidImplementationError;
 import com.shuffle.protocol.blame.Blame;
 import com.shuffle.protocol.message.MessageFactory;
 import com.shuffle.protocol.message.Phase;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -41,21 +38,21 @@ import java.util.concurrent.TimeUnit;
  */
 public class Messages implements MessageFactory {
 
-    final Map<VerificationKey, SendChan<com.shuffle.player.Packet>> net;
-    private final ReceiveChan<SignedPacket> receive;
+    final Map<VerificationKey, Send<com.shuffle.player.Packet>> net;
+    private final Receive<SignedPacket> receive;
     final SessionIdentifier session;
     final VerificationKey me;
     final List<Packet> sent = new LinkedList<>();
 
     public Messages(SessionIdentifier session,
                     VerificationKey me,
-                    Map<VerificationKey, SendChan<com.shuffle.player.Packet>> net,
-                    ReceiveChan<SignedPacket> receive) {
+                    Map<VerificationKey, Send<com.shuffle.player.Packet>> net,
+                    Receive<SignedPacket> receive) {
 
         this.net = net;
         this.session = session;
         this.me = me;
-        this.receive = new HistoryReceiveChan<>(receive);
+        this.receive = new HistoryReceive<>(receive);
 
     }
 
@@ -348,7 +345,7 @@ public class Messages implements MessageFactory {
         @Override
         public void send() throws InterruptedException {
 
-            SendChan<com.shuffle.player.Packet> chan = net.get(to);
+            Send<com.shuffle.player.Packet> chan = net.get(to);
 
             if (chan == null) return;
 

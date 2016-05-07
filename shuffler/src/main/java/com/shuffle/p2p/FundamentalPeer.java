@@ -8,6 +8,8 @@
 
 package com.shuffle.p2p;
 
+import com.shuffle.chan.Send;
+
 /**
  * An implementation of Peer which is good for implementations which do not contain
  * other Peer objects, ie, they are fundamental.
@@ -27,7 +29,7 @@ public abstract class FundamentalPeer<Identity, Message> implements Peer<Identit
     }
 
     // Returns null if there is a session already open.
-    public abstract Session<Identity, Message> openSession(Receiver<Message> receiver)
+    public abstract Session<Identity, Message> openSession(Send<Message> send)
             throws InterruptedException;
 
     // Whether there is an open session to this peer.

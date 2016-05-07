@@ -8,6 +8,7 @@
 
 package com.shuffle.p2p;
 
+import com.shuffle.chan.Send;
 import com.shuffle.monad.Either;
 
 /**
@@ -79,7 +80,7 @@ public class Multiplexer<X, Y, Message> implements Channel<Either<X, Y>, Message
         }
 
         @Override
-        public Session<Either<X, Y>, Message> openSession(Receiver<Message> receiver)
+        public Session<Either<X, Y>, Message> openSession(Send<Message> receiver)
                 throws InterruptedException {
 
             if (first == null) {
@@ -167,7 +168,7 @@ public class Multiplexer<X, Y, Message> implements Channel<Either<X, Y>, Message
     public Connection<Either<X, Y>, Message> open(final Listener<Either<X, Y>, Message> listener) {
         Connection<X, Message> cx = x.open(new Listener<X, Message>(){
             @Override
-            public Receiver<Message> newSession(Session<X, Message> session) throws InterruptedException {
+            public Send<Message> newSession(Session<X, Message> session) throws InterruptedException {
                 return listener.newSession(new EitherSession(session, null));
             }
         });
@@ -176,7 +177,7 @@ public class Multiplexer<X, Y, Message> implements Channel<Either<X, Y>, Message
 
         Connection<Y, Message> cy = y.open(new Listener<Y, Message>(){
             @Override
-            public Receiver<Message> newSession(Session<Y, Message> session) throws InterruptedException {
+            public Send<Message> newSession(Session<Y, Message> session) throws InterruptedException {
                 return listener.newSession(new EitherSession(null, session));
             }
         });

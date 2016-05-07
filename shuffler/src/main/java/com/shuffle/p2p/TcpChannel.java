@@ -1,5 +1,7 @@
 package com.shuffle.p2p;
 
+import com.shuffle.chan.Send;
+
 import java.io.InputStream;
 import java.io.IOException;
 import java.net.InetAddress;
@@ -191,7 +193,7 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
 
         @Override
         public synchronized Session<InetSocketAddress, Bytestring> openSession(
-                Receiver<Bytestring> receiver
+                Send<Bytestring> send
         ) {
             // Don't allow sessions to be opened when we're opening or closing the channel.
             synchronized (lock) { }
@@ -210,7 +212,7 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
                 return null;
             }
 
-            executor.execute(new TcpReceiver(session, receiver));
+            executor.execute(new TcpReceiver(session, send));
 
             return session;
         }
@@ -280,20 +282,18 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
     private class TcpReceiver implements Runnable {
         final TcpPeer.TcpSession session;
         final InputStream in;
-        final Receiver<Bytestring> receiver;
+        final Send<Bytestring> send;
 
-        private TcpReceiver(TcpPeer.TcpSession session, Receiver<Bytestring> receiver) {
+        private TcpReceiver(TcpPeer.TcpSession session, Send<Bytestring> send) {
             this.session = session;
             this.in = session.in;
-            this.receiver = receiver;
+            this.send = send;
         }
 
         @Override
         public void run() {
             while (true) {
                 try {
-                    Bytestring bs;
-
                     byte[] head = new byte[header.headerLength()];
                     in.read(head);
 
@@ -305,7 +305,7 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
                         return;
                     }
 
-                    receiver.receive(new Bytestring(msg));
+                    send.send(new Bytestring(msg));
 
                 } catch (IOException | InterruptedException e) {
                     session.close();
@@ -343,14 +343,13 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
                         continue;
                     }
 
-                    Receiver<Bytestring> receiver;
-                    receiver = listener.newSession(session);
+                    Send<Bytestring> send = listener.newSession(session);
 
-                    if (receiver == null) {
+                    if (send == null) {
                         continue;
                     }
 
-                    executor.execute(new TcpReceiver(session, receiver));
+                    executor.execute(new TcpReceiver(session, send));
                 } catch (IOException | InterruptedException e) {
                     return;
                 }

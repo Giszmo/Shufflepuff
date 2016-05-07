@@ -8,6 +8,8 @@
 
 package com.shuffle.p2p;
 
+import com.shuffle.chan.Send;
+
 /**
  * A representation of a remote peer to which we can open communication channels.
  *
@@ -18,7 +20,7 @@ public interface Peer<Identity, Message> {
     Identity identity();
 
     // Returns null if there is a session already open.
-    Session<Identity, Message> openSession(Receiver<Message> receiver) throws InterruptedException;
+    Session<Identity, Message> openSession(Send<Message> send) throws InterruptedException;
 
     // Whether there is an open session to this peer.
     boolean open();

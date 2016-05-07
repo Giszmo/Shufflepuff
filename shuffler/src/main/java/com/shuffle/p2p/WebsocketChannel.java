@@ -8,6 +8,8 @@
 
 package com.shuffle.p2p;
 
+import com.shuffle.chan.Send;
+
 import java.io.IOException;
 import java.net.URI;
 import java.nio.ByteBuffer;
@@ -163,7 +165,7 @@ public class WebsocketChannel implements Channel<URI, Bytestring> {
 
         @Override
         public synchronized com.shuffle.p2p.Session<URI, Bytestring> openSession(
-                final Receiver<Bytestring> receiver) {
+                final Send<Bytestring> send) {
             // Don't allow sessions to be opened when we're opening or closing the channel.
             synchronized (lock) { }
 
@@ -184,7 +186,7 @@ public class WebsocketChannel implements Channel<URI, Bytestring> {
             session.session.addMessageHandler(new MessageHandler.Whole<byte[]>() {
                 public void onMessage(byte[] message) {
                     try {
-                        receiver.receive(new Bytestring(message));
+                        send.send(new Bytestring(message));
                     } catch (InterruptedException e) {
                         session.close();
                     }

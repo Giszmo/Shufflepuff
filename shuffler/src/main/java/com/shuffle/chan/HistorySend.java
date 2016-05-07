@@ -6,11 +6,11 @@ import java.util.List;
 /**
  * Created by Daniel Krawisz on 4/25/16.
  */
-public class HistorySendChan<X> implements SendChan<X> {
-    private final SendChan<X> chan;
+public class HistorySend<X> implements Send<X> {
+    private final Send<X> chan;
     private final List<X> history = new LinkedList<>();
 
-    public HistorySendChan(SendChan<X> chan) {
+    public HistorySend(Send<X> chan) {
         this.chan = chan;
     }
 

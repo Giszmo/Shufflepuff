@@ -2,8 +2,8 @@ package com.shuffle.p2p;
 
 import com.shuffle.chan.BasicChan;
 import com.shuffle.chan.Chan;
-import com.shuffle.chan.ReceiveChan;
-import com.shuffle.chan.SendChan;
+import com.shuffle.chan.Receive;
+import com.shuffle.chan.Send;
 
 import junit.framework.Assert;
 
@@ -44,7 +44,7 @@ public class TestTcpChannel {
 
     // Channels for receiving messages.
     // another assymmetrit 2-tensor.
-    ReceiveChan<Integer> rec[][];
+    Receive<Integer> rec[][];
 
     // The connection listeners. A vector.
     TestListener listen[];
@@ -97,10 +97,10 @@ public class TestTcpChannel {
             }
 
             @Override
-            public Session<Integer, Integer> openSession(Receiver<Integer> receiver)
+            public Session<Integer, Integer> openSession(Send<Integer> send)
                     throws InterruptedException {
 
-                Session<InetSocketAddress, Bytestring> p = peer.openSession(new TcpTestReceiver(receiver));
+                Session<InetSocketAddress, Bytestring> p = peer.openSession(new TcpTestReceiver(send));
 
                 if (p == null) {
                     return null;
@@ -165,7 +165,7 @@ public class TestTcpChannel {
             }
 
             @Override
-            public Receiver<Bytestring> newSession(Session<InetSocketAddress, Bytestring> session)
+            public Send<Bytestring> newSession(Session<InetSocketAddress, Bytestring> session)
                     throws InterruptedException {
 
                 return new TcpTestReceiver(inner.newSession(new TcpTestSession(session)));
@@ -212,17 +212,20 @@ public class TestTcpChannel {
         }
     }
 
-    private static class TcpTestReceiver implements Receiver<Bytestring> {
-        private final Receiver<Integer> inner;
+    private static class TcpTestReceiver implements Send<Bytestring> {
+        private final Send<Integer> inner;
         int last = 0;
         int i = 0;
+        boolean closed = false;
 
-        private TcpTestReceiver(Receiver<Integer> inner) {
+        private TcpTestReceiver(Send<Integer> inner) {
             this.inner = inner;
         }
 
         @Override
-        public void receive(Bytestring bytestring) throws InterruptedException {
+        public boolean send(Bytestring bytestring) throws InterruptedException {
+            if (closed) return false;
+
             byte[] bytes = bytestring.bytes;
 
             for (byte b : bytes) {
@@ -230,28 +233,40 @@ public class TestTcpChannel {
                 i ++;
                 if (i == 4) {
                     i = 0;
-                    inner.receive(last);
+                    if (!inner.send(last)) {
+                        closed = true;
+                        return false;
+                    }
                     last = 0;
                 }
             }
+
+            return true;
+        }
+
+        @Override
+        public void close() {
+            inner.close();
+            closed = true;
         }
     }
 
-    private static class IntegerTestReceiver implements Receiver<Integer> {
-        private final SendChan<Integer>[] send;
+    private static class IntegerTestReceiver implements Send<Integer> {
+        private final Send<Integer>[] send;
         private final Chan<Session<Integer, Integer>> sch;
         private final Session<Integer, Integer> s;
         private final int to;
         private int from = -1;
+        private boolean closed = false;
 
-        private IntegerTestReceiver(Integer to, SendChan<Integer>[] send, Chan<Session<Integer, Integer>> sch, Session<Integer, Integer> s) {
+        private IntegerTestReceiver(Integer to, Send<Integer>[] send, Chan<Session<Integer, Integer>> sch, Session<Integer, Integer> s) {
             this.to = to;
             this.send = send;
             this.sch = sch;
             this.s = s;
         }
 
-        private IntegerTestReceiver(Integer to, int from, SendChan<Integer>[] send) {
+        private IntegerTestReceiver(Integer to, int from, Send<Integer>[] send) {
             this.to = to;
             this.send = send;
             this.from = from;
@@ -260,30 +275,36 @@ public class TestTcpChannel {
         }
 
         @Override
-        public void receive(Integer i) throws InterruptedException {
+        public boolean send(Integer i) throws InterruptedException {
+            if (closed) return false;
 
             if (from == -1) {
                 if (!(i >= 0 && i < 4)) {
                     throw new InterruptedException();
                 }
                 from = i;
-                sch.send(s);
+                return sch.send(s);
             } else {
                 Assert.assertNotNull(send[i]);
 
-                send[i].send(i);
+                return send[i].send(i);
             }
+        }
+
+        @Override
+        public void close() {
+            closed = true;
         }
     }
 
     private static class TestListener implements Listener<Integer, Integer> {
-        private final SendChan<Integer>[] senders;
+        private final Send<Integer>[] senders;
         private final Chan<Session<Integer, Integer>> sch;
         private final int me;
 
         private TestListener(
                 Integer me,
-                SendChan<Integer>[] senders,
+                Send<Integer>[] senders,
                 Chan<Session<Integer, Integer>> sch) {
 
             this.me = me;
@@ -292,7 +313,7 @@ public class TestTcpChannel {
         }
 
         @Override
-        public Receiver<Integer> newSession(Session<Integer, Integer> session)
+        public Send<Integer> newSession(Session<Integer, Integer> session)
                 throws InterruptedException {
 
             return new IntegerTestReceiver(me, senders, sch, session);
@@ -314,7 +335,7 @@ public class TestTcpChannel {
         conn = (Connection<Integer, Integer>[]) new Connection[3];
         peer = (Peer<Integer, Integer>[][]) new Peer[3][3];
         session = (Session<Integer, Integer>[][]) new Session[3][3];
-        rec = (ReceiveChan<Integer>[][]) new ReceiveChan[3][3];
+        rec = (Receive<Integer>[][]) new Receive[3][3];
 
         // Channels for receiving messages [from][to]
         Chan<Integer> chan[][] = (Chan<Integer>[][]) new Chan[3][3];
