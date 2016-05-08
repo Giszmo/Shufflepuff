@@ -162,6 +162,8 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
 
         // Constructor for a connection that is initiated by a remote peer.
         // TODO it would make more sense to have a socket rather than a session here.
+        //
+        // TODO figure out what I meant by that previous TODO note and explain it better.
         public TcpPeer(InetSocketAddress identity, TcpSession session) {
             super(identity);
             this.currentSession = session;
@@ -236,7 +238,7 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
                 // Don't allow sending messages while we're opening or closing the channel.
                 synchronized (lock) { }
 
-                if (socket.isClosed()) {
+                if (socket == null || socket.isClosed()) {
                     return false;
                 }
 
@@ -244,6 +246,8 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
                     socket.getOutputStream().write(header.makeHeader(message.bytes.length).bytes);
                     socket.getOutputStream().write(message.bytes);
                 } catch (IOException e) {
+                    // socket should be closed by throwing an exception.
+                    socket = null;
                     return false;
                 }
 
@@ -309,6 +313,7 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
 
                 } catch (IOException | InterruptedException e) {
                     session.close();
+                    send.close();
                     return;
                 }
             }
