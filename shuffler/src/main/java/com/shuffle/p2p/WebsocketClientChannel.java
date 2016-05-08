@@ -22,8 +22,6 @@ import javax.websocket.ContainerProvider;
 import javax.websocket.DeploymentException;
 import javax.websocket.MessageHandler;
 import javax.websocket.OnClose;
-import javax.websocket.OnMessage;
-import javax.websocket.OnOpen;
 import javax.websocket.Session;
 import javax.websocket.WebSocketContainer;
 
@@ -45,8 +43,6 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
      *  Necessary class to use the javax.websocket library.
      */
 
-    private Listener<URI, Bytestring> globalListener = null;
-
     @ClientEndpoint
     public class WebsocketClientEndpoint {
 
@@ -59,6 +55,11 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
         public Session newSession() throws RuntimeException, DeploymentException, IOException {
             WebSocketContainer container = ContainerProvider.getWebSocketContainer();
             return container.connectToServer(this, this.uri);
+        }
+
+        @OnClose
+        public void onClose(Session userSession, CloseReason reason) {
+            peers.remove(this.uri);
         }
 
     }
@@ -77,7 +78,10 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
             return peer;
         }
 
-        // remove function?
+        public synchronized void remove(URI identity) {
+            peers.remove(identity);
+        }
+
     }
 
     final Peers peers = new Peers();
@@ -270,7 +274,6 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
             if (running) return null;
             running = true;
             openSessions = new OpenSessions();
-            globalListener = listener;
             return new WebsocketConnection();
         }
     }

@@ -51,23 +51,18 @@ public class TestWebsocketChannel {
             }
         };
 
-        Listener<URI, Bytestring> clientListener = new Listener<URI, Bytestring>() {
-            @Override
-            public Receiver<Bytestring> newSession(Session<URI, Bytestring> session) throws InterruptedException {
-                return new Receiver<Bytestring>() {
-                    @Override
-                    public void receive(Bytestring bytestring) throws InterruptedException {
-                        return;
-                    }
-                };
-            }
-        };
-
-        Receiver<Bytestring> clientReceiver = new Receiver<Bytestring>() {
+        final Receiver<Bytestring> clientReceiver = new Receiver<Bytestring>() {
             @Override
             public void receive(Bytestring bytestring) throws InterruptedException {
                 TestWebsocketChannel.this.clientMessage = new String(bytestring.bytes);
                 return;
+            }
+        };
+
+        Listener<URI, Bytestring> clientListener = new Listener<URI, Bytestring>() {
+            @Override
+            public Receiver<Bytestring> newSession(Session<URI, Bytestring> session) throws InterruptedException {
+                return clientReceiver;
             }
         };
 

@@ -46,6 +46,7 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
      */
 
     private Listener<InetAddress, Bytestring> globalListener = null;
+    // static copy of globalListener.
     private static Listener<InetAddress, Bytestring> staticGlobalListener = null;
 
 
@@ -56,6 +57,20 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
     // TODO
     @ServerEndpoint("/")
     public static class WebsocketServerEndpoint{
+
+        /**
+         *
+         * The three variables "listener", "localOpenSessions", and "localPeers" are simply copies
+         * of the static variables "staticGlobalListener", "staticOpenSessions", and "staticPeers",
+         * respectively.  Since WebsocketServerEndpoint MUST be static if it is an inner class, it
+         * can only access outer variables that are also static.  That means if this class needs to
+         * access the non-static variables "peers" or "openSessions", it must have a static copy of
+         * these variables.  Since these are static copies of non-static variables, any instance of
+         * WebsocketServerChannel can alter them.  To ensure that no instance of WebsocketServerChannel
+         * alters these static copies while we are using them, we use a synchronized lock in the open()
+         * method and then copy these static copies in the WebsocketServerEndpoint constructor.
+         *
+         */
 
         Listener<InetAddress, Bytestring> listener;
         OpenSessions localOpenSessions;
@@ -144,6 +159,7 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
     }
 
     private final Peers peers = new Peers();
+    // static copy of peers
     public static Peers staticPeers = null;
 
     class OpenSessions {
@@ -195,6 +211,7 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
     }
 
     private OpenSessions openSessions = null;
+    // static copy of openSessions
     public static OpenSessions staticOpenSessions = null;
 
     public class WebsocketPeer extends FundamentalPeer<InetAddress, Bytestring> {
@@ -274,6 +291,8 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
     private Server server;
     private boolean running = false;
     private final Object lock = new Object();
+    // a static lock
+    private final static Object staticLock = new Object();
 
     public WebsocketServerChannel(
             int port,
@@ -323,7 +342,21 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
         synchronized (lock) {
             if (running) return null;
 
-            synchronized (lock) {
+            /**
+             * We must use a static lock to ensure that no other instances of WebsocketServerChannel
+             * are altering our static "copy" variables (staticOpenSessions, staticGlobalListener,
+             * and staticPeers).
+             */
+            synchronized (staticLock) {
+
+                /**
+                 * We MUST initialize these variables BEFORE server.start() is called.  The start()
+                 * method instantiates a WebsocketServerEndpoint class, which REQUIRES the variables
+                 * staticOpenSessions, staticGlobalListener, and staticPeers to be initialized.
+                 * The variables staticOpenSessions and staticGlobalListener, in turn require
+                 * openSessions and globalListener to be initialized.  If these variables are not
+                 * initialized here, the possibility of unexpected behavior arises.
+                 */
 
                 running = true;
                 openSessions = new OpenSessions();
@@ -339,6 +372,12 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
                         server = new Server(hostName, port, "", new HashMap<String, Object>(), WebsocketServerEndpoint.class);
                         server.start();
                     } catch (DeploymentException e) {
+
+                        /**
+                         * If the server did not start, we can un-initialize the variables that
+                         * WebsocketServerEndpoint requires.
+                         */
+
                         running = false;
                         openSessions = null;
                         globalListener = null;
