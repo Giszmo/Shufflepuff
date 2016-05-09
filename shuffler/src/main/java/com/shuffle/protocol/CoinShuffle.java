@@ -18,7 +18,7 @@ import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
-import com.shuffle.chan.SendChan;
+import com.shuffle.chan.Send;
 import com.shuffle.protocol.blame.Blame;
 import com.shuffle.protocol.blame.BlameException;
 import com.shuffle.protocol.blame.Evidence;
@@ -1085,7 +1085,7 @@ public class CoinShuffle {
             Address change, // Change address. (can be null)
             // If this is not null, the machine is put in this channel so that another thread can
             // query the phase as it runs.
-            SendChan<Phase> chan
+            Send<Phase> chan
     ) throws WaitingException, Matrix, InterruptedException, InvalidParticipantSetException,
             FormatException, IOException, CoinNetworkException {
 
@@ -1140,7 +1140,7 @@ public class CoinShuffle {
      */
     static class CurrentPhase {
 
-        private final SendChan<Phase> ch;
+        private final Send<Phase> ch;
         private Phase phase = Phase.Uninitiated;
 
         // the phase can be accessed concurrently in case we want to update
@@ -1160,7 +1160,7 @@ public class CoinShuffle {
             ch = null;
         }
 
-        public CurrentPhase(SendChan<Phase> ch) throws InterruptedException {
+        public CurrentPhase(Send<Phase> ch) throws InterruptedException {
             if (ch == null) {
                 throw new NullPointerException();
             }

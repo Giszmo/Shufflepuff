@@ -8,12 +8,12 @@
 
 package com.shuffle.mock;
 
+import com.shuffle.chan.Send;
 import com.shuffle.p2p.Channel;
 import com.shuffle.p2p.Connection;
 import com.shuffle.p2p.FundamentalPeer;
 import com.shuffle.p2p.Listener;
 import com.shuffle.p2p.Peer;
-import com.shuffle.p2p.Receiver;
 import com.shuffle.p2p.Session;
 
 import java.util.HashMap;
@@ -81,7 +81,7 @@ public class MockChannel<Q, X> implements Channel<Q, X> {
         @Override
         // Open a session with a mock remote peer. Include a function which is to be
         // called when a X is received.
-        public synchronized Session<Q, X> openSession(Receiver<X> receiver)
+        public synchronized Session<Q, X> openSession(Send<X> send)
                 throws InterruptedException {
             // if there is already an open session, fail.
             if (currentSession != null) {
@@ -101,7 +101,7 @@ public class MockChannel<Q, X> implements Channel<Q, X> {
             }
 
             // Create a new session and register it with the remote peer.
-            MockSession session = this.new MockSession(remote.connect(me, receiver));
+            MockSession session = this.new MockSession(remote.connect(me, send));
 
             // If the session is not open, the connection didn't work for some reason.
             if (session.closed()) {
@@ -114,21 +114,21 @@ public class MockChannel<Q, X> implements Channel<Q, X> {
         }
 
         public class MockSession implements Session<Q, X> {
-            final Receiver<X> receiver;
+            final Send<X> send;
             boolean closed;
 
-            MockSession(Receiver<X> receiver) {
-                this.receiver = receiver;
-                closed = receiver == null;
+            MockSession(Send<X> send) {
+                this.send = send;
+                closed = send == null;
             }
 
             @Override
             public boolean send(X x) throws InterruptedException {
-                if (receiver == null) {
+                if (send == null) {
                     return false;
                 }
 
-                receiver.receive(x);
+                send.send(x);
                 return true;
             }
 
@@ -181,10 +181,10 @@ public class MockChannel<Q, X> implements Channel<Q, X> {
         return this.connection;
     }
 
-    Receiver<X> connect(Q you, Receiver<X> receiver) throws InterruptedException {
+    Send<X> connect(Q you, Send<X> send) throws InterruptedException {
         Thread.sleep(100);
 
-        if (listener == null || receiver == null) {
+        if (listener == null || send == null) {
             return null;
         }
 
@@ -199,7 +199,7 @@ public class MockChannel<Q, X> implements Channel<Q, X> {
             return null;
         }
 
-        peer.setSession(peer.new MockSession(receiver));
+        peer.setSession(peer.new MockSession(send));
 
         return listener.newSession(peer.getSession());
     }

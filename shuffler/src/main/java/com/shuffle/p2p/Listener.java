@@ -8,6 +8,8 @@
 
 package com.shuffle.p2p;
 
+import com.shuffle.chan.Send;
+
 /**
  * Functions to be called by a thread that receives new peers.
  *
@@ -15,5 +17,5 @@ package com.shuffle.p2p;
  */
 public interface Listener<Identity, Message> {
     // Message to call when a new peer is found.
-    Receiver<Message> newSession(Session<Identity, Message> session) throws InterruptedException;
+    Send<Message> newSession(Session<Identity, Message> session) throws InterruptedException;
 }

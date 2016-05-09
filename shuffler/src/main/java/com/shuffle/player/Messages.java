@@ -13,21 +13,21 @@ import com.shuffle.bitcoin.EncryptionKey;
 import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
-import com.shuffle.chan.ReceiveChan;
-import com.shuffle.chan.SendChan;
+import com.shuffle.chan.HistoryReceive;
+import com.shuffle.chan.Receive;
+import com.shuffle.chan.Send;
 import com.shuffle.protocol.FormatException;
 import com.shuffle.protocol.InvalidImplementationError;
 import com.shuffle.protocol.blame.Blame;
 import com.shuffle.protocol.message.MessageFactory;
 import com.shuffle.protocol.message.Phase;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.Deque;
 import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -37,27 +37,28 @@ import java.util.concurrent.TimeUnit;
  * Created by Daniel Krawisz on 12/9/15.
  */
 public class Messages implements MessageFactory {
-    private static final transient Logger log = LogManager.getLogger(Messages.class);
 
-    private final Map<VerificationKey, SendChan<com.shuffle.protocol.message.Packet>> net;
-    private final ReceiveChan<SignedPacket> receive;
-    private final SessionIdentifier session;
-    private final VerificationKey me;
+    final Map<VerificationKey, Send<com.shuffle.player.Packet>> net;
+    private final Receive<SignedPacket> receive;
+    final SessionIdentifier session;
+    final VerificationKey me;
+    final List<Packet> sent = new LinkedList<>();
 
     public Messages(SessionIdentifier session,
                     VerificationKey me,
-                    Map<VerificationKey, SendChan<com.shuffle.protocol.message.Packet>> net,
-                    ReceiveChan<SignedPacket> receive) {
+                    Map<VerificationKey, Send<com.shuffle.player.Packet>> net,
+                    Receive<SignedPacket> receive) {
 
         this.net = net;
         this.session = session;
         this.me = me;
-        this.receive = receive;
+        this.receive = new HistoryReceive<>(receive);
+
     }
 
     @Override
     public com.shuffle.protocol.message.Message make() {
-        return new Message(session, me, net);
+        return new Message(session, me);
     }
 
     @Override
@@ -273,7 +274,7 @@ public class Messages implements MessageFactory {
         }
     }
 
-    class Packet implements com.shuffle.protocol.message.Packet, Serializable {
+    class Packet implements com.shuffle.player.Packet, Serializable {
 
         public final Message message;
         public final Phase phase;
@@ -344,11 +345,18 @@ public class Messages implements MessageFactory {
         @Override
         public void send() throws InterruptedException {
 
-            SendChan<com.shuffle.protocol.message.Packet> chan = net.get(to);
+            Send<com.shuffle.player.Packet> chan = net.get(to);
 
             if (chan == null) return;
 
-            chan.send(this);
+            if (chan.send(this)) {
+                sent.add(this);
+            }
+        }
+
+        @Override
+        public Preliminary preliminary() {
+            return null;
         }
     }
 
@@ -357,12 +365,12 @@ public class Messages implements MessageFactory {
      *
      * Created by Daniel Krawisz on 1/22/16.
      */
-    public static class SignedPacket implements com.shuffle.protocol.message.Packet, Serializable {
+    public static class SignedPacket implements com.shuffle.player.Packet, Serializable {
 
-        public final com.shuffle.protocol.message.Packet packet;
+        public final com.shuffle.player.Packet packet;
         public final Signature signature;
 
-        public SignedPacket(com.shuffle.protocol.message.Packet packet, Signature signature) {
+        public SignedPacket(com.shuffle.player.Packet packet, Signature signature) {
             if (packet == null || signature == null) {
                 throw new NullPointerException();
             }
@@ -420,6 +428,11 @@ public class Messages implements MessageFactory {
         public void send() throws InterruptedException {
             // Message cannot be sent because it is not ours.
         }
+
+        @Override
+        public Preliminary preliminary() {
+            return packet.preliminary();
+        }
     }
 
     public class Message implements com.shuffle.protocol.message.Message, Serializable {
@@ -427,16 +440,13 @@ public class Messages implements MessageFactory {
         public final SessionIdentifier session;
         public final Atom atoms;
         public final VerificationKey from;
-        public final transient Map<VerificationKey, SendChan<com.shuffle.protocol.message.Packet>> net;
 
         public Message(
                 SessionIdentifier session,
-                VerificationKey from,
-                Map<VerificationKey, SendChan<com.shuffle.protocol.message.Packet>> net) {
+                VerificationKey from) {
 
-            if (net == null || from == null || session == null) throw new NullPointerException();
+            if (from == null || session == null) throw new NullPointerException();
 
-            this.net = net;
             atoms = null;
             this.session = session;
             this.from = from;
@@ -445,12 +455,10 @@ public class Messages implements MessageFactory {
         private Message(
                 SessionIdentifier session,
                 VerificationKey from,
-                Map<VerificationKey, SendChan<com.shuffle.protocol.message.Packet>> net,
                 Atom atom) {
 
-            if (net == null || session == null || from == null) throw new NullPointerException();
+            if (session == null || from == null) throw new NullPointerException();
 
-            this.net = net;
             this.from = from;
             atoms = atom;
             this.session = session;
@@ -458,12 +466,10 @@ public class Messages implements MessageFactory {
 
         public Message(SessionIdentifier session,
                        VerificationKey from,
-                       Map<VerificationKey, SendChan<com.shuffle.protocol.message.Packet>> net,
                        Deque atoms) {
 
-            if (net == null || session == null || from == null || atoms == null) throw new NullPointerException();
+            if (session == null || from == null || atoms == null) throw new NullPointerException();
 
-            this.net = net;
             Atom atom = null;
 
             Iterator i = atoms.descendingIterator();
@@ -485,42 +491,42 @@ public class Messages implements MessageFactory {
         public com.shuffle.protocol.message.Message attachAddrs(Deque<Address> addrs) {
             if (addrs == null) throw new NullPointerException();
 
-            Message m = new Message(session, from, net, addrs);
+            Message m = new Message(session, from, addrs);
 
-            return new Message(session, from, net, Messages.Atom.attach(atoms, m.atoms));
+            return new Message(session, from, Messages.Atom.attach(atoms, m.atoms));
         }
 
         @Override
         public com.shuffle.protocol.message.Message attach(EncryptionKey ek) {
             if (ek == null) throw new NullPointerException();
 
-            return new Message(session, from, net, Messages.Atom.attach(atoms, Messages.Atom.make(ek)));
+            return new Message(session, from, Messages.Atom.attach(atoms, Messages.Atom.make(ek)));
         }
 
         @Override
         public com.shuffle.protocol.message.Message attach(Address addr) {
             if (addr == null) throw new NullPointerException();
 
-            return new Message(session, from, net, Messages.Atom.attach(atoms, Messages.Atom.make(addr)));
+            return new Message(session, from, Messages.Atom.attach(atoms, Messages.Atom.make(addr)));
         }
 
         @Override
         public com.shuffle.protocol.message.Message attach(Signature sig) {
             if (sig == null) throw new NullPointerException();
 
-            return new Message(session, from, net, Messages.Atom.attach(atoms, Messages.Atom.make(sig)));
+            return new Message(session, from, Messages.Atom.attach(atoms, Messages.Atom.make(sig)));
         }
 
         @Override
         public com.shuffle.protocol.message.Message attach(Blame blame) {
             if (blame == null) throw new NullPointerException();
 
-            return new Message(session, from, net, Messages.Atom.attach(atoms, Messages.Atom.make(blame)));
+            return new Message(session, from, Messages.Atom.attach(atoms, Messages.Atom.make(blame)));
         }
 
         public com.shuffle.protocol.message.Message hashed() {
 
-            return new Message(session, from, net, Messages.Atom.make(new Messages.SecureHash(this)));
+            return new Message(session, from, Messages.Atom.make(new Messages.SecureHash(this)));
         }
 
         @Override
@@ -556,7 +562,7 @@ public class Messages implements MessageFactory {
 
             if (atoms == null) throw new FormatException();
 
-            return new Message(session, from, net, atoms.next);
+            return new Message(session, from, atoms.next);
         }
 
         @Override

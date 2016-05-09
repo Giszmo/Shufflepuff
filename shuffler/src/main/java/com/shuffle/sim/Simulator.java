@@ -12,7 +12,7 @@ import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.chan.BasicChan;
-import com.shuffle.chan.SendChan;
+import com.shuffle.chan.Send;
 import com.shuffle.player.Messages;
 import com.shuffle.monad.Either;
 import com.shuffle.monad.NaturalSummableFuture;
@@ -21,7 +21,7 @@ import com.shuffle.monad.SummableFutureZero;
 import com.shuffle.monad.SummableMaps;
 import com.shuffle.player.SessionIdentifier;
 import com.shuffle.protocol.blame.Matrix;
-import com.shuffle.protocol.message.Packet;
+import com.shuffle.player.Packet;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
@@ -43,7 +43,7 @@ public final class Simulator {
     }
 
     private static class SimulationInitializer implements InitialState.Initializer {
-        public final Map<VerificationKey, SendChan<Packet>> networks = new HashMap<>();
+        public final Map<VerificationKey, Send<Packet>> networks = new HashMap<>();
         public final SessionIdentifier session;
         public final int capacity;
 
@@ -55,9 +55,10 @@ public final class Simulator {
 
         @Override
         public com.shuffle.protocol.message.MessageFactory messages(SigningKey key) {
-            NetworkSim sim = new NetworkSim(key, new BasicChan<Messages.SignedPacket>(capacity));
+            BasicChan<Messages.SignedPacket> chan = new BasicChan<>(capacity);
+            NetworkSim sim = new NetworkSim(key, chan);
             networks.put(key.VerificationKey(), sim);
-            return new Messages(session, key.VerificationKey(), networks, sim);
+            return new Messages(session, key.VerificationKey(), networks, chan);
         }
     }
 

@@ -10,9 +10,8 @@ package com.shuffle.player;
 
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
-import com.shuffle.chan.ReceiveChan;
-import com.shuffle.chan.SendChan;
-import com.shuffle.protocol.message.Packet;
+import com.shuffle.chan.Receive;
+import com.shuffle.chan.Send;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -27,7 +26,7 @@ import java.util.concurrent.TimeUnit;
  *
  * Created by Daniel Krawisz on 12/5/15.
  */
-public class MockNetwork implements Map<VerificationKey, SendChan<Packet>>, ReceiveChan<Messages.SignedPacket> {
+public class MockNetwork implements Map<VerificationKey, Send<Packet>>, Receive<Messages.SignedPacket> {
 
     public class SentMessage implements Map.Entry<Packet, VerificationKey> {
         private final Packet packet;
@@ -109,11 +108,11 @@ public class MockNetwork implements Map<VerificationKey, SendChan<Packet>>, Rece
     }
 
     @Override
-    public SendChan<Packet> get(final Object o) {
+    public Send<Packet> get(final Object o) {
         if (!(o instanceof VerificationKey)) return null;
 
         if (me.VerificationKey().equals((VerificationKey)o)) {
-            return new SendChan<Packet>() {
+            return new Send<Packet>() {
 
                 @Override
                 public boolean send(Packet packet) throws InterruptedException {
@@ -131,7 +130,7 @@ public class MockNetwork implements Map<VerificationKey, SendChan<Packet>>, Rece
             };
         } else {
 
-            return new SendChan<Packet>() {
+            return new Send<Packet>() {
 
                 @Override
                 public boolean send(Packet packet) throws InterruptedException {
@@ -148,17 +147,17 @@ public class MockNetwork implements Map<VerificationKey, SendChan<Packet>>, Rece
     }
 
     @Override
-    public SendChan<Packet> put(VerificationKey verificationKey, SendChan<Packet> packetSendChan) {
+    public Send<Packet> put(VerificationKey verificationKey, Send<Packet> packetSend) {
         return null;
     }
 
     @Override
-    public SendChan<Packet> remove(Object o) {
+    public Send<Packet> remove(Object o) {
         return null;
     }
 
     @Override
-    public void putAll(Map<? extends VerificationKey, ? extends SendChan<Packet>> map) {
+    public void putAll(Map<? extends VerificationKey, ? extends Send<Packet>> map) {
 
     }
 
@@ -173,12 +172,12 @@ public class MockNetwork implements Map<VerificationKey, SendChan<Packet>>, Rece
     }
 
     @Override
-    public Collection<SendChan<Packet>> values() {
+    public Collection<Send<Packet>> values() {
         return new LinkedList<>();
     }
 
     @Override
-    public Set<Entry<VerificationKey, SendChan<Packet>>> entrySet() {
+    public Set<Entry<VerificationKey, Send<Packet>>> entrySet() {
         return new HashSet<>();
     }
 
@@ -200,7 +199,7 @@ public class MockNetwork implements Map<VerificationKey, SendChan<Packet>>, Rece
 
     @Override
     public Messages.SignedPacket receive(long l, TimeUnit u) throws InterruptedException {
-        com.shuffle.protocol.message.Packet p = received.poll();
+        Packet p = received.poll();
         if (p == null) return null;
         return new Messages.SignedPacket(p, me.makeSignature(p));
     }

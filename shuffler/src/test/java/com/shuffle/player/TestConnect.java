@@ -13,8 +13,8 @@ import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.chan.BasicChan;
 import com.shuffle.chan.Chan;
-import com.shuffle.chan.ReceiveChan;
-import com.shuffle.chan.SendChan;
+import com.shuffle.chan.Receive;
+import com.shuffle.chan.Send;
 import com.shuffle.mock.InsecureRandom;
 import com.shuffle.mock.MockChannel;
 import com.shuffle.mock.MockCrypto;
@@ -51,7 +51,7 @@ public class TestConnect {
 
     public static class ConnectRun implements Runnable {
         private final Channel<Integer, Bytestring> channel;
-        private final SendChan<Messages> net;
+        private final Send<Messages> net;
         private final Connect<Integer> connect;
 
         private final Map<Integer, VerificationKey> keys;
@@ -66,7 +66,7 @@ public class TestConnect {
                 Channel<Integer, Bytestring> channel,
                 Map<Integer, VerificationKey> keys,
                 int timeout, int maxRetries,
-                SendChan<Messages> net) {
+                Send<Messages> net) {
 
             this.me = me;
 
@@ -100,7 +100,7 @@ public class TestConnect {
     public static class ConnectFuture
             implements Future<Summable.SummableElement<Map<Integer, Messages>>> {
         
-        final ReceiveChan<Messages> netChan;
+        final Receive<Messages> netChan;
         SummableMap<Integer, Messages> net = null;
         final int me;
 

@@ -140,7 +140,7 @@ public class TestMailbox {
 
             int expected = (test.success ? 1 : 0);
 
-            Queue<Map.Entry<Packet, VerificationKey>> responses = network.getResponses();
+            Queue<Map.Entry<com.shuffle.player.Packet, VerificationKey>> responses = network.getResponses();
             Assert.assertEquals(
                     String.format(
                             "Recieved %d responses when only expected %d in test case %d",

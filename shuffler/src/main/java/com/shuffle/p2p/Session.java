@@ -8,14 +8,14 @@
 
 package com.shuffle.p2p;
 
-import com.shuffle.chan.SendChan;
+import com.shuffle.chan.Send;
 
 /**
  * The session is an open means of communication between two peers.
  *
  * Created by Daniel Krawisz on 1/25/16.
  */
-public interface Session<Identity, Message> extends SendChan<Message> {
+public interface Session<Identity, Message> extends Send<Message> {
 
     // Whether the session has been closed.
     boolean closed();
