@@ -215,9 +215,9 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
 
     private OpenSessions openSessions = null;
     // static copy of openSessions
-    public static OpenSessions staticOpenSessions = null;
+    private static OpenSessions staticOpenSessions = null;
 
-    public class WebsocketPeer extends FundamentalPeer<InetAddress, Bytestring> {
+    private class WebsocketPeer extends FundamentalPeer<InetAddress, Bytestring> {
 
         WebsocketSession currentSession;
 
@@ -235,7 +235,7 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
         }
 
 
-        public class WebsocketSession implements com.shuffle.p2p.Session<InetAddress, Bytestring> {
+        private class WebsocketSession implements com.shuffle.p2p.Session<InetAddress, Bytestring> {
             javax.websocket.Session session;
 
             public WebsocketSession(javax.websocket.Session session) throws IOException {

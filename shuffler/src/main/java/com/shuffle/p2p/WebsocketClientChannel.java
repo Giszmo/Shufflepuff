@@ -140,7 +140,7 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
     private OpenSessions openSessions = null;
 
     // Class definition for representation of a particular websocket peer.
-    public class WebsocketPeer extends FundamentalPeer<URI, Bytestring> {
+    private class WebsocketPeer extends FundamentalPeer<URI, Bytestring> {
 
         WebsocketSession currentSession;
 
@@ -193,7 +193,7 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
         }
 
         // Encapsulates a particular websocket session.
-        public class WebsocketSession implements com.shuffle.p2p.Session<URI, Bytestring> {
+        private class WebsocketSession implements com.shuffle.p2p.Session<URI, Bytestring> {
             javax.websocket.Session session;
 
             public WebsocketSession(javax.websocket.Session session) throws IOException {
