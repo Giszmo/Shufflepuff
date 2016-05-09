@@ -8,6 +8,8 @@
 
 package com.shuffle.p2p;
 
+import com.shuffle.chan.Send;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -75,7 +77,7 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
         Listener<InetAddress, Bytestring> listener;
         OpenSessions localOpenSessions;
         Peers localPeers;
-        HashMap<Session, Receiver> receiveMap;
+        HashMap<Session, Send> receiveMap;
 
         public WebsocketServerEndpoint() {
             listener = staticGlobalListener;
@@ -101,15 +103,15 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
             }
 
             WebsocketPeer.WebsocketSession session = localOpenSessions.putOpenSession(identity, userSession);
-            Receiver<Bytestring> receiver = listener.newSession(session);
+            Send<Bytestring> receiver = listener.newSession(session);
             receiveMap.put(userSession, receiver);
         }
 
         @OnMessage
         public void onMessage(byte[] message, Session userSession) throws InterruptedException {
             Bytestring bytestring = new Bytestring(message);
-            Receiver<Bytestring> receiver = receiveMap.get(userSession);
-            receiver.receive(bytestring);
+            Send<Bytestring> receiver = receiveMap.get(userSession);
+            receiver.send(bytestring);
         }
 
         // Callback for when a peer disconnects from the WebsocketServer
@@ -133,6 +135,7 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
 
             localOpenSessions.remove(identity);
             localPeers.remove(identity);
+            receiveMap.get(userSession).close();
             receiveMap.remove(userSession);
         }
 
@@ -227,7 +230,7 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
 
         @Override
         public synchronized com.shuffle.p2p.Session<InetAddress, Bytestring> openSession(
-                final Receiver<Bytestring> receiver) {
+                final Send<Bytestring> receiver) {
             return null;
         }
 

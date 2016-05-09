@@ -8,6 +8,8 @@
 
 package com.shuffle.p2p;
 
+import com.shuffle.chan.Send;
+
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -40,28 +42,36 @@ public class TestWebsocketChannel {
 
         Listener<InetAddress, Bytestring> serverListener = new Listener<InetAddress, Bytestring>() {
             @Override
-            public Receiver<Bytestring> newSession(com.shuffle.p2p.Session<InetAddress, Bytestring> session) throws InterruptedException {
-                return new Receiver<Bytestring>() {
+            public Send<Bytestring> newSession(com.shuffle.p2p.Session<InetAddress, Bytestring> session) throws InterruptedException {
+                return new Send<Bytestring>() {
                     @Override
-                    public void receive(Bytestring bytestring) throws InterruptedException {
+                    public boolean send(Bytestring bytestring) throws InterruptedException {
                         TestWebsocketChannel.this.serverMessage = new String(bytestring.bytes);
-                        return;
+                        return true;
+                    }
+
+                    public void close() {
+
                     }
                 };
             }
         };
 
-        final Receiver<Bytestring> clientReceiver = new Receiver<Bytestring>() {
+        final Send<Bytestring> clientReceiver = new Send<Bytestring>() {
             @Override
-            public void receive(Bytestring bytestring) throws InterruptedException {
+            public boolean send(Bytestring bytestring) throws InterruptedException {
                 TestWebsocketChannel.this.clientMessage = new String(bytestring.bytes);
-                return;
+                return true;
+            }
+
+            public void close() {
+
             }
         };
 
         Listener<URI, Bytestring> clientListener = new Listener<URI, Bytestring>() {
             @Override
-            public Receiver<Bytestring> newSession(Session<URI, Bytestring> session) throws InterruptedException {
+            public Send<Bytestring> newSession(Session<URI, Bytestring> session) throws InterruptedException {
                 return clientReceiver;
             }
         };
