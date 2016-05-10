@@ -132,7 +132,7 @@ public class TestWebsocketChannel {
     }
 
     @After
-    public void shutdown() {
+    public void shutdown() throws InterruptedException {
         serverSession.close();
         clientSession.close();
         serverConn.close();

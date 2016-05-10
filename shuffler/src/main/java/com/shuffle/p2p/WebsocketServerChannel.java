@@ -116,7 +116,7 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
 
         // Callback for when a peer disconnects from the WebsocketServer
         @OnClose
-        public void onClose(Session userSession, CloseReason reason) {
+        public void onClose(Session userSession, CloseReason reason) throws InterruptedException {
 
             String sessionIp = ((TyrusSession)userSession).getRemoteAddr();
             InetAddress identity;
