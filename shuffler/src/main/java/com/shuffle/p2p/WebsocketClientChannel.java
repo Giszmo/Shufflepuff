@@ -14,7 +14,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -25,7 +24,6 @@ import javax.websocket.ContainerProvider;
 import javax.websocket.DeploymentException;
 import javax.websocket.MessageHandler;
 import javax.websocket.OnClose;
-import javax.websocket.OnOpen;
 import javax.websocket.Session;
 import javax.websocket.WebSocketContainer;
 
@@ -41,16 +39,15 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
  * A manager for websocket connections.
  */
 
-public class WebsocketChannel implements Channel<URI, Bytestring> {
+public class WebsocketClientChannel implements Channel<URI, Bytestring> {
 
     /**
      *  Necessary class to use the javax.websocket library.
      */
 
     @ClientEndpoint
-    private class WebsocketClientEndpoint {
+    public class WebsocketClientEndpoint {
 
-        Session userSession = null;
         URI uri;
 
         public WebsocketClientEndpoint(URI endpointUri) {
@@ -62,15 +59,11 @@ public class WebsocketChannel implements Channel<URI, Bytestring> {
             return container.connectToServer(this, this.uri);
         }
 
-        @OnOpen
-        public void onOpen(Session userSession) {
-            this.userSession = userSession;
-        }
-
         @OnClose
         public void onClose(Session userSession, CloseReason reason) {
-            this.userSession = null;
+            peers.remove(this.uri);
         }
+
     }
 
     // Only one object representing each peer is allowed at a time.
@@ -81,10 +74,16 @@ public class WebsocketChannel implements Channel<URI, Bytestring> {
         public synchronized WebsocketPeer get(URI identity) {
             WebsocketPeer peer = peers.get(identity);
             if (peer == null) {
-                peer = peers.put(identity, new WebsocketPeer(identity));
+                peer = new WebsocketPeer(identity);
+                peers.put(identity, peer);
             }
             return peer;
         }
+
+        public synchronized void remove(URI identity) {
+            peers.remove(identity);
+        }
+
     }
 
     final Peers peers = new Peers();
@@ -103,7 +102,7 @@ public class WebsocketChannel implements Channel<URI, Bytestring> {
 
             WebsocketPeer.WebsocketSession openSession = openSessions.get(identity);
             if (openSession != null) {
-                if (!openSession.closed()) {
+                if (openSession.session.isOpen()) {
                     return null;
                 }
 
@@ -117,7 +116,9 @@ public class WebsocketChannel implements Channel<URI, Bytestring> {
                 return null;
             }
 
-            return openSessions.put(identity, session);
+            openSessions.put(identity, session);
+
+            return session;
         }
 
         public WebsocketPeer.WebsocketSession get(URI identity) {
@@ -136,10 +137,10 @@ public class WebsocketChannel implements Channel<URI, Bytestring> {
 
     }
 
-    OpenSessions openSessions = null;
+    private OpenSessions openSessions = null;
 
     // Class definition for representation of a particular websocket peer.
-    public class WebsocketPeer extends FundamentalPeer<URI, Bytestring> {
+    private class WebsocketPeer extends FundamentalPeer<URI, Bytestring> {
 
         WebsocketSession currentSession;
 
@@ -148,16 +149,10 @@ public class WebsocketChannel implements Channel<URI, Bytestring> {
             super(identity);
         }
 
-        private WebsocketPeer setSession(javax.websocket.Session session) throws IOException {
-            currentSession = new WebsocketSession(session);
-            return this;
-        }
-
-        WebsocketPeer.WebsocketSession newSession() throws DeploymentException {
-            URI identity = identity();
+        private WebsocketPeer.WebsocketSession newSession() throws DeploymentException {
             try {
-                return new WebsocketPeer(identity).new
-                        WebsocketSession(new WebsocketClientEndpoint(identity).newSession());
+                currentSession = this.new WebsocketSession(new WebsocketClientEndpoint(identity()).newSession());
+                return currentSession;
             } catch (IOException e) {
                 return null;
             }
@@ -178,11 +173,11 @@ public class WebsocketChannel implements Channel<URI, Bytestring> {
             }
 
             final WebsocketSession session = openSessions.putNewSession(identity(), this);
+
             if (session == null) {
                 return null;
             }
 
-            // if the session receives a message, it is passed to the receiver.
             session.session.addMessageHandler(new MessageHandler.Whole<byte[]>() {
                 public void onMessage(byte[] message) {
                     try {
@@ -198,7 +193,7 @@ public class WebsocketChannel implements Channel<URI, Bytestring> {
         }
 
         // Encapsulates a particular websocket session.
-        public class WebsocketSession implements com.shuffle.p2p.Session<URI, Bytestring> {
+        private class WebsocketSession implements com.shuffle.p2p.Session<URI, Bytestring> {
             javax.websocket.Session session;
 
             public WebsocketSession(javax.websocket.Session session) throws IOException {
@@ -253,7 +248,7 @@ public class WebsocketChannel implements Channel<URI, Bytestring> {
     private boolean running = false;
     private final Object lock = new Object();
 
-    public WebsocketChannel() {
+    public WebsocketClientChannel() {
 
     }
 
