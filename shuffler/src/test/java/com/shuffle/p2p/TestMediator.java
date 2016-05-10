@@ -2,6 +2,7 @@ package com.shuffle.p2p;
 
 import com.shuffle.chan.BasicChan;
 import com.shuffle.chan.Chan;
+import com.shuffle.chan.Receive;
 import com.shuffle.chan.Send;
 import com.shuffle.mock.MockChannel;
 
@@ -12,6 +13,8 @@ import org.junit.Test;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by Daniel Krawisz on 5/3/16.
@@ -31,49 +34,26 @@ import java.util.Map;
                                                    Map<Integer, String> names;
            Map<String, MediatorClientChannel<String, Integer, Integer>> clients;
                                Map<String, Connection<String, Integer>> conn;
-                                Map<String, Map<String, Chan<Integer>>> receivers;
+                                Map<String, Map<String, Chan<Integer>>> msgs;
                      Map<String, Map<String, Session<String, Integer>>> sessions;
 
                                      Mediator<String, Integer, Integer> mediator;
 
-                                                            class TestSend implements Send<Integer> {
+                                                            private Chan<Integer> getChan(String from, String to) {
 
-                                               private final Send<Integer> ch;
-
-                                                                TestSend(String from, String to) {
-
-                                         Map<String, Chan<Integer>> r = receivers.get(from);
-                                                                    if (r == null) throw new IllegalArgumentException();
-
-                                                      Chan<Integer> ch = r.get(to);
-                                                                    if (ch == null) throw new IllegalArgumentException();
-
-                                                                    this.ch = ch;
+                                     Map<String, Chan<Integer>> r = msgs.get(from);
+                                                                if (r == null) {
+                                                                    r = new HashMap<>();
+                                                                    msgs.put(from, r);
                                                                 }
 
-                                                                @Override
-                                                 public boolean send(Integer integer) throws InterruptedException {
-                                                                    return ch.send(integer);
+                                                  Chan<Integer> ch = r.get(to);
+                                                                if (ch == null) {
+                                                                    ch = new BasicChan<>(1);
+                                                                    r.put(to, ch);
                                                                 }
 
-                                                                @Override
-                                                    public void close() throws InterruptedException {
-                                                                    ch.close();
-                                                                }
-                                                            }
-
-                                                            class DummyTestReceiver implements Send<Integer> {
-                                                                boolean open = true;
-
-                                                                @Override
-                                                 public boolean send(Integer integer) throws InterruptedException {
-                                                                    return open;
-                                                                }
-
-                                                                @Override
-                                                    public void close() {
-                                                                    open = false;
-                                                                }
+                                                                return ch;
                                                             }
 
                                                             class TestListener implements Listener<String, Integer> {
@@ -97,7 +77,7 @@ import java.util.Map;
                                                              String name = session.peer().identity();
                                                                     openSessions.put(name, session);
 
-                                                                    return new TestSend(name, me);
+                                                                    return getChan(me, name);
                                                                 }
                                                             }
 
@@ -108,7 +88,7 @@ import java.util.Map;
                                                                 clients   = new HashMap<>();
                                                                 sessions  = new HashMap<>();
                                                                 conn      = new HashMap<>();
-                                                                receivers = new HashMap<>();
+                                                                msgs      = new HashMap<>();
                                                                 mockConn  = new HashMap<>();
 
                                                                 // Three peers and one mediator.
@@ -120,16 +100,6 @@ import java.util.Map;
                                                                 names.put(2, "Larry");
                                                                 names.put(3, "Curly");
 
-                                                                // Set up receiver channels.
-                                                                for (String from : names.values()) {
-
-                                         Map<String, Chan<Integer>> receive = new HashMap<>();
-                                                                    receivers.put(from, receive);
-
-                                                                    for (String to : names.values())
-                                                                        receive.put(to, new BasicChan<Integer>(7));
-                                                                }
-
                                                                 mediator = new Mediator<>(hosts.get(0));
 
                                                                 // Now connect the clients to the mediator server.
@@ -139,10 +109,13 @@ import java.util.Map;
 
            MockChannel<Integer, Mediator.Envelope<String, Integer>> host = hosts.get(i);
 
+                                                                    // Make a new MediatorClientChannel using the MockChannel connected
+                                                                    // to the Mediator.
                     MediatorClientChannel<String, Integer, Integer> client = new MediatorClientChannel<>(names.get(i), host.getPeer(0));
 
                                                                     clients.put(name, client);
                               Map<String, Session<String, Integer>> openSessions = new HashMap<>();
+                                                                    // Fill sessions with empty map.
                                                                     sessions.put(name, openSessions);
 
                                                                     // Open client.
@@ -179,7 +152,7 @@ import java.util.Map;
 
                                                                 try {
                                                                     // Open session.
-                                           Session<String, Integer> ss = clients.get(from).getPeer(to).openSession(new DummyTestReceiver());
+                                           Session<String, Integer> ss = clients.get(from).getPeer(to).openSession(getChan(from, to));
 
                                                                     Assert.assertNull(ss);
 
@@ -188,31 +161,43 @@ import java.util.Map;
                                                                 }
                                                             }
 
-                                             public boolean openSessionSucceed(String from, String to) throws InterruptedException {
+                                                            private class NetworkEdge {
+                                                                private final String a, b;
 
-                                                                try {
+                                                                public final Session<String, Integer> ab;
+                                                                public final Session<String, Integer> ba;
+
+                                                                private NetworkEdge(String a, String b) throws InterruptedException {
+
+                                                                    if (a == null || b == null) {
+                                                                        throw new NullPointerException();
+                                                                    }
+
+                                                                    this.a = a;
+                                                                    this.b = b;
+
                                                                     // Open session.
-                                           Session<String, Integer> ss = clients.get(from).getPeer(to).openSession(new TestSend(from, to));
+                                                                    ab = clients.get(a).getPeer(b).openSession(getChan(a, b));
 
-                                                                    if (ss == null) {
+                                                                    if (ab == null) {
                                                                         Assert.fail("Null session returned; expected success.");
-                                                                        return false;
+                                                                        throw new IllegalArgumentException();
                                                                     }
 
                                                                     // Session should be open.
-                                                                    if (ss.closed()) {
+                                                                    if (ab.closed()) {
                                                                         Assert.fail("Session is closed.");
-                                                                        return true;
+                                                                        throw new IllegalArgumentException();
                                                                     }
 
                                                                     // Session should exist in openSessions.
-                                                                    Assert.assertFalse(sessions.get(to).get(from).closed());
-                                                                } catch (NullPointerException | IllegalArgumentException e) {
-                                                                    Assert.fail("Session not opened properly.");
-                                                                    return false;
+                                                                    ba = sessions.get(b).get(a);
+                                                                    if (ba == null) {
+                                                                        Assert.fail("Null session found.");
+                                                                        Assert.fail();
+                                                                    }
+                                                                    Assert.assertFalse(ba.closed());
                                                                 }
-
-                                                                return true;
                                                             }
 
                                                             @Test
@@ -222,12 +207,45 @@ import java.util.Map;
                                                                 openSessionFail("Moe", "Shemp");
 
                                                                 // Moe opens a session to Larry.
-                                                                openSessionSucceed("Moe", "Larry");
+                                                                new NetworkEdge("Moe", "Larry");
+
+                                                                openSessionFail("Moe", "Larry");
+
+                                                                openSessionFail("Larry", "Moe");
+
+                                                                new NetworkEdge("Moe", "Curly");
+
+                                                                new NetworkEdge("Curly", "Larry");
+                                                            }
+
+                                                            Integer msgNo = 73;
+
+                                               private void sendMessage(String a, String b, Session<String, Integer> ab) throws InterruptedException {
+
+                                                                // Send a message from A to B.
+
+                                                                System.out.println("About to send message from " + a + " to " + b);
+                                                                ab.send(++msgNo);
+                                                                Assert.assertEquals(msgNo, getChan(b, a).receive());
+
+
+                                                            }
+
+                                                public void sendMessages(NetworkEdge ab) throws InterruptedException {
+                                                                sendMessage(ab.a, ab.b, ab.ab);
+                                                                sendMessage(ab.b, ab.a, ab.ba);
+
                                                             }
 
                                                             @Test
-                                                            public void TestSendMessage() {
-                                                                // TODO
+                                                            public void TestSendMessage() throws InterruptedException {
+                                                                NetworkEdge ml = new NetworkEdge("Moe", "Larry");
+
+                                                                NetworkEdge mc = new NetworkEdge("Moe", "Curly");
+
+                                                                sendMessages(ml);
+
+                                                                sendMessages(mc);
                                                             }
 
                                                             @After

@@ -111,4 +111,10 @@ public class BasicChan<X> implements Chan<X> {
     public boolean closed() {
         return receiveClosed;
     }
+
+    @Override
+    public String toString() {
+        // Oh my god java sucks so bad. I can't even print the type name of X here? I think that's ridiculous.
+        return "chan{?}";
+    }
 }

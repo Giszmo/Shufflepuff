@@ -101,6 +101,31 @@ public class Mediator<Name extends Comparable<Name>, Address, Payload> implement
             register = false;
             payload = null;
         }
+
+        @Override
+        public String toString() {
+            return "[ " + from.toString() + messageContents() + " ]";
+        }
+
+        private String messageContents() {
+            if (register) {
+                return " registers";
+            }
+
+            if (openSessionRequest) {
+                return " -> " + to;
+            }
+
+            if (openSessionResponse) {
+                return " <- " + to;
+            }
+
+            if (closeSession) {
+                return " <- " + to;
+            }
+
+            return " >> " + to + " : " + payload;
+        }
     }
 
     private static class VirtualConnection<Name extends Comparable<Name>>

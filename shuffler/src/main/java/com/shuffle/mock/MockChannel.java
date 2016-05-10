@@ -126,6 +126,7 @@ public class MockChannel<Q, X> implements Channel<Q, X> {
 
             @Override
             public boolean send(X x) throws InterruptedException {
+                System.out.println("(mock) Sending message " + x);
                 return !closed && send.send(x);
             }
 

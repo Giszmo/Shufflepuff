@@ -284,33 +284,41 @@ public class MediatorClientChannel<Name, Address, Payload> implements Channel<Na
         public boolean send(Mediator.Envelope<Name, Payload> envelope) throws InterruptedException {
 
             synchronized (lock) {
+                System.out.println(me + " receives " + envelope);
+
                 if (session == null) return false;
+                System.out.println(me + " receives A");
 
                 if (!me.equals(envelope.to)) {
                     return false;
                 }
+                System.out.println(me + " receives B");
 
                 // Is this a regular message?
                 Send<Payload> r = openSessions.get(envelope.from);
                 if (r != null && envelope.payload != null) {
-
+                    System.out.println(me + " passes on regular message");
                     return r.send(envelope.payload);
                 }
+                System.out.println(me + " receives C");
 
                 // Is this a request to open a session?
                 if (envelope.openSessionRequest) {
                     return openSessions.openRespond(envelope.from, listener);
                 }
+                System.out.println(me + " receives D");
 
                 // Is this a response from the server to an open session request?
                 if (envelope.openSessionResponse) {
                     return openSessions.openComplete(envelope.from);
                 }
+                System.out.println(me + " receives E");
 
                 // Is it a close session message?
                 if (envelope.closeSession) {
                     return openSessions.remove(envelope.from);
                 }
+                System.out.println(me + " receives ");
 
                 return false;
             }
