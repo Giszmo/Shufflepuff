@@ -1,19 +1,18 @@
 package com.shuffle.bitcoin.impl;
 
 import com.shuffle.bitcoin.BitcoinCrypto;
-import com.shuffle.bitcoin.CryptographyError;
 import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
-import com.shuffle.protocol.Packet;
+import com.shuffle.protocol.message.Packet;
 
 import org.bitcoinj.core.ECKey;
 
 /**
  * Created by conta on 10.03.16.
  */
-public class SigningKeyImpl extends SigningKey {
+public class SigningKeyImpl implements SigningKey {
 
    ECKey verificationKey;
    BitcoinCrypto bitcoinCrypto = new BitcoinCrypto();
@@ -37,9 +36,10 @@ public class SigningKeyImpl extends SigningKey {
    }
 
    @Override
-   public Signature makeSignature(Packet p) throws CryptographyError {
+   public Signature makeSignature(Packet p) {
       return null;
    }
+
 
    @Override
    public int compareTo(Object o) {
