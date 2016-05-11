@@ -7,6 +7,15 @@ import com.shuffle.bitcoin.EncryptionKey;
 import com.shuffle.protocol.FormatException;
 
 import org.bitcoinj.core.ECKey;
+import org.spongycastle.util.encoders.Hex;
+
+import java.nio.charset.StandardCharsets;
+import java.security.Key;
+import java.security.KeyFactory;
+import java.security.PrivateKey;
+import java.security.spec.KeySpec;
+
+import javax.crypto.Cipher;
 
 
 /**
@@ -25,21 +34,37 @@ public class DecryptionKeyImpl implements DecryptionKey {
       this.encryptionKey = key.getPubKey();
    }
 
-   @Override
-   public EncryptionKey EncryptionKey() {
-      return new EncryptionKeyImpl(key);
+   public java.lang.String toString() {
+      return this.key.toString();
    }
 
-   //not sure if that is meant to be passing a Message m?
+   @Override
+   public EncryptionKey EncryptionKey() {
+      return new EncryptionKeyImpl(key.getPubKey());
+   }
+
+
    @Override
    public Address decrypt(Address m) throws FormatException {
-      String input = m.toString();
+      java.lang.String input = m.toString();
       if (bitcoinCrypto.isValidAddress(input)) {
          return new AddressImpl(input);
       } else {
-         // todo: string is encoded bits of address
-         return null;
+         try {
+            KeyFactory kf = KeyFactory.getInstance("ECIES");
+            PrivateKey privateKey = kf.generatePrivate(kf.getKeySpec((Key) key, KeySpec.class));
 
+            //encrypt cipher
+            Cipher cipher = Cipher.getInstance("ECIES");
+            cipher.init(Cipher.DECRYPT_MODE, privateKey);
+            byte[] bytes = m.toString().getBytes(StandardCharsets.UTF_8);
+            byte[] decrypted = cipher.doFinal(bytes);
+            return new AddressImpl(Hex.toHexString(decrypted));
+
+         } catch (Exception e) {
+            e.printStackTrace();
+
+         }
       }
    }
 }

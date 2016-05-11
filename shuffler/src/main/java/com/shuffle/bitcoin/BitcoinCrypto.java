@@ -2,20 +2,18 @@ package com.shuffle.bitcoin;
 
 import com.shuffle.bitcoin.impl.DecryptionKeyImpl;
 import com.shuffle.bitcoin.impl.SigningKeyImpl;
-import com.shuffle.p2p.Bytestring;
 import com.shuffle.protocol.InvalidImplementationError;
 
+import org.bitcoinj.core.Address;
 import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.crypto.HDUtils;
-import org.bitcoinj.crypto.KeyCrypter;
 import org.bitcoinj.kits.WalletAppKit;
 import org.bitcoinj.net.discovery.DnsDiscovery;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.KeyChain;
-import org.spongycastle.crypto.params.KeyParameter;
 
 import java.io.File;
 import java.security.KeyPair;
@@ -31,7 +29,7 @@ public class BitcoinCrypto implements Crypto {
 
    // Figure out which network we should connect to. Each one gets its own set of files.
    NetworkParameters params = TestNet3Params.get();
-   String fileprefix = "_cosh";
+   String fileprefix = "_shuffle";
    WalletAppKit kit;
 
 
@@ -52,7 +50,6 @@ public class BitcoinCrypto implements Crypto {
    }
 
    // create derivation path for shuffle keys
-   HDUtils hdUtils = new HDUtils();
    String path = HDUtils.formatPath(HDUtils.parsePath("ShuffleAuth/"));
    int decKeyCounter = 0;
 
@@ -69,13 +66,12 @@ public class BitcoinCrypto implements Crypto {
 
 
    public boolean isValidAddress(String address) {
-      org.bitcoinj.core.Address paddress;
       try {
-         paddress = new org.bitcoinj.core.Address(params, address);
+         new Address(params, address);
+         return true;
       } catch (AddressFormatException e) {
          return false;
       }
-      return true;
    }
 
    private KeyPairGenerator getKeyPGen() {
@@ -158,18 +154,6 @@ public class BitcoinCrypto implements Crypto {
     * Dave ⟶ everybody: D', B', C', A'
     **/
 
-
-   public Bytestring hash(com.shuffle.player.Messages.Message m) throws InvalidImplementationError {
-
-       KeyCrypter keyCrypter = kit.wallet().getKeyCrypter();
-       SigningKey sk = makeSigningKey();
-
-      KeyParameter keyParameter = keyCrypter.deriveKey(sk.toString());
-       String mInputString = m.toString();
-      byte[] enc = keyCrypter.encrypt(mInputString.getBytes(), keyParameter).encryptedBytes;
-      Bytestring encString = new Bytestring(enc);
-      return encString;
-    }
 
 
 }

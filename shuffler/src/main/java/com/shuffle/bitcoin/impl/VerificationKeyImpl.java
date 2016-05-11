@@ -20,11 +20,14 @@ public class VerificationKeyImpl implements VerificationKey {
    Address address;
    BitcoinCrypto bitcoinCrypto = new BitcoinCrypto();
 
-   public VerificationKeyImpl(ECKey ecKey) {
-      this.ecKey = ecKey;
-      this.vKey = ecKey.getPubKey();
+   public VerificationKeyImpl(byte[] ecKey) {
+      this.ecKey = ECKey.fromPublicOnly(ecKey);
+      this.vKey = this.ecKey.getPubKey();
    }
 
+   public String toString() {
+      return this.vKey.toString();
+   }
 
    @Override
    public boolean verify(Transaction t, Signature sig) throws InvalidImplementationError {

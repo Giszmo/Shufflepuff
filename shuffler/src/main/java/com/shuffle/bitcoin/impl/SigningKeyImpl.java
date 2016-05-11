@@ -15,21 +15,24 @@ import org.bitcoinj.core.ECKey;
  */
 public class SigningKeyImpl extends SigningKey {
 
-   ECKey privateKey;
+   ECKey verificationKey;
    BitcoinCrypto bitcoinCrypto = new BitcoinCrypto();
 
    public SigningKeyImpl(org.bitcoinj.core.ECKey ecKey) {
-      this.privateKey = ecKey;
+      this.verificationKey = ecKey;
    }
 
-
-   @Override
-   public VerificationKey VerificationKey() throws CryptographyError {
-      return new VerificationKeyImpl(privateKey);
+   public String toString() {
+      return this.verificationKey.toString();
    }
 
    @Override
-   public Signature makeSignature(Transaction t) throws CryptographyError {
+   public VerificationKey VerificationKey() {
+      return new VerificationKeyImpl(verificationKey.getPubKey());
+   }
+
+   @Override
+   public Signature makeSignature(Transaction t) {
       return null;
    }
 
@@ -44,7 +47,7 @@ public class SigningKeyImpl extends SigningKey {
          throw new IllegalArgumentException("unable to compare with other SingingKey");
       }
       //get netParams to create correct address and check by address.
-      org.bitcoinj.core.Address a = ((SigningKeyImpl) o).privateKey.toAddress(bitcoinCrypto.getParams());
+      org.bitcoinj.core.Address a = ((SigningKeyImpl) o).verificationKey.toAddress(bitcoinCrypto.getParams());
       return a.compareTo(((org.bitcoinj.core.Address) o));
    }
 }

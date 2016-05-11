@@ -27,6 +27,10 @@ public class AddressImpl implements Address {
       this.address = address1;
    }
 
+   public String toString() {
+      return this.address.toString();
+   }
+
    @Override
    public int compareTo(Address o) {
       if (!(o instanceof AddressImpl)) {
