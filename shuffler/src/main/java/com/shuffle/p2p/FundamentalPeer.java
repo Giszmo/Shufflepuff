@@ -12,7 +12,8 @@ import com.shuffle.chan.Send;
 
 /**
  * An implementation of Peer which is good for implementations which do not contain
- * other Peer objects, ie, they are fundamental.
+ * other Peer objects, ie, they are fundamental. For example, it is used in TcpChannel and
+ * the websocket channels.
  *
  * Created by Daniel Krawisz on 3/18/16.
  */

@@ -151,7 +151,7 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
     private OpenSessions openSessions = null;
 
     // Class definition for representation of a particular tcppeer.
-    public class TcpPeer extends FundamentalPeer<InetSocketAddress, Bytestring> {
+    private class TcpPeer extends FundamentalPeer<InetSocketAddress, Bytestring> {
 
         TcpSession currentSession;
 
@@ -220,7 +220,7 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
         }
 
         // Encapsulates a particular tcp session.
-        public class TcpSession implements Session<InetSocketAddress, Bytestring> {
+        private class TcpSession implements Session<InetSocketAddress, Bytestring> {
             Socket socket;
             InputStream in;
 
@@ -396,6 +396,7 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
     }
 
     private class TcpConnection implements Connection<InetSocketAddress, Bytestring> {
+        private boolean closed = false;
 
         @Override
         public InetSocketAddress identity() {
@@ -405,7 +406,10 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
         @Override
         // TODO should close all connections and stop listening.
         public void close() {
+            if (closed) return;
+
             synchronized (lock) {
+                closed = true;
                 if (server != null) {
                     try {
                         server.close();
@@ -417,6 +421,11 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
                     }
                 }
             }
+        }
+
+        @Override
+        public boolean closed() {
+            return closed;
         }
     }
 

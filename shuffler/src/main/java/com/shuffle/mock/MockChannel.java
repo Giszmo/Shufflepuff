@@ -17,8 +17,6 @@ import com.shuffle.p2p.Peer;
 import com.shuffle.p2p.Session;
 
 import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -58,6 +56,11 @@ public class MockChannel<Q, X> implements Channel<Q, X> {
 
             connection = null;
             listener = null;
+        }
+
+        @Override
+        public boolean closed() {
+            return connection == null;
         }
     }
 

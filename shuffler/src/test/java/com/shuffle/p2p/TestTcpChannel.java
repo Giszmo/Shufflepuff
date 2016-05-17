@@ -188,6 +188,11 @@ public class TestTcpChannel {
             public void close() throws InterruptedException {
                 conn.close();
             }
+
+            @Override
+            public boolean closed() {
+                return conn.closed();
+            }
         }
 
         @Override

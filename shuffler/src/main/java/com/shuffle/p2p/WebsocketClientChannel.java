@@ -253,6 +253,7 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
     }
 
     private class WebsocketConnection implements Connection<URI, Bytestring> {
+        private boolean closed = false;
 
         @Override
         public URI identity() {
@@ -262,11 +263,19 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
 
         @Override
         public void close() {
+            if (closed) return;
+
             synchronized (lock) {
+                closed = true;
                 openSessions.closeAll();
                 openSessions = null;
                 running = false;
             }
+        }
+
+        @Override
+        public boolean closed() {
+            return closed;
         }
     }
 

@@ -260,6 +260,7 @@ public class MediatorClientChannel<Name, Address, Payload> implements Channel<Na
     }
 
     private class MediatorClientConnection implements Connection<Name, Payload> {
+        private boolean closed = false;
 
         @Override
         public Name identity() {
@@ -268,7 +269,16 @@ public class MediatorClientChannel<Name, Address, Payload> implements Channel<Na
 
         @Override
         public void close() throws InterruptedException {
+            if (closed) return;
+
+            closed = true;
+
             MediatorClientChannel.this.close();
+        }
+
+        @Override
+        public boolean closed() {
+            return closed;
         }
     }
 

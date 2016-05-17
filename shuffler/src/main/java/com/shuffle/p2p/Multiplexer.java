@@ -12,7 +12,8 @@ import com.shuffle.chan.Send;
 import com.shuffle.monad.Either;
 
 /**
- * A channel that is the product of two channels.
+ * This channel takes two channels that use two different types as addresses and makes a "product"
+ * channel, with addresses of type Either<X, Y>
  *
  * Created by Daniel Krawisz on 1/31/16.
  */
@@ -161,6 +162,12 @@ public class Multiplexer<X, Y, Message> implements Channel<Either<X, Y>, Message
         public void close() throws InterruptedException {
             x.close();
             y.close();
+        }
+
+        @Override
+        public boolean closed() {
+            // It should not actually happen that both channels are in a different state.
+            return x.closed() || y.closed();
         }
     }
 

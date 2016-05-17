@@ -315,6 +315,7 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
     }
 
     private class WebsocketConnection implements Connection<InetAddress, Bytestring> {
+        private boolean closed = false;
 
         public InetAddress identity() {
             return me;
@@ -322,8 +323,11 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
 
         @Override
         public void close() {
+            if (closed) return;
+
             synchronized (lock) {
                 if (server != null) {
+                    closed = true;
                     server.stop();
                     openSessions.closeAll();
                     openSessions = null;
@@ -332,6 +336,11 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
                     globalListener = null;
                 }
             }
+        }
+
+        @Override
+        public boolean closed() {
+            return closed;
         }
     }
 

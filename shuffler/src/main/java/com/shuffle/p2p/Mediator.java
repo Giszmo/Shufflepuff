@@ -184,10 +184,15 @@ public class Mediator<Name extends Comparable<Name>, Address, Payload> implement
     }
 
     private class OpenSessions {
+        private boolean closed = false;
+
+        // The set of open sessions.
         private final Map<Name, Session<Address, Envelope<Name, Payload>>> openSessions = new HashMap<>();
 
+        // The set of open connections.
         private final Set<VirtualConnection<Name>> connections = new HashSet<>();
 
+        // Set of pending connections by initiatar -> names with whom he has pending connections.
         private final Map<Name, SortedSet<Name>> pending = new HashMap<>();
 
         // Drop a peer and all his connections.
@@ -233,6 +238,8 @@ public class Mediator<Name extends Comparable<Name>, Address, Payload> implement
         }
 
         public Session<Address, Envelope<Name, Payload>> get(Name name) throws InterruptedException {
+            if (closed) return null;
+
             Session<Address, Envelope<Name, Payload>> s = openSessions.get(name);
 
             if (s == null) return null;
@@ -245,6 +252,8 @@ public class Mediator<Name extends Comparable<Name>, Address, Payload> implement
         }
 
         public boolean put(Name name, Session<Address, Envelope<Name, Payload>> s) throws InterruptedException {
+            if (closed) return false;
+
             if (s.closed()) return false;
 
             if (openSessions.containsKey(name)) return false;
@@ -257,6 +266,8 @@ public class Mediator<Name extends Comparable<Name>, Address, Payload> implement
         // Initiate connection.
         public boolean initiateConnection(Name a, Name b) throws InterruptedException {
             if (a == null || b == null) throw new NullPointerException();
+
+            if (closed) return false;
 
             if (a.equals(b)) return false;
 
@@ -294,6 +305,8 @@ public class Mediator<Name extends Comparable<Name>, Address, Payload> implement
         public boolean completeConnection(Name a, Name b) throws InterruptedException {
             if (a == null || b == null) throw new NullPointerException();
 
+            if (closed) return false;
+
             if (a.equals(b)) return false;
 
             // Must not already exist.
@@ -329,13 +342,15 @@ public class Mediator<Name extends Comparable<Name>, Address, Payload> implement
 
             if (a.equals(b)) return true;
 
-            // Add the connection.
+            // Remove the connection.
             connections.remove(new VirtualConnection<Name>(a, b));
 
             return true;
         }
 
         public boolean send(Envelope<Name, Payload> en) throws InterruptedException {
+            if (closed) return false;
+
             if (en.to == null) return false;
 
             // The message may only be sent if a session exists between the two clients
@@ -349,6 +364,28 @@ public class Mediator<Name extends Comparable<Name>, Address, Payload> implement
             s.send(en);
 
             return true;
+        }
+
+        // TODO
+        public void close() throws InterruptedException {
+            // Close all pending connections.
+            for (Map.Entry<Name, SortedSet<Name>> p : pending.entrySet()) {
+                Name from = p.getKey();
+
+                for (Name to : p.getValue()) {
+                    // Send close connection message.
+                }
+            }
+
+            // Close all open virtual connections.
+            for (VirtualConnection<Name> connection : connections) {
+                // Send message to both of them.
+            }
+
+            // Close all real connections.
+            for (Session<Address, Envelope<Name, Payload>> session : openSessions.values()) {
+                session.close();
+            }
         }
     }
 
@@ -445,9 +482,21 @@ public class Mediator<Name extends Comparable<Name>, Address, Payload> implement
         return conn.identity();
     }
 
+    private boolean closed = false;
+
     @Override
     public void close() throws InterruptedException {
+        if (closed) return;
+        closed = true;
+
+        openSessions.close();
+
         conn.close();
+    }
+
+    @Override
+    public boolean closed() {
+        return closed;
     }
 
 }

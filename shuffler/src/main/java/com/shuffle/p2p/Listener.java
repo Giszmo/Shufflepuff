@@ -11,7 +11,10 @@ package com.shuffle.p2p;
 import com.shuffle.chan.Send;
 
 /**
- * Functions to be called by a thread that receives new peers.
+ * Normally, the Listener is to be implemented by the user of a channel. The purpose
+ * of the Listener is to whatever the user wants with a session that is initiated by a
+ * remote peer, and to create a Send for the channel to use when a message is received
+ * from the remote peer.
  *
  * Created by Daniel Krawisz on 1/25/16.
  */
