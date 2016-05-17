@@ -8,6 +8,7 @@ import org.bitcoinj.core.Address;
 import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.Wallet;
 import org.bitcoinj.crypto.HDUtils;
 import org.bitcoinj.kits.WalletAppKit;
 import org.bitcoinj.net.discovery.DnsDiscovery;
@@ -50,7 +51,7 @@ public class BitcoinCrypto implements Crypto {
    }
 
    // create derivation path for shuffle keys
-   String path = HDUtils.formatPath(HDUtils.parsePath("ShuffleAuth/"));
+   final String path = HDUtils.formatPath(HDUtils.parsePath("ShuffleAuth/"));
    int decKeyCounter = 0;
 
    public void initKit() {
@@ -102,6 +103,10 @@ public class BitcoinCrypto implements Crypto {
 
    public int getDecKeyCounter() {
       return decKeyCounter;
+   }
+
+   public Wallet getWallet() {
+      return kit.wallet();
    }
 
    public String getCurrentPathAsString() {

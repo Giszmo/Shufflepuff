@@ -5,20 +5,25 @@ import com.shuffle.bitcoin.BitcoinCrypto;
 import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
-import com.shuffle.protocol.InvalidImplementationError;
-import com.shuffle.protocol.Packet;
+import com.shuffle.bitcoin.blockchain.Bitcoin;
+import com.shuffle.protocol.message.Packet;
 
 import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.ECKey.ECDSASignature;
+import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.store.BlockStoreException;
+
+import java.io.IOException;
+import java.util.Arrays;
 
 /**
  * Created by conta on 31.03.16.
  */
 public class VerificationKeyImpl implements VerificationKey {
 
-   private ECKey ecKey;
-   byte[] vKey;
-   Address address;
-   BitcoinCrypto bitcoinCrypto = new BitcoinCrypto();
+   private final ECKey ecKey;
+   private final byte[] vKey;
+   private final BitcoinCrypto bitcoinCrypto = new BitcoinCrypto();
 
    public VerificationKeyImpl(byte[] ecKey) {
       this.ecKey = ECKey.fromPublicOnly(ecKey);
@@ -26,25 +31,46 @@ public class VerificationKeyImpl implements VerificationKey {
    }
 
    public String toString() {
-      return this.vKey.toString();
+      return Arrays.toString(this.vKey);
    }
 
    @Override
-   public boolean verify(Transaction t, Signature sig) throws InvalidImplementationError {
-      org.bitcoinj.core.Transaction transaction = t.hashCode()
+   public boolean verify(Transaction t, Signature sig) {
+      try {
+         Bitcoin.Transaction transaction = (Bitcoin.Transaction) t;
+         org.bitcoinj.core.Transaction transactionj = transaction.bitcoinj();
+         return ECKey.verify(transactionj.bitcoinSerialize(), (ECDSASignature) sig, vKey);
+
+      } catch (BlockStoreException | IOException e) {
+         e.printStackTrace();
+      }
+
       return false;
+   }
+
+   @Override
+   public boolean verify(Bitcoin.Transaction t, Signature sig) {
+
+      try {
+         return ECKey.verify(t.bitcoinj().bitcoinSerialize(), (ECDSASignature) sig, vKey);
+      } catch (Exception e) {
+         e.printStackTrace();
+      }
    }
 
    @Override
    public boolean verify(Packet packet, Signature sig) {
-      return false;
+      String pinput = packet.toString();
+
+      return ecKey.verify(Sha256Hash.twiceOf(pinput.getBytes()), (ECDSASignature) sig);
    }
 
    @Override
    public boolean equals(Object vk) {
-
-      VerificationKey oKey = (VerificationKey) vk;
-      return this.address == oKey.address() && oKey.getClass() == this.getClass();
+      if (vk.getClass() == this.getClass()) {
+         VerificationKey oKey = (VerificationKey) vk;
+         return this.address() == oKey.address() && oKey.getClass() == this.getClass();
+      }
    }
 
    @Override

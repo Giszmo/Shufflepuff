@@ -2,12 +2,18 @@ package com.shuffle.bitcoin.impl;
 
 import com.shuffle.bitcoin.BitcoinCrypto;
 import com.shuffle.bitcoin.Signature;
+import com.shuffle.bitcoin.SignatureImpl;
 import com.shuffle.bitcoin.SigningKey;
-import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.bitcoin.blockchain.Bitcoin;
 import com.shuffle.protocol.message.Packet;
 
 import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.store.BlockStoreException;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Created by conta on 10.03.16.
@@ -31,13 +37,28 @@ public class SigningKeyImpl implements SigningKey {
    }
 
    @Override
-   public Signature makeSignature(Transaction t) {
-      return null;
+   public Signature makeSignature(Bitcoin.Transaction t) {
+      SignatureImpl signature1;
+      signature1 = null;
+      try {
+         ECKey.ECDSASignature signature = verificationKey.sign(t.bitcoinj().getHash());
+         byte[] signed = signature.encodeToDER();
+         signature1 = new SignatureImpl(signed);
+      } catch (BlockStoreException e) {
+         e.printStackTrace();
+      } catch (IOException e) {
+         e.printStackTrace();
+      }
+      return signature1;
    }
 
    @Override
    public Signature makeSignature(Packet p) {
-      return null;
+      String input = p.toString();
+      ECKey.ECDSASignature signature = verificationKey.sign(Sha256Hash.twiceOf(input.getBytes(StandardCharsets.UTF_8)));
+      byte[] signed = signature.encodeToDER();
+      SignatureImpl signature1 = new SignatureImpl(signed);
+      return signature1;
    }
 
 
