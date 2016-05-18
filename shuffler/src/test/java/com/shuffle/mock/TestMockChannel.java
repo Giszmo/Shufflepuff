@@ -8,10 +8,10 @@
 
 package com.shuffle.mock;
 
+import com.shuffle.chan.Send;
 import com.shuffle.mock.MockChannel;
 import com.shuffle.p2p.Connection;
 import com.shuffle.p2p.Listener;
-import com.shuffle.p2p.Receiver;
 import com.shuffle.p2p.Session;
 
 import org.junit.Assert;
@@ -28,31 +28,38 @@ import java.util.Map;
  * Created by Daniel Krawisz on 3/4/16.
  */
 public class TestMockChannel {
-    public class MockListener implements Listener<Integer, String> {
-        public final Map<Integer, Session<Integer, String>> openSessions = new HashMap<>();
-        public final Map<Integer, Receiver<String>> receivers = new HashMap<>();
 
-        public Receiver<String> getReceiver(Integer from) {
-            Receiver<String> receiver = receivers.get(from);
+    public class MockListener implements Listener<Integer, String> {
+        public final Map<Integer, Send<String>> receivers = new HashMap<>();
+
+        public Send<String> getSend(Integer from) {
+            Send<String> receiver = receivers.get(from);
             if (receiver == null) {
-                receiver = new MockReceiver();
+                receiver = new MockSend();
                 receivers.put(from, receiver);
             }
             return receiver;
         }
 
         @Override
-        public Receiver<String> newSession(Session<Integer, String> session) {
-            return getReceiver(session.peer().identity());
+        public Send<String> newSession(Session<Integer, String> session) {
+            return getSend(session.peer().identity());
         }
     }
 
-    public class MockReceiver implements Receiver<String> {
+    public class MockSend implements Send<String> {
         final List<String> messages = new LinkedList<>();
+        boolean closed = false;
 
         @Override
-        public void receive(String s) {
-            messages.add(s);
+        public boolean send(String s) {
+            return !closed && messages.add(s);
+
+        }
+
+        @Override
+        public void close() {
+            closed = true;
         }
     }
 
@@ -62,13 +69,13 @@ public class TestMockChannel {
         Map<Integer, MockChannel<Integer, String>> knownHosts = new HashMap<>();
         Map<Integer, Connection<Integer, String>> connections = new HashMap<>();
         Map<Integer, MockListener> listeners = new HashMap<>();
-        Map<Integer, MockReceiver> receivers = new HashMap<>();
+        Map<Integer, MockSend> receivers = new HashMap<>();
         knownHosts.put(1, new MockChannel<>(1, knownHosts));
         knownHosts.put(2, new MockChannel<>(2, knownHosts));
         listeners.put(1, new MockListener());
         listeners.put(2, new MockListener());
-        receivers.put(1, new MockReceiver());
-        receivers.put(2, new MockReceiver());
+        receivers.put(1, new MockSend());
+        receivers.put(2, new MockSend());
 
         connections.put(1, knownHosts.get(1).open(listeners.get(1)));
         connections.put(2, knownHosts.get(2).open(listeners.get(2)));

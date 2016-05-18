@@ -18,7 +18,7 @@ import java.io.Serializable;
 import java.util.Arrays;
 
 /**
- * A simple wrapper for []byte.
+ * A wrapper for []byte.
  *
  * Created by Daniel Krawisz on 12/19/15.
  */

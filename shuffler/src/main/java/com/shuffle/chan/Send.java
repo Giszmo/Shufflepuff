@@ -15,10 +15,10 @@ package com.shuffle.chan;
  *
  * Created by Daniel Krawisz on 3/3/16.
  */
-public interface SendChan<X> {
+public interface Send<X> {
     // Send an X.
     boolean send(X x) throws InterruptedException;
 
     // Close the chan.
-    void close();
+    void close() throws InterruptedException;
 }

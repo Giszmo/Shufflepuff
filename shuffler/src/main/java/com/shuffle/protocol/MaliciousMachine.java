@@ -17,7 +17,7 @@ import com.shuffle.bitcoin.EncryptionKey;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
-import com.shuffle.chan.SendChan;
+import com.shuffle.chan.Send;
 import com.shuffle.protocol.blame.Blame;
 import com.shuffle.protocol.blame.BlameException;
 import com.shuffle.protocol.blame.Matrix;
@@ -403,7 +403,7 @@ public final class MaliciousMachine extends CoinShuffle {
             Address change, // Change address. (can be null)
             // If this is not null, the machine is put in this channel so that another thread can
             // query the phase as it runs.
-            SendChan<Phase> chan
+            Send<Phase> chan
     ) throws WaitingException,
             InvalidParticipantSetException,
             InterruptedException, FormatException,

@@ -1,5 +1,7 @@
 package com.shuffle.p2p;
 
+import com.shuffle.chan.Send;
+
 import java.io.InputStream;
 import java.io.IOException;
 import java.net.InetAddress;
@@ -149,7 +151,7 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
     private OpenSessions openSessions = null;
 
     // Class definition for representation of a particular tcppeer.
-    public class TcpPeer extends FundamentalPeer<InetSocketAddress, Bytestring> {
+    private class TcpPeer extends FundamentalPeer<InetSocketAddress, Bytestring> {
 
         TcpSession currentSession;
 
@@ -160,6 +162,8 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
 
         // Constructor for a connection that is initiated by a remote peer.
         // TODO it would make more sense to have a socket rather than a session here.
+        //
+        // TODO figure out what I meant by that previous TODO note and explain it better.
         public TcpPeer(InetSocketAddress identity, TcpSession session) {
             super(identity);
             this.currentSession = session;
@@ -191,7 +195,7 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
 
         @Override
         public synchronized Session<InetSocketAddress, Bytestring> openSession(
-                Receiver<Bytestring> receiver
+                Send<Bytestring> send
         ) {
             // Don't allow sessions to be opened when we're opening or closing the channel.
             synchronized (lock) { }
@@ -210,13 +214,13 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
                 return null;
             }
 
-            executor.execute(new TcpReceiver(session, receiver));
+            executor.execute(new TcpReceiver(session, send));
 
             return session;
         }
 
         // Encapsulates a particular tcp session.
-        public class TcpSession implements Session<InetSocketAddress, Bytestring> {
+        private class TcpSession implements Session<InetSocketAddress, Bytestring> {
             Socket socket;
             InputStream in;
 
@@ -234,7 +238,7 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
                 // Don't allow sending messages while we're opening or closing the channel.
                 synchronized (lock) { }
 
-                if (socket.isClosed()) {
+                if (socket == null || socket.isClosed()) {
                     return false;
                 }
 
@@ -242,6 +246,8 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
                     socket.getOutputStream().write(header.makeHeader(message.bytes.length).bytes);
                     socket.getOutputStream().write(message.bytes);
                 } catch (IOException e) {
+                    // socket should be closed by throwing an exception.
+                    socket = null;
                     return false;
                 }
 
@@ -280,20 +286,18 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
     private class TcpReceiver implements Runnable {
         final TcpPeer.TcpSession session;
         final InputStream in;
-        final Receiver<Bytestring> receiver;
+        final Send<Bytestring> send;
 
-        private TcpReceiver(TcpPeer.TcpSession session, Receiver<Bytestring> receiver) {
+        private TcpReceiver(TcpPeer.TcpSession session, Send<Bytestring> send) {
             this.session = session;
             this.in = session.in;
-            this.receiver = receiver;
+            this.send = send;
         }
 
         @Override
         public void run() {
             while (true) {
                 try {
-                    Bytestring bs;
-
                     byte[] head = new byte[header.headerLength()];
                     in.read(head);
 
@@ -302,15 +306,21 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
 
                     if (total < msg.length) {
                         session.close();
-                        return;
+                        break;
                     }
 
-                    receiver.receive(new Bytestring(msg));
+                    send.send(new Bytestring(msg));
 
                 } catch (IOException | InterruptedException e) {
                     session.close();
-                    return;
+                    break;
                 }
+            }
+
+            try {
+                send.close();
+            } catch (InterruptedException e) {
+
             }
         }
     }
@@ -343,14 +353,13 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
                         continue;
                     }
 
-                    Receiver<Bytestring> receiver;
-                    receiver = listener.newSession(session);
+                    Send<Bytestring> send = listener.newSession(session);
 
-                    if (receiver == null) {
+                    if (send == null) {
                         continue;
                     }
 
-                    executor.execute(new TcpReceiver(session, receiver));
+                    executor.execute(new TcpReceiver(session, send));
                 } catch (IOException | InterruptedException e) {
                     return;
                 }
@@ -387,6 +396,7 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
     }
 
     private class TcpConnection implements Connection<InetSocketAddress, Bytestring> {
+        private boolean closed = false;
 
         @Override
         public InetSocketAddress identity() {
@@ -396,7 +406,10 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
         @Override
         // TODO should close all connections and stop listening.
         public void close() {
+            if (closed) return;
+
             synchronized (lock) {
+                closed = true;
                 if (server != null) {
                     try {
                         server.close();
@@ -408,6 +421,11 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
                     }
                 }
             }
+        }
+
+        @Override
+        public boolean closed() {
+            return closed;
         }
     }
 

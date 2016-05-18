@@ -12,12 +12,11 @@ import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.chan.BasicChan;
-import com.shuffle.chan.SendChan;
+import com.shuffle.chan.Send;
 import com.shuffle.p2p.Bytestring;
 import com.shuffle.p2p.Channel;
 import com.shuffle.p2p.Connection;
 import com.shuffle.p2p.Peer;
-import com.shuffle.p2p.Receiver;
 import com.shuffle.p2p.Session;
 
 import java.io.IOException;
@@ -107,11 +106,11 @@ public class Connect<Address> {
     private class Listener implements com.shuffle.p2p.Listener<Address, Bytestring> {
         final SignedReceiver receiver;
         final Map<Address, VerificationKey> keys;
-        final Map<VerificationKey, SendChan<Packet>> players;
+        final Map<VerificationKey, Send<Packet>> players;
         final Peers peers;
         final Marshaller marshaller;
 
-        private Listener(Map<VerificationKey, SendChan<Packet>> players,
+        private Listener(Map<VerificationKey, Send<Packet>> players,
                          Peers peers,
                          Map<Address, VerificationKey> keys,
                          SignedReceiver receiver,
@@ -125,7 +124,7 @@ public class Connect<Address> {
         }
 
         @Override
-        public Receiver<Bytestring> newSession(Session<Address, Bytestring> session) {
+        public Send<Bytestring> newSession(Session<Address, Bytestring> session) throws InterruptedException {
             VerificationKey key = keys.get(session.peer().identity());
 
             if (key == null) {
@@ -162,7 +161,7 @@ public class Connect<Address> {
 
         Peers peers = new Peers();
 
-        Map<VerificationKey, SendChan<Packet>> players = new HashMap<>();
+        Map<VerificationKey, Send<Packet>> players = new HashMap<>();
 
         SignedReceiver receiver = new SignedReceiver(marshall, new BasicChan<Bytestring>(2 * (1 + players.size())));
 
@@ -239,7 +238,7 @@ public class Connect<Address> {
         return new Messages(session, me.VerificationKey(), players, receiver);
     }
 
-    public void shutdown() {
+    public void shutdown() throws InterruptedException {
         if (connection == null) {
             return;
         }

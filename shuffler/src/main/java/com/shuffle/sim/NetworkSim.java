@@ -2,8 +2,8 @@ package com.shuffle.sim;
 
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.chan.Chan;
-import com.shuffle.chan.ReceiveChan;
-import com.shuffle.chan.SendChan;
+import com.shuffle.chan.Receive;
+import com.shuffle.chan.Send;
 import com.shuffle.player.Messages;
 import com.shuffle.player.Packet;
 
@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit;
  *
  * Created by Daniel Krawisz on 2/8/16.
  */
-public class NetworkSim implements SendChan<Packet>, ReceiveChan<Messages.SignedPacket> {
+public class NetworkSim implements Send<Packet>, Receive<Messages.SignedPacket> {
     final Chan<Messages.SignedPacket> inbox;
     final SigningKey key;
 
@@ -46,7 +46,7 @@ public class NetworkSim implements SendChan<Packet>, ReceiveChan<Messages.Signed
     }
 
     @Override
-    public void close() {
+    public void close() throws InterruptedException {
         inbox.close();
     }
 }

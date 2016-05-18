@@ -9,12 +9,21 @@
 package com.shuffle.p2p;
 
 /**
- * Represents an open connection. We can close the connection and that's all.
+ * Represents an open connection. The Connection is produced from the Channel's open() method.
+ *
+ * It is used to close the channel.
  *
  * Created by Daniel Krawisz on 2/22/16.
  */
 public interface Connection<Identity, Message> {
+    // Our own identity on this channel. For TCP, this would be a IP address.
     Identity identity();
 
-    void close();
+    // Once closed, a Connection cannot be reopened. Instead, a new Connection is created
+    // by the Channel's open method.
+    void close() throws InterruptedException;
+
+    // Whether the channel has been closed. After this method returns true, it can only return true
+    // after that.
+    boolean closed();
 }

@@ -22,5 +22,5 @@ public interface Channel<Identity, Message> {
     Peer<Identity, Message> getPeer(Identity you);
 
     // Returns null if the connection could not be opened.
-    Connection<Identity, Message> open(final Listener<Identity, Message> listener);
+    Connection<Identity, Message> open(final Listener<Identity, Message> listener) throws InterruptedException;
 }

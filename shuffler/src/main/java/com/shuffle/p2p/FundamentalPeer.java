@@ -8,9 +8,12 @@
 
 package com.shuffle.p2p;
 
+import com.shuffle.chan.Send;
+
 /**
  * An implementation of Peer which is good for implementations which do not contain
- * other Peer objects, ie, they are fundamental.
+ * other Peer objects, ie, they are fundamental. For example, it is used in TcpChannel and
+ * the websocket channels.
  *
  * Created by Daniel Krawisz on 3/18/16.
  */
@@ -27,16 +30,16 @@ public abstract class FundamentalPeer<Identity, Message> implements Peer<Identit
     }
 
     // Returns null if there is a session already open.
-    public abstract Session<Identity, Message> openSession(Receiver<Message> receiver)
+    public abstract Session<Identity, Message> openSession(Send<Message> send)
             throws InterruptedException;
 
     // Whether there is an open session to this peer.
-    public final boolean open() {
+    public final boolean open() throws InterruptedException {
         return currentSession != null && !currentSession.closed();
     }
 
     // Close any open sessions for this peer.
-    public final void close() {
+    public final void close() throws InterruptedException {
         if (currentSession != null) {
             currentSession.close();
         }

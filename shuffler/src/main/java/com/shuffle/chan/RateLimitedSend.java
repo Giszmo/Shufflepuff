@@ -7,7 +7,7 @@ import java.util.concurrent.TimeUnit;
  *
  * Created by Daniel Krawisz on 4/14/16.
  */
-public class RateLimitedChan<X> implements Chan<X> {
+public class RateLimitedSend<X> implements Chan<X> {
 
     public interface Size<X> {
         double size(X x);
@@ -44,7 +44,7 @@ public class RateLimitedChan<X> implements Chan<X> {
 
     Message released = null;
 
-    public RateLimitedChan(int capacity, Size<X> size, long unitDuration, double maxEnclosedSize, long maxLatency) {
+    public RateLimitedSend(int capacity, Size<X> size, long unitDuration, double maxEnclosedSize, long maxLatency) {
 
         this.chan = new BasicChan<>(capacity);
         this.size = size;
@@ -155,7 +155,7 @@ public class RateLimitedChan<X> implements Chan<X> {
     }
 
     @Override
-    public void close() {
+    public void close() throws InterruptedException {
         chan.close();
     }
 

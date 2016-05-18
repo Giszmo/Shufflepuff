@@ -8,10 +8,12 @@
 
 package com.shuffle.p2p;
 
+import com.shuffle.chan.Send;
 import com.shuffle.monad.Either;
 
 /**
- * A channel that is the product of two channels.
+ * This channel takes two channels that use two different types as addresses and makes a "product"
+ * channel, with addresses of type Either<X, Y>
  *
  * Created by Daniel Krawisz on 1/31/16.
  */
@@ -34,7 +36,7 @@ public class Multiplexer<X, Y, Message> implements Channel<Either<X, Y>, Message
         }
 
         @Override
-        public void close() {
+        public void close() throws InterruptedException {
             if (first == null) {
                 second.close();
                 return;
@@ -44,7 +46,7 @@ public class Multiplexer<X, Y, Message> implements Channel<Either<X, Y>, Message
         }
 
         @Override
-        public boolean closed() {
+        public boolean closed() throws InterruptedException {
             if (first == null) {
                 return second.closed();
             }
@@ -79,7 +81,7 @@ public class Multiplexer<X, Y, Message> implements Channel<Either<X, Y>, Message
         }
 
         @Override
-        public Session<Either<X, Y>, Message> openSession(Receiver<Message> receiver)
+        public Session<Either<X, Y>, Message> openSession(Send<Message> receiver)
                 throws InterruptedException {
 
             if (first == null) {
@@ -98,7 +100,7 @@ public class Multiplexer<X, Y, Message> implements Channel<Either<X, Y>, Message
         }
 
         @Override
-        public boolean open() {
+        public boolean open() throws InterruptedException {
             if (first == null) {
                 return second.open();
             }
@@ -107,7 +109,7 @@ public class Multiplexer<X, Y, Message> implements Channel<Either<X, Y>, Message
         }
 
         @Override
-        public void close() {
+        public void close() throws InterruptedException {
             if (first == null) {
                 second.close();
                 return;
@@ -157,17 +159,25 @@ public class Multiplexer<X, Y, Message> implements Channel<Either<X, Y>, Message
         }
 
         @Override
-        public void close() {
+        public void close() throws InterruptedException {
             x.close();
             y.close();
+        }
+
+        @Override
+        public boolean closed() {
+            // It should not actually happen that both channels are in a different state.
+            return x.closed() || y.closed();
         }
     }
 
     @Override
-    public Connection<Either<X, Y>, Message> open(final Listener<Either<X, Y>, Message> listener) {
+    public Connection<Either<X, Y>, Message> open(final Listener<Either<X, Y>, Message> listener)
+            throws InterruptedException {
+        
         Connection<X, Message> cx = x.open(new Listener<X, Message>(){
             @Override
-            public Receiver<Message> newSession(Session<X, Message> session) throws InterruptedException {
+            public Send<Message> newSession(Session<X, Message> session) throws InterruptedException {
                 return listener.newSession(new EitherSession(session, null));
             }
         });
@@ -176,7 +186,7 @@ public class Multiplexer<X, Y, Message> implements Channel<Either<X, Y>, Message
 
         Connection<Y, Message> cy = y.open(new Listener<Y, Message>(){
             @Override
-            public Receiver<Message> newSession(Session<Y, Message> session) throws InterruptedException {
+            public Send<Message> newSession(Session<Y, Message> session) throws InterruptedException {
                 return listener.newSession(new EitherSession(null, session));
             }
         });

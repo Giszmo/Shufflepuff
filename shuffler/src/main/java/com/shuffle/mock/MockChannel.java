@@ -8,12 +8,12 @@
 
 package com.shuffle.mock;
 
+import com.shuffle.chan.Send;
 import com.shuffle.p2p.Channel;
 import com.shuffle.p2p.Connection;
 import com.shuffle.p2p.FundamentalPeer;
 import com.shuffle.p2p.Listener;
 import com.shuffle.p2p.Peer;
-import com.shuffle.p2p.Receiver;
 import com.shuffle.p2p.Session;
 
 import java.util.HashMap;
@@ -43,7 +43,7 @@ public class MockChannel<Q, X> implements Channel<Q, X> {
         }
 
         @Override
-        public void close() {
+        public void close() throws InterruptedException {
             if (connection == null) {
                 return;
             }
@@ -56,6 +56,11 @@ public class MockChannel<Q, X> implements Channel<Q, X> {
 
             connection = null;
             listener = null;
+        }
+
+        @Override
+        public boolean closed() {
+            return connection == null;
         }
     }
 
@@ -81,32 +86,29 @@ public class MockChannel<Q, X> implements Channel<Q, X> {
         @Override
         // Open a session with a mock remote peer. Include a function which is to be
         // called when a X is received.
-        public synchronized Session<Q, X> openSession(Receiver<X> receiver)
+        public synchronized Session<Q, X> openSession(Send<X> send)
                 throws InterruptedException {
+
+            if (send == null) throw new NullPointerException();
+
             // if there is already an open session, fail.
-            if (currentSession != null) {
-                return null;
-            }
+            if (currentSession != null) return null;
 
             Q identity = identity();
 
             // Do we know this remote peer?
             MockChannel<Q, X> remote = knownHosts.get(identity);
-            if (remote == null) {
-                return null;
-            }
-
-            if (!equals(peers.get(identity))) {
-                return null;
-            }
+            if (remote == null) return null;
+            if (!equals(peers.get(identity))) return null;
 
             // Create a new session and register it with the remote peer.
-            MockSession session = this.new MockSession(remote.connect(me, receiver));
+            Send<X> r = remote.connect(me, send);
+            if (r == null) return null;
+
+            MockSession session = this.new MockSession(r);
 
             // If the session is not open, the connection didn't work for some reason.
-            if (session.closed()) {
-                return null;
-            }
+            if (session.closed()) return null;
 
             // Set the new session as the officially connected one for this peer.
             this.currentSession = session;
@@ -114,22 +116,21 @@ public class MockChannel<Q, X> implements Channel<Q, X> {
         }
 
         public class MockSession implements Session<Q, X> {
-            final Receiver<X> receiver;
+            final Send<X> send;
             boolean closed;
 
-            MockSession(Receiver<X> receiver) {
-                this.receiver = receiver;
-                closed = receiver == null;
+            MockSession(Send<X> send) {
+
+                if (send == null) throw new NullPointerException();
+
+                this.send = send;
+                closed = false;
             }
 
             @Override
             public boolean send(X x) throws InterruptedException {
-                if (receiver == null) {
-                    return false;
-                }
-
-                receiver.receive(x);
-                return true;
+                System.out.println("(mock) Sending message " + x);
+                return !closed && send.send(x);
             }
 
             @Override
@@ -172,35 +173,31 @@ public class MockChannel<Q, X> implements Channel<Q, X> {
 
     @Override
     public Connection<Q, X> open(Listener<Q, X> listener) {
-        if (this.listener != null) {
-            return null;
-        }
+
+        if (this.listener != null) throw new NullPointerException();
         this.listener = listener;
 
         this.connection = new MockConnection();
         return this.connection;
     }
 
-    Receiver<X> connect(Q you, Receiver<X> receiver) throws InterruptedException {
+    Send<X> connect(Q you, Send<X> send) throws InterruptedException {
         Thread.sleep(100);
 
-        if (listener == null || receiver == null) {
-            return null;
-        }
+        if (you == null || send == null) throw new NullPointerException();
+
+        if (listener == null) return null;
 
         // Do we know this remote peer?
         MockPeer peer = (MockPeer) getPeer(you);
-        if (peer == null) {
-            return null;
-        }
+        if (peer == null) return null;
 
         // An open session already exists.
-        if (peer.open()) {
-            return null;
-        }
+        if (peer.open()) return null;
 
-        peer.setSession(peer.new MockSession(receiver));
+        peer.setSession(peer.new MockSession(send));
 
         return listener.newSession(peer.getSession());
     }
+
 }

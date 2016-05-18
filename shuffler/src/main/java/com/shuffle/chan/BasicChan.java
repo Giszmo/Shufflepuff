@@ -42,6 +42,8 @@ public class BasicChan<X> implements Chan<X> {
     private final LinkedBlockingQueue<Message> queue;
 
     public BasicChan(int n) {
+        if (n < 1) throw new IllegalArgumentException();
+
         queue = new LinkedBlockingQueue<>(n);
     }
 
@@ -108,5 +110,11 @@ public class BasicChan<X> implements Chan<X> {
     @Override
     public boolean closed() {
         return receiveClosed;
+    }
+
+    @Override
+    public String toString() {
+        // Oh my god java sucks so bad. I can't even print the type name of X here? I think that's ridiculous.
+        return "chan{?}";
     }
 }

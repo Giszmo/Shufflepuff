@@ -15,8 +15,8 @@ import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.chan.BasicChan;
 import com.shuffle.chan.Chan;
-import com.shuffle.chan.ReceiveChan;
-import com.shuffle.chan.SendChan;
+import com.shuffle.chan.Receive;
+import com.shuffle.chan.Send;
 import com.shuffle.mock.InsecureRandom;
 import com.shuffle.mock.MockCrypto;
 import com.shuffle.mock.MockSessionIdentifier;
@@ -76,11 +76,11 @@ class Player implements Runnable {
         }
     }
 
-    private final SendChan<Phase> msg ;
+    private final Send<Phase> msg ;
     private final Executor exec;
     private final Parameters param;
 
-    private Player(Parameters param, SendChan<Phase> msg, Executor exec) {
+    private Player(Parameters param, Send<Phase> msg, Executor exec) {
         this.param = param;
         this.exec = exec;
         this.msg = msg;
@@ -216,7 +216,7 @@ class Player implements Runnable {
         report(msg, System.out);
     }
 
-    private static void report(ReceiveChan<Phase> msg, PrintStream stream) {
+    private static void report(Receive<Phase> msg, PrintStream stream) {
 
         while (true) {
             Phase next = null;
@@ -232,7 +232,7 @@ class Player implements Runnable {
         }
     }
     
-    private static Transaction play(Parameters param, SendChan<Phase> msg, Executor exec)
+    private static Transaction play(Parameters param, Send<Phase> msg, Executor exec)
             throws InterruptedException {
 
         Channel<InetSocketAddress, Bytestring> tcp =
@@ -282,10 +282,12 @@ class Player implements Runnable {
     public void run() {
         // Run the protocol and signal to the other thread when it's done.
         try {
-            play(param, msg, exec);
+            try {
+                play(param, msg, exec);
+            } finally {
+                msg.close();
+            }
         } catch (InterruptedException e) {
-        } finally {
-            msg.close();
         }
     }
 }

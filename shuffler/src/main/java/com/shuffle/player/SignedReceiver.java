@@ -1,9 +1,9 @@
 package com.shuffle.player;
 
 import com.shuffle.chan.Chan;
-import com.shuffle.chan.ReceiveChan;
+import com.shuffle.chan.Receive;
+import com.shuffle.chan.Send;
 import com.shuffle.p2p.Bytestring;
-import com.shuffle.p2p.Receiver;
 
 import java.util.concurrent.TimeUnit;
 
@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
  *
  * Created by Daniel Krawisz on 4/13/16.
  */
-public class SignedReceiver implements ReceiveChan<Messages.SignedPacket>, Receiver<Bytestring> {
+public class SignedReceiver implements Receive<Messages.SignedPacket>, Send<Bytestring> {
     private final Marshaller marshaller;
     private final Chan<Bytestring> chan;
 
@@ -58,7 +58,12 @@ public class SignedReceiver implements ReceiveChan<Messages.SignedPacket>, Recei
     }
 
     @Override
-    public void receive(Bytestring bytestring) throws InterruptedException {
-        chan.send(bytestring);
+    public boolean send(Bytestring bytestring) throws InterruptedException {
+        return chan.send(bytestring);
+    }
+
+    @Override
+    public void close() throws InterruptedException {
+        chan.close();
     }
 }

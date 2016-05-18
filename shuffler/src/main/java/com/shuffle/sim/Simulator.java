@@ -12,7 +12,7 @@ import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.chan.BasicChan;
-import com.shuffle.chan.SendChan;
+import com.shuffle.chan.Send;
 import com.shuffle.player.Messages;
 import com.shuffle.monad.Either;
 import com.shuffle.monad.NaturalSummableFuture;
@@ -43,7 +43,7 @@ public final class Simulator {
     }
 
     private static class SimulationInitializer implements InitialState.Initializer {
-        public final Map<VerificationKey, SendChan<Packet>> networks = new HashMap<>();
+        public final Map<VerificationKey, Send<Packet>> networks = new HashMap<>();
         public final SessionIdentifier session;
         public final int capacity;
 
