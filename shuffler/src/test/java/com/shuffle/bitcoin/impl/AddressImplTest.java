@@ -26,7 +26,16 @@ public class AddressImplTest extends TestCase {
 
    @Test
    public void testCompareTo() {
-      assertEquals(1, addressi.compareTo(addressi));
+      System.out.println("Network Parameters" + tnpar.toString());
+      System.out.println("address: " + address.toString());
+      System.out.println("address2: " + address2.toString());
+      System.out.println("addressi: " + addressi.toString());
+      System.out.println("addressi2: " + addressi2.toString());
+
+      assertEquals(0, addressi.compareTo(addressi));
+      if (1 == addressi.compareTo(addressi)) {
+         System.out.println("fail √");
+      }
       assertEquals(0, addressi.compareTo(addressi2));
    }
 }

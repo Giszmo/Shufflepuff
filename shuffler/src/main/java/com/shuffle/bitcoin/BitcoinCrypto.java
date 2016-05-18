@@ -13,7 +13,6 @@ import org.bitcoinj.crypto.HDUtils;
 import org.bitcoinj.kits.WalletAppKit;
 import org.bitcoinj.net.discovery.DnsDiscovery;
 import org.bitcoinj.params.TestNet3Params;
-import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.KeyChain;
 
 import java.io.File;
@@ -23,7 +22,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
-import java.util.List;
 
 
 public class BitcoinCrypto implements Crypto {
@@ -41,17 +39,18 @@ public class BitcoinCrypto implements Crypto {
    PrivateKey privKey = keyPair.getPrivate();
    PublicKey pubKey = keyPair.getPublic();
 
-   DeterministicSeed seed = kit.wallet().getKeyChainSeed();
+   //DeterministicSeed seed = kit.wallet().getKeyChainSeed();
    // if we generate new keys no need for mnemonic, apparently we don't
-   List<String> mnemonicCode = seed.getMnemonicCode();
-   SecureRandom sr = new SecureRandom(seed.getSeedBytes());
+   //List<String> mnemonicCode = seed.getMnemonicCode();
+   SecureRandom sr = new SecureRandom();
 
    public NetworkParameters getParams() {
       return params;
    }
 
    // create derivation path for shuffle keys
-   final String path = HDUtils.formatPath(HDUtils.parsePath("ShuffleAuth/"));
+   HDUtils hdUtils = new HDUtils();
+   final String path = HDUtils.formatPath(HDUtils.parsePath("ShuffleAutH/"));
    int decKeyCounter = 0;
 
    public void initKit() {
@@ -78,7 +77,7 @@ public class BitcoinCrypto implements Crypto {
    private KeyPairGenerator getKeyPGen() {
       if (keyPG == null) {
          try {
-            keyPG = KeyPairGenerator.getInstance("HMacSP800DRBG");
+            keyPG = KeyPairGenerator.getInstance("EC");
          } catch (NoSuchAlgorithmException exception) {
             exception.printStackTrace();
          }
