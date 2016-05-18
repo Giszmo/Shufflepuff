@@ -36,10 +36,9 @@ public class VerificationKeyImpl implements VerificationKey {
 
    @Override
    public boolean verify(Transaction t, Signature sig) {
+      Bitcoin.Transaction tj = (Bitcoin.Transaction) t;
       try {
-         Bitcoin.Transaction transaction = (Bitcoin.Transaction) t;
-         org.bitcoinj.core.Transaction transactionj = transaction.bitcoinj();
-         return ECKey.verify(transactionj.bitcoinSerialize(), (ECDSASignature) sig, vKey);
+         return ECKey.verify(tj.bitcoinj().bitcoinSerialize(), (ECDSASignature) sig, vKey);
 
       } catch (BlockStoreException | IOException e) {
          e.printStackTrace();
@@ -49,19 +48,8 @@ public class VerificationKeyImpl implements VerificationKey {
    }
 
    @Override
-   public boolean verify(Bitcoin.Transaction t, Signature sig) {
-
-      try {
-         return ECKey.verify(t.bitcoinj().bitcoinSerialize(), (ECDSASignature) sig, vKey);
-      } catch (Exception e) {
-         e.printStackTrace();
-      }
-   }
-
-   @Override
    public boolean verify(Packet packet, Signature sig) {
       String pinput = packet.toString();
-
       return ecKey.verify(Sha256Hash.twiceOf(pinput.getBytes()), (ECDSASignature) sig);
    }
 
@@ -71,6 +59,7 @@ public class VerificationKeyImpl implements VerificationKey {
          VerificationKey oKey = (VerificationKey) vk;
          return this.address() == oKey.address() && oKey.getClass() == this.getClass();
       }
+      return false;
    }
 
    @Override

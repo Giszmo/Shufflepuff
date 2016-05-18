@@ -47,6 +47,7 @@ public class DecryptionKeyImpl implements DecryptionKey {
    @Override
    public Address decrypt(Address m) throws FormatException {
       java.lang.String input = m.toString();
+      AddressImpl returnAddress = null;
       if (bitcoinCrypto.isValidAddress(input)) {
          return new AddressImpl(input);
       } else {
@@ -59,12 +60,14 @@ public class DecryptionKeyImpl implements DecryptionKey {
             cipher.init(Cipher.DECRYPT_MODE, privateKey);
             byte[] bytes = m.toString().getBytes(StandardCharsets.UTF_8);
             byte[] decrypted = cipher.doFinal(bytes);
-            return new AddressImpl(Hex.toHexString(decrypted));
+            returnAddress = new AddressImpl(Hex.toHexString(decrypted));
 
          } catch (Exception e) {
             e.printStackTrace();
 
          }
       }
+      return returnAddress;
    }
+
 }

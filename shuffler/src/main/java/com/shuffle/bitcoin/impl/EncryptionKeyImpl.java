@@ -31,7 +31,7 @@ public class EncryptionKeyImpl implements EncryptionKey {
 
    @Override
    public Address encrypt(Address m) {
-
+      AddressImpl add = null;
       try {
          KeyFactory kf = KeyFactory.getInstance("ECIES");
          PublicKey pubKey = kf.generatePublic(kf.getKeySpec((Key) encryptionKey, KeySpec.class));
@@ -41,10 +41,12 @@ public class EncryptionKeyImpl implements EncryptionKey {
          cipher.init(Cipher.ENCRYPT_MODE, pubKey);
          byte[] bytes = m.toString().getBytes(StandardCharsets.UTF_8);
          byte[] encrypted = cipher.doFinal(bytes);
-         return new AddressImpl(Hex.encodeHexString(encrypted));
-
+         add = new AddressImpl(Hex.encodeHexString(encrypted));
       } catch (Exception e) {
          e.printStackTrace();
 
       }
+      return add;
    }
+
+}

@@ -4,6 +4,7 @@ import com.shuffle.bitcoin.BitcoinCrypto;
 import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.SignatureImpl;
 import com.shuffle.bitcoin.SigningKey;
+import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.bitcoin.blockchain.Bitcoin;
 import com.shuffle.protocol.message.Packet;
@@ -36,12 +37,14 @@ public class SigningKeyImpl implements SigningKey {
       return new VerificationKeyImpl(verificationKey.getPubKey());
    }
 
+
    @Override
-   public Signature makeSignature(Bitcoin.Transaction t) {
+   public Signature makeSignature(Transaction t) {
       SignatureImpl signature1;
       signature1 = null;
       try {
-         ECKey.ECDSASignature signature = verificationKey.sign(t.bitcoinj().getHash());
+         Bitcoin.Transaction tj = (Bitcoin.Transaction) t;
+         ECKey.ECDSASignature signature = verificationKey.sign(tj.bitcoinj().getHash());
          byte[] signed = signature.encodeToDER();
          signature1 = new SignatureImpl(signed);
       } catch (BlockStoreException e) {
