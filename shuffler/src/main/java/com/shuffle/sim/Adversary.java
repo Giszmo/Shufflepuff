@@ -96,20 +96,20 @@ public class Adversary {
 
                     } catch (Matrix m) {
                         q.send(new Either<Transaction, Matrix>(null, m));
+                    } catch (IOException
+                            | WaitingException
+                            | FormatException
+                            | CoinNetworkException
+                            | InvalidParticipantSetException e) {
+
+                        e.printStackTrace();
+                        System.out.println("Exception returned by " + sk + ": " + e.getMessage());
+
                     } finally {
                         q.close();
                     }
 
-                } catch (IOException
-                        | WaitingException
-                        | FormatException
-                        | CoinNetworkException
-                        | InvalidParticipantSetException e) {
-
-                    e.printStackTrace();
-                    System.out.println("Exception returned by " + sk + ": " + e.getMessage());
-                    
-                } catch (InterruptedException e) {
+                }  catch (InterruptedException e) {
                     // Ignore and we'll just return nothing.
                 }
 

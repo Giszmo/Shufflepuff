@@ -9,8 +9,10 @@
 package com.shuffle.protocol.message;
 
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.p2p.Bytestring;
 
 import java.io.IOException;
+import java.io.Serializable;
 
 /**
  * Represents a coin shuffle message with context information attached that is necessary to
@@ -19,12 +21,13 @@ import java.io.IOException;
  *
  * Created by Daniel Krawisz on 12/9/15.
  */
-public interface Packet {
+public interface Packet extends Serializable {
 
     Message payload();
     Phase phase();
     VerificationKey from();
     VerificationKey to();
+    Bytestring serialize();
 
     // Send across the CoinShuffle network.
     void send() throws // May be thrown if this protocol runs in an interruptable thread.

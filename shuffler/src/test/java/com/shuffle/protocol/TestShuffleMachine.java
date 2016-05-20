@@ -110,7 +110,8 @@ public class TestShuffleMachine {
 
             Map<SigningKey, TestCase.Mismatch> mismatch
                     = com.shuffle.sim.TestCase.test(init);
-            if (mismatch == null || mismatch.isEmpty() ) {
+
+            if (mismatch != null && mismatch.isEmpty() ) {
                 success ++;
             } else {
                 fail ++;

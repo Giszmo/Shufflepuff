@@ -11,19 +11,25 @@ package com.shuffle.player;
 import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
-import com.shuffle.chan.BasicChan;
 import com.shuffle.chan.Send;
+import com.shuffle.chan.SigningSend;
+import com.shuffle.chan.VerifyingSend;
 import com.shuffle.p2p.Bytestring;
 import com.shuffle.p2p.Channel;
 import com.shuffle.p2p.Connection;
+import com.shuffle.p2p.Listener;
+import com.shuffle.chan.Inbox;
 import com.shuffle.p2p.Peer;
 import com.shuffle.p2p.Session;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * A class for setting up Network objects. It manages setting up all all the necessary
@@ -40,38 +46,63 @@ public class Connect<Address> {
     // and the one for receiving connections. We set it in its own class to allow for some
     // synchronized functions.
     private class Peers {
-        private final Queue<Peer<Address, Bytestring>> peers = new LinkedList<>();
+        // The set of connected peers.
+        private final Map<VerificationKey, Send<Packet>> connected = new HashMap<>();
 
-        private Peers() { }
+        // The list of peers which we have not connected with yet.
+        private final Queue<Address> unconnected = new LinkedList<>();
+        private final Set<Address> remaining = new TreeSet<>();
 
-        public void add(Peer<Address, Bytestring> peer) {
-            if (peer == null) {
+        private Peers() {   }
+
+        public void queue(Address address) {
+            if (address == null) {
                 throw new NullPointerException();
             }
-            peers.add(peer);
+
+            if (remaining.contains(address)) return;
+
+            unconnected.add(address);
+            remaining.add(address);
         }
 
-        public Peer<Address, Bytestring> peek() {
-            return peers.peek();
+        public Address peek() {
+            return unconnected.peek();
         }
 
-        synchronized boolean rotate() {
-            Peer<Address, Bytestring> peer = peers.poll();
-            if (peer == null) {
+        boolean rotate() {
+            Address address = unconnected.poll();
+            if (address == null) {
                 return false;
             }
 
-            peers.add(peer);
+            unconnected.add(address);
             return true;
         }
 
-        synchronized boolean remove(Peer<Address, Bytestring> peer) {
-            return peers.remove(peer);
+        synchronized boolean connect(Address addr, VerificationKey k, Send<Packet> p) {
+
+            if (!remaining.remove(addr)) {
+                return false;
+            }
+
+            connected.put(k, p);
+            return true;
         }
+
+        boolean connected(Address address) {
+            return !remaining.contains(address);
+        }
+
+        // Removes the first element from the list.
+        void remove() {
+            unconnected.remove();
+        }
+
 
         @Override
         public String toString() {
-            return peers.toString();
+            return unconnected.toString();
         }
     }
 
@@ -102,44 +133,54 @@ public class Connect<Address> {
         }
     }
 
-    // Provides functions for a thread to call when it receives a new connection.
-    private class Listener implements com.shuffle.p2p.Listener<Address, Bytestring> {
-        final SignedReceiver receiver;
-        final Map<Address, VerificationKey> keys;
-        final Map<VerificationKey, Send<Packet>> players;
-        final Peers peers;
-        final Marshaller marshaller;
+    // Provides functions to be called when a new connection is received.
+    private class SigningListener implements Listener<Address, Bytestring> {
+        private final SigningKey me;
+        private final Map<Address, VerificationKey> keys;
+        private final Peers peers;
+        private final SigningSend.Marshaller<Packet> marshaller;
+        private final Inbox<VerificationKey, VerifyingSend.Signed<Packet>> inbox;
 
-        private Listener(Map<VerificationKey, Send<Packet>> players,
-                         Peers peers,
-                         Map<Address, VerificationKey> keys,
-                         SignedReceiver receiver,
-                         Marshaller marshaller) {
+        private SigningListener(
+                SigningKey me,
+                Peers peers,
+                Map<Address, VerificationKey> keys,
+                SigningSend.Marshaller<Packet> marshaller,
+                Inbox<VerificationKey, VerifyingSend.Signed<Packet>> inbox) {
 
-            this.players = players;
+            if (me == null || peers == null || keys == null
+                    || marshaller == null || inbox == null) throw new NullPointerException();
+
+            this.me = me;
             this.peers = peers;
             this.keys = keys;
-            this.receiver = receiver;
             this.marshaller = marshaller;
+            this.inbox = inbox;
         }
 
         @Override
-        public Send<Bytestring> newSession(Session<Address, Bytestring> session) throws InterruptedException {
+        public Send<Bytestring> newSession(Session<Address, Bytestring> session)
+                throws InterruptedException {
+
             VerificationKey key = keys.get(session.peer().identity());
 
             if (key == null) {
                 session.close();
+                return null;
             }
 
-            if (peers.remove(session.peer())) {
-                players.put(key, new SignedSender<Address>(session, marshaller));
+            if (!peers.connect(session.peer().identity(), key,
+                    new SigningSend<>(session, marshaller, me))) {
+
+                session.close();
+                return null;
             }
 
-            return receiver;
+            return new VerifyingSend<>(inbox.receivesFrom(key), marshaller, key);
         }
     }
 
-    private Connection<Address, Bytestring> connection;
+    private Connection<Address> connection;
 
     public Connect(Crypto crypto, SessionIdentifier session) {
         this.crypto = crypto;
@@ -151,8 +192,7 @@ public class Connect<Address> {
             SigningKey me,
             Channel<Address, Bytestring> channel,
             Map<Address, VerificationKey> keys,
-            Marshaller marshall,
-            int timeout,
+            SigningSend.Marshaller<Packet> marshall,
             int maxRetries) throws IOException, InterruptedException {
 
         if (connection != null) {
@@ -163,9 +203,9 @@ public class Connect<Address> {
 
         Map<VerificationKey, Send<Packet>> players = new HashMap<>();
 
-        SignedReceiver receiver = new SignedReceiver(marshall, new BasicChan<Bytestring>(2 * (1 + players.size())));
+        Inbox<VerificationKey, VerifyingSend.Signed<Packet>> inbox = new Inbox<>(100);
 
-        Listener listener = new Listener(players, peers, keys, receiver, marshall);
+        Listener<Address, Bytestring> listener = new SigningListener(me, peers, keys, marshall, inbox);
 
         connection = channel.open(listener);
         // TODO need to be able to disconnect the network.
@@ -175,48 +215,54 @@ public class Connect<Address> {
 
         // Randomly arrange the list of peers.
         // First, put all peers in an array.
-        int size = keys.size();
-        Peer<Address, Bytestring>[] p = new Peer[size];
-        int i = 0;
+        ArrayList<Address> addresses = new ArrayList<>();
         for (Address address : keys.keySet()) {
-            Peer<Address, Bytestring> peer = channel.getPeer(address);
-            if (peer == null) {
-                throw new NullPointerException();
-            }
-            p[i] = peer;
-            i++;
+            addresses.add(address);
         }
 
         // Then randomly select them one at a time and put them in peers.
-        i = 0;
-        for (int rmax = size - 1; rmax >= 0; rmax--) {
+        for (int rmax = keys.size() - 1; rmax >= 0; rmax--) {
             int rand = crypto.getRandom(rmax);
 
-            peers.add(p[rand]);
+            peers.queue(addresses.get(rand));
 
-            p[rand] = p[rmax];
+            // Put the address at the end into the spot we just took.
+            addresses.set(rand, addresses.get(rmax));
         }
 
         final Retries retries = new Retries();
 
         int l = 0;
         while (true) {
-            Peer<Address, Bytestring> peer = peers.peek();
-            if (peer == null) {
+            Address address = peers.peek();
+            if (address == null) {
                 break;
             }
 
-            if (peer.open()) {
-                peers.remove(peer);
+            Peer<Address, Bytestring> peer = channel.getPeer(address);
+
+            if (peer == null) {
+
+                // TODO clean up properly and fail more gracefully.
+                throw new NullPointerException();
+            }
+
+            if (!peers.connected(address)) {
+                peers.remove();
                 continue;
             }
 
-            Session<Address, Bytestring> session = peer.openSession(receiver);
+            VerificationKey key = keys.get(address);
+            Send<VerifyingSend.Signed<Packet>> processor = inbox.receivesFrom(key);
+            if (processor != null) {
+                Session<Address, Bytestring> session =
+                        peer.openSession(new VerifyingSend<Packet>(processor, marshall, key));
 
-            if (session != null) {
-                peers.remove(peer);
-                listener.newSession(session);
-                continue;
+                if (session != null) {
+                    peers.remove();
+                    listener.newSession(session);
+                    continue;
+                }
             }
 
             int r = retries.increment(peer.identity());
@@ -235,7 +281,7 @@ public class Connect<Address> {
             }
         }
 
-        return new Messages(session, me.VerificationKey(), players, receiver);
+        return new Messages(session, me.VerificationKey(), players, inbox);
     }
 
     public void shutdown() throws InterruptedException {

@@ -8,6 +8,8 @@
 
 package com.shuffle.p2p;
 
+import java.io.Serializable;
+
 /**
  * A channel through which connections can be created to other peers.
  *
@@ -17,10 +19,10 @@ package com.shuffle.p2p;
  *
  * Created by Daniel Krawisz on 12/16/15.
  */
-public interface Channel<Identity, Message> {
+public interface Channel<Identity, Message extends Serializable> {
     // Returns null if a peer could not be created for this identity.
     Peer<Identity, Message> getPeer(Identity you);
 
     // Returns null if the connection could not be opened.
-    Connection<Identity, Message> open(final Listener<Identity, Message> listener) throws InterruptedException;
+    Connection<Identity> open(final Listener<Identity, Message> listener) throws InterruptedException;
 }

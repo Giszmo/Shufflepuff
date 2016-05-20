@@ -10,6 +10,8 @@ package com.shuffle.p2p;
 
 import com.shuffle.chan.Send;
 
+import java.io.Serializable;
+
 /**
  * An implementation of Peer which is good for implementations which do not contain
  * other Peer objects, ie, they are fundamental. For example, it is used in TcpChannel and
@@ -17,7 +19,7 @@ import com.shuffle.chan.Send;
  *
  * Created by Daniel Krawisz on 3/18/16.
  */
-public abstract class FundamentalPeer<Identity, Message> implements Peer<Identity, Message> {
+public abstract class FundamentalPeer<Identity, Message extends Serializable> implements Peer<Identity, Message> {
     private final Identity you;
     protected Session<Identity, Message> currentSession = null;
 

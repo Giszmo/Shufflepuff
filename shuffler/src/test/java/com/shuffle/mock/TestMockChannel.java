@@ -67,7 +67,7 @@ public class TestMockChannel {
     public void testMockChannel() throws InterruptedException {
         // Create channels.
         Map<Integer, MockChannel<Integer, String>> knownHosts = new HashMap<>();
-        Map<Integer, Connection<Integer, String>> connections = new HashMap<>();
+        Map<Integer, Connection<Integer>> connections = new HashMap<>();
         Map<Integer, MockListener> listeners = new HashMap<>();
         Map<Integer, MockSend> receivers = new HashMap<>();
         knownHosts.put(1, new MockChannel<>(1, knownHosts));
@@ -95,19 +95,10 @@ public class TestMockChannel {
         Assert.assertNotNull(knownHosts.get(1).getPeer(2));
         Assert.assertNotNull(knownHosts.get(2).getPeer(1));
 
-        // No open sessions.
-        Assert.assertFalse(knownHosts.get(1).getPeer(2).open());
-        Assert.assertFalse(knownHosts.get(2).getPeer(1).open());
-
         // Try to open sessions.
         Assert.assertNotNull(knownHosts.get(1).getPeer(2).openSession(receivers.get(1)));
         Assert.assertNull(knownHosts.get(1).getPeer(2).openSession(receivers.get(1)));
         Assert.assertNull(knownHosts.get(2).getPeer(1).openSession(receivers.get(2)));
-        Assert.assertTrue(knownHosts.get(2).getPeer(1).open());
-
-        // Now the sessions should be opened.
-        Assert.assertTrue(knownHosts.get(1).getPeer(2).open());
-        Assert.assertTrue(knownHosts.get(2).getPeer(1).open());
 
         connections.get(1).close();
         connections.get(2).close();

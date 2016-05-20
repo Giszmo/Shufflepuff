@@ -10,9 +10,9 @@ package com.shuffle.protocol.blame;
 
 import com.shuffle.bitcoin.DecryptionKey;
 import com.shuffle.bitcoin.EncryptionKey;
-import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.p2p.Bytestring;
 import com.shuffle.protocol.message.Packet;
 
 import org.apache.logging.log4j.Logger;
@@ -32,7 +32,7 @@ public class Evidence {
     public final VerificationKey accused;
     public final Reason reason;
     public final Transaction t;
-    public final Signature signature;
+    public final Bytestring signature;
     public final Map<VerificationKey, Packet> output;
     public final Map<VerificationKey, EncryptionKey> sent;
     public final Map<VerificationKey, Packet> shuffle;
@@ -43,7 +43,7 @@ public class Evidence {
             VerificationKey accused,
             Reason reason,
             Transaction t,
-            Signature signature,
+            Bytestring signature,
             Map<VerificationKey, Packet> output,
             Map<VerificationKey, EncryptionKey> sent,
             Map<VerificationKey, Packet> shuffle,
@@ -175,7 +175,7 @@ public class Evidence {
         return new Evidence(accused, Reason.DoubleSpend, t, null, null, null, null, null, null);
     }
 
-    public static Evidence InvalidSignature(VerificationKey accused, Signature signature) {
+    public static Evidence InvalidSignature(VerificationKey accused, Bytestring signature) {
         return new Evidence(accused,
                 Reason.InvalidSignature, null, signature, null, null, null, null, null);
     }

@@ -8,11 +8,12 @@
 
 package com.shuffle.mock;
 
-import com.shuffle.bitcoin.Signature;
-import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.bitcoin.SigningKey;
-import com.shuffle.protocol.message.Packet;
+import com.shuffle.p2p.Bytestring;
+
+import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 /**
  * Created by Daniel Krawisz on 12/9/15.
@@ -30,13 +31,8 @@ public class MockSigningKey implements SigningKey {
     }
 
     @Override
-    public Signature makeSignature(Transaction t) {
-        return new MockSignature(t, new MockVerificationKey(index));
-    }
-
-    @Override
-    public Signature makeSignature(Packet p) {
-        return new MockSignature(p, new MockVerificationKey(index));
+    public Bytestring sign(Bytestring string) {
+        return new Bytestring(ByteBuffer.allocate(4).putInt(string.hashCode() + index).array());
     }
 
     @Override

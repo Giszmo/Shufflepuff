@@ -14,11 +14,11 @@ import com.shuffle.bitcoin.CoinNetworkException;
 import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.DecryptionKey;
 import com.shuffle.bitcoin.EncryptionKey;
-import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.chan.Send;
+import com.shuffle.p2p.Bytestring;
 import com.shuffle.protocol.blame.Blame;
 import com.shuffle.protocol.blame.BlameException;
 import com.shuffle.protocol.blame.Evidence;
@@ -94,7 +94,7 @@ public class CoinShuffle {
 
         public final Address change; // My change address. (may be null).
 
-        public final Map<VerificationKey, Signature> signatures = new HashMap<>();
+        public final Map<VerificationKey, Bytestring> signatures = new HashMap<>();
 
         public final Mailbox mailbox;
 
@@ -220,10 +220,10 @@ public class CoinShuffle {
             }
 
             Transaction t = coin.shuffleTransaction(amount, inputs, newAddresses, changeAddresses);
-
+            
             checkDoubleSpending(t);
 
-            mailbox.broadcast(messages.make().attach(sk.makeSignature(t)), phase.get());
+            mailbox.broadcast(messages.make().attach(sk.sign(t.serialize())), phase.get());
 
             Map<VerificationKey, Message> signatureMessages = null;
             boolean invalidClaim = false;
@@ -249,12 +249,12 @@ public class CoinShuffle {
             }
 
             // Verify the signatures.
-            Map<VerificationKey, Signature> invalid = new HashMap<>();
+            Map<VerificationKey, Bytestring> invalid = new HashMap<>();
             for (Map.Entry<VerificationKey, Message> sig : signatureMessages.entrySet()) {
                 VerificationKey key = sig.getKey();
-                Signature signature = sig.getValue().readSignature();
+                Bytestring signature = sig.getValue().readSignature();
                 signatures.put(key, signature);
-                if (!key.verify(t, signature)) {
+                if (!key.verify(t.serialize(), signature)) {
                     invalid.put(key, signature);
                 }
             }
@@ -263,9 +263,9 @@ public class CoinShuffle {
                 phase.set(Phase.Blame);
                 Message blameMessage = messages.make();
 
-                for (Map.Entry<VerificationKey, Signature> bad : invalid.entrySet()) {
+                for (Map.Entry<VerificationKey, Bytestring> bad : invalid.entrySet()) {
                     VerificationKey key = bad.getKey();
-                    Signature signature = bad.getValue();
+                    Bytestring signature = bad.getValue();
 
                     blameMessage = blameMessage.attach(Blame.InvalidSignature(key, signature));
                 }

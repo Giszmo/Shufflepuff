@@ -10,6 +10,8 @@ package com.shuffle.p2p;
 
 import com.shuffle.chan.Send;
 
+import java.io.Serializable;
+
 /**
  * Normally, the Listener is to be implemented by the user of a channel. The purpose
  * of the Listener is to whatever the user wants with a session that is initiated by a
@@ -18,7 +20,7 @@ import com.shuffle.chan.Send;
  *
  * Created by Daniel Krawisz on 1/25/16.
  */
-public interface Listener<Identity, Message> {
+public interface Listener<Identity, Message extends Serializable> {
     // Message to call when a new peer is found.
     Send<Message> newSession(Session<Identity, Message> session) throws InterruptedException;
 }

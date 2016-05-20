@@ -9,9 +9,9 @@
 package com.shuffle.protocol.blame;
 
 import com.shuffle.bitcoin.DecryptionKey;
-import com.shuffle.bitcoin.Signature;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.p2p.Bytestring;
 import com.shuffle.protocol.message.Packet;
 
 import java.io.Serializable;
@@ -29,14 +29,14 @@ public class Blame implements Serializable {
     public final Transaction t;
     public final Queue<Packet> packets;
     public final DecryptionKey privateKey;
-    public final Signature invalid;
+    public final Bytestring invalid;
 
     private Blame(Reason reason,
           VerificationKey accused,
           Transaction t,
           DecryptionKey privateKey,
           Queue<Packet> packets,
-          Signature invalid) {
+          Bytestring invalid) {
 
         if (reason == null) {
             throw new IllegalArgumentException();
@@ -137,7 +137,7 @@ public class Blame implements Serializable {
     }
 
     // Sent when a player makes an invalid signature to the transaction.
-    public static Blame InvalidSignature(VerificationKey accused, Signature invalid) {
+    public static Blame InvalidSignature(VerificationKey accused, Bytestring invalid) {
         return new Blame(Reason.InvalidSignature, accused, null, null, null, invalid);
     }
 

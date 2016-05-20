@@ -55,7 +55,6 @@ public class TestConnect {
         private final Connect<Integer> connect;
 
         private final Map<Integer, VerificationKey> keys;
-        private final int timeout;
         private final int maxRetries;
 
         private final SigningKey me;
@@ -74,7 +73,6 @@ public class TestConnect {
             this.connect = connect;
             this.keys = keys;
 
-            this.timeout = timeout;
             this.maxRetries = maxRetries;
             this.net = net;
         }
@@ -84,7 +82,7 @@ public class TestConnect {
             try {
                 Messages messages = connect.connect(
                     me, channel, keys,
-                    new MockMarshaller(), timeout, maxRetries);
+                    new MockMarshaller(), maxRetries);
                 if (messages != null) {
                     net.send(messages);
                 }

@@ -89,7 +89,6 @@ public class Mailbox {
     }
 
     public void broadcast(Message message, Phase phase) throws IOException, InterruptedException {
-
         for (VerificationKey to : players) {
             send(message.prepare(phase, to));
         }
@@ -99,7 +98,6 @@ public class Mailbox {
     // ahead under some circumstances, so we have to keep their messages to look at later.
     // It always returns a blame packet if encountered.
     private Packet receiveNextPacket(Phase expectedPhase) throws InterruptedException, IOException {
-
         Packet found = null;
 
         // Go through the queue of received messages if any are there.
@@ -146,6 +144,7 @@ public class Mailbox {
                 e.printStackTrace();
             }
         }
+
         return found;
     }
 

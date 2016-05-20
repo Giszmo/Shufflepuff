@@ -10,6 +10,7 @@ package com.shuffle.p2p;
 
 import com.shuffle.chan.Send;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -25,9 +26,9 @@ import java.util.TreeSet;
  *
  * Created by Daniel Krawisz on 1/26/16.
  */
-public class Mediator<Name extends Comparable<Name>, Address, Payload> implements Connection<Address, Mediator.Envelope<Name, Payload>> {
+public class Mediator<Name extends Comparable<Name>, Address, Payload extends Serializable> implements Connection<Address> {
 
-    public static class Envelope<Name, Payload> {
+    public static class Envelope<Name, Payload> implements Serializable {
         public final Name to; // Null means to the mediator.
         public final Name from; // Null means from the mediator.
         public final Payload payload;
@@ -466,7 +467,7 @@ public class Mediator<Name extends Comparable<Name>, Address, Payload> implement
     }
 
     Channel<Address, Envelope<Name, Payload>> clients;
-    private final Connection<Address, Envelope<Name, Payload>> conn;
+    private final Connection<Address> conn;
 
     public Mediator(Channel<Address, Envelope<Name, Payload>> clients) throws InterruptedException {
         this.clients = clients;

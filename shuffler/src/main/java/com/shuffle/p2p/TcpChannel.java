@@ -395,7 +395,7 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
         this(defaultHeader(), me, executor);
     }
 
-    private class TcpConnection implements Connection<InetSocketAddress, Bytestring> {
+    private class TcpConnection implements Connection<InetSocketAddress> {
         private boolean closed = false;
 
         @Override
@@ -430,7 +430,7 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
     }
 
     @Override
-    public Connection<InetSocketAddress, Bytestring> open(
+    public Connection<InetSocketAddress> open(
             Listener<InetSocketAddress, Bytestring> listener
     ) {
         if (listener == null) {

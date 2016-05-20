@@ -8,6 +8,7 @@
 
 package com.shuffle.bitcoin;
 
+import com.shuffle.p2p.Bytestring;
 import com.shuffle.protocol.message.Packet;
 
 /**
@@ -18,9 +19,8 @@ import com.shuffle.protocol.message.Packet;
  * Created by Daniel Krawisz on 12/3/15.
  */
 public interface SigningKey extends Comparable {
+
     VerificationKey VerificationKey();
 
-    Signature makeSignature(Transaction t);
-
-    Signature makeSignature(Packet p);
+    Bytestring sign(Bytestring string);
 }

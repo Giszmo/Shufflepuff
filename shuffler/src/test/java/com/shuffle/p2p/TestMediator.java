@@ -30,10 +30,10 @@ import java.util.concurrent.TimeUnit;
                                                         public class TestMediator {
 
  Map<Integer, MockChannel<Integer, Mediator.Envelope<String, Integer>>> hosts;
-  Map<Integer, Connection<Integer, Mediator.Envelope<String, Integer>>> mockConn;
+                                      Map<Integer, Connection<Integer>> mockConn;
                                                    Map<Integer, String> names;
            Map<String, MediatorClientChannel<String, Integer, Integer>> clients;
-                               Map<String, Connection<String, Integer>> conn;
+                                        Map<String, Connection<String>> conn;
                                 Map<String, Map<String, Chan<Integer>>> msgs;
                      Map<String, Map<String, Session<String, Integer>>> sessions;
 
@@ -119,7 +119,7 @@ import java.util.concurrent.TimeUnit;
                                                                     sessions.put(name, openSessions);
 
                                                                     // Open client.
-            Connection<Integer, Mediator.Envelope<String, Integer>> mock = host.open(
+                                                Connection<Integer> mock = host.open(
                                                                             new Listener<Integer, Mediator.Envelope<String, Integer>>(){
                                                                                 // The listener doesn't need to do anything because the
                                                                                 // mediator doesn't initiate connections.
@@ -134,7 +134,7 @@ import java.util.concurrent.TimeUnit;
 
                                                                     mockConn.put(i, mock);
 
-                                        Connection<String, Integer> connection = client.open(new TestListener(name, openSessions));
+                                                 Connection<String> connection = client.open(new TestListener(name, openSessions));
 
                                                                     Assert.assertTrue(connection != null);
 
@@ -255,12 +255,12 @@ import java.util.concurrent.TimeUnit;
                                                                     for (Session<String, Integer> s : ss.values()) s.close();
 
                                                                 // close connections to server.
-                                                                for (Connection<String, Integer> client : conn.values()) {
+                                                                for (Connection<String> client : conn.values()) {
                                                                     client.close();
                                                                 }
 
                                                                 // close underlying mock connections.
-                                                                for (Connection<Integer, Mediator.Envelope<String, Integer>> m : mockConn.values()) {
+                                                                for (Connection<Integer> m : mockConn.values()) {
                                                                     m.close();
                                                                 }
 

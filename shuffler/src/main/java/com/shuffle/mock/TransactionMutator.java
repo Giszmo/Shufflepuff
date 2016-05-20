@@ -39,7 +39,7 @@ public class TransactionMutator implements Coin {
         MockCoin.MockTransaction tr = (MockCoin.MockTransaction) coin.shuffleTransaction(
                         amount, from, to, changeAddresses);
 
-        return coin.new MockTransaction(tr.inputs, tr.outputs, tr.z + 1);
+        return new MockCoin.MockTransaction(tr.inputs, tr.outputs, tr.z + 1, coin);
     }
 
     @Override

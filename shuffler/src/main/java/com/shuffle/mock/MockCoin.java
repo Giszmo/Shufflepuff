@@ -13,6 +13,7 @@ import com.shuffle.bitcoin.Coin;
 import com.shuffle.bitcoin.CoinNetworkException;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.p2p.Bytestring;
 import com.shuffle.protocol.InvalidImplementationError;
 
 import java.io.Serializable;
@@ -63,18 +64,20 @@ public class MockCoin implements com.shuffle.sim.MockCoin {
     /**
      * Created by Daniel Krawisz on 12/8/15.
      */
-    public class MockTransaction implements Transaction, Serializable {
+    static class MockTransaction implements Transaction, Serializable {
         public final List<Output> inputs = new LinkedList<>();
         public final List<Output> outputs = new LinkedList<>();
         // A number used to represented slight variations in a transaction which would
         // result in different signatures being produced.
         public final int z;
 
-        public MockTransaction(List<Output> inputs, List<Output> outputs) {
-            this(inputs, outputs, 1);
+        private final transient MockCoin coin;
+
+        MockTransaction(List<Output> inputs, List<Output> outputs, MockCoin coin) {
+            this(inputs, outputs, 1, coin);
         }
 
-        public MockTransaction(List<Output> inputs, List<Output> outputs, int z) {
+        public MockTransaction(List<Output> inputs, List<Output> outputs, int z, MockCoin coin) {
             for (Output output : inputs)
                 if (output == null) throw new NullPointerException();
 
@@ -84,6 +87,7 @@ public class MockCoin implements com.shuffle.sim.MockCoin {
             this.z = z;
             this.inputs.addAll(inputs);
             this.outputs.addAll(outputs);
+            this.coin = coin;
         }
 
         @Override
@@ -119,21 +123,32 @@ public class MockCoin implements com.shuffle.sim.MockCoin {
 
         @Override
         public String toString() {
-            return "{" + inputs.toString() + " ==> " + outputs.toString() + "}";
+            return "{" + inputs.toString() + " ==> " + outputs.toString() + "; z:" + z + "}";
         }
 
         @Override
         public boolean send() throws CoinNetworkException {
-            MockCoin.this.send(this);
+            if (coin == null) return false;
+            coin.send(this);
             return true;
         }
 
+        @Override
+        public Bytestring serialize() {
+            return new Bytestring(toString().getBytes());
+        }
+
         public MockTransaction copy() {
-            return new MockTransaction(inputs, outputs, z);
+            return new MockTransaction(inputs, outputs, z, coin);
         }
 
         public MockTransaction mutate() {
-            return new MockTransaction(inputs, outputs, z + 1);
+            return new MockTransaction(inputs, outputs, z + 1, coin);
+        }
+
+        @Override
+        public int hashCode() {
+            return inputs.hashCode() + 17 * (outputs.hashCode() + (17 * z));
         }
     }
 
@@ -174,7 +189,7 @@ public class MockCoin implements com.shuffle.sim.MockCoin {
         in.add(output);
         out.add(new Output(to, amount));
 
-        return new MockTransaction(in, out);
+        return new MockTransaction(in, out, this);
     }
 
     public synchronized void send(Transaction t) throws CoinNetworkException {
@@ -256,7 +271,7 @@ public class MockCoin implements com.shuffle.sim.MockCoin {
 
         for (Address address : to) outputs.add(new Output(address, amount));
 
-        return new MockTransaction(inputs, outputs, 1);
+        return new MockTransaction(inputs, outputs, 1, this);
     }
 
     @Override

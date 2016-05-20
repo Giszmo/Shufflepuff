@@ -10,23 +10,18 @@ package com.shuffle.sim;
 
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.Transaction;
-import com.shuffle.bitcoin.VerificationKey;
-import com.shuffle.chan.BasicChan;
-import com.shuffle.chan.Send;
-import com.shuffle.player.Messages;
 import com.shuffle.monad.Either;
 import com.shuffle.monad.NaturalSummableFuture;
 import com.shuffle.monad.SummableFuture;
 import com.shuffle.monad.SummableFutureZero;
 import com.shuffle.monad.SummableMaps;
-import com.shuffle.player.SessionIdentifier;
-import com.shuffle.protocol.blame.Matrix;
+import com.shuffle.player.Messages;
 import com.shuffle.player.Packet;
+import com.shuffle.protocol.blame.Matrix;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
@@ -42,29 +37,9 @@ public final class Simulator {
     private Simulator() {
     }
 
-    private static class SimulationInitializer implements InitialState.Initializer {
-        public final Map<VerificationKey, Send<Packet>> networks = new HashMap<>();
-        public final SessionIdentifier session;
-        public final int capacity;
-
-        private SimulationInitializer(SessionIdentifier session, int capacity) {
-
-            this.session = session;
-            this.capacity = capacity;
-        }
-
-        @Override
-        public com.shuffle.protocol.message.MessageFactory messages(SigningKey key) {
-            BasicChan<Messages.SignedPacket> chan = new BasicChan<>(capacity);
-            NetworkSim sim = new NetworkSim(key, chan);
-            networks.put(key.VerificationKey(), sim);
-            return new Messages(session, key.VerificationKey(), networks, chan);
-        }
-    }
-
     public static Map<SigningKey, Either<Transaction, Matrix>> run(InitialState init) {
 
-        final SimulationInitializer initializer = new SimulationInitializer(init.session, 2 * (1 + init.size() ));
+        final Initializer<Packet> initializer = new Initializer<>(init.session, new MockMarshaller(), 2 * (1 + init.size() ));
         final Map<SigningKey, Adversary> machines = init.getPlayers(initializer);
 
         Map<SigningKey, Either<Transaction, Matrix>> results = runSimulation(machines);

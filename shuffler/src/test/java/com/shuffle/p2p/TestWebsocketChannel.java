@@ -32,8 +32,8 @@ public class TestWebsocketChannel {
 
     WebsocketServerChannel server;
     WebsocketClientChannel client;
-    Connection<InetAddress, Bytestring> serverConn;
-    Connection<URI, Bytestring> clientConn;
+    Connection<InetAddress> serverConn;
+    Connection<URI> clientConn;
     Session<InetAddress, Bytestring> serverSession;
     Session<URI, Bytestring> clientSession;
     String serverMessage;

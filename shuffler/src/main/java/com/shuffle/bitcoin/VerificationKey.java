@@ -8,8 +8,11 @@
 
 package com.shuffle.bitcoin;
 
+import com.shuffle.p2p.Bytestring;
 import com.shuffle.protocol.InvalidImplementationError;
 import com.shuffle.protocol.message.Packet;
+
+import java.io.Serializable;
 
 /**
  *
@@ -18,10 +21,12 @@ import com.shuffle.protocol.message.Packet;
  *
  * Created by Daniel Krawisz on 12/3/15.
  */
-public interface VerificationKey extends Comparable {
-    boolean verify(Transaction t, Signature sig) throws InvalidImplementationError;
+public interface VerificationKey extends Comparable, Serializable {
 
-    boolean verify(Packet packet, Signature sig);
+    // Separates message from signature and returns null if the verification fails.
+    Bytestring[] verify(Bytestring bytestring);
+
+    boolean verify(Bytestring payload, Bytestring signature);
 
     boolean equals(Object vk);
 

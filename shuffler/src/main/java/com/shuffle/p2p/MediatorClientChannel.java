@@ -4,6 +4,7 @@ import com.shuffle.chan.BasicChan;
 import com.shuffle.chan.Chan;
 import com.shuffle.chan.Send;
 
+import java.io.Serializable;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -16,7 +17,7 @@ import java.util.concurrent.ConcurrentMap;
  * Created by Eugene Siegel on 4/12/16.
  */
 
-public class MediatorClientChannel<Name, Address, Payload> implements Channel<Name, Payload> {
+public class MediatorClientChannel<Name, Address, Payload extends Serializable> implements Channel<Name, Payload> {
 
     // Methods for creating Envelope objects.
     // (use these for creating Envelope objects for safety.)
@@ -208,11 +209,6 @@ public class MediatorClientChannel<Name, Address, Payload> implements Channel<Na
         }
 
         @Override
-        public boolean open() throws InterruptedException {
-            return openSessions.connected(you);
-        }
-
-        @Override
         public void close() throws InterruptedException {
             openSessions.close(you);
         }
@@ -259,7 +255,7 @@ public class MediatorClientChannel<Name, Address, Payload> implements Channel<Na
         }
     }
 
-    private class MediatorClientConnection implements Connection<Name, Payload> {
+    private class MediatorClientConnection implements Connection<Name> {
         private boolean closed = false;
 
         @Override
@@ -340,7 +336,7 @@ public class MediatorClientChannel<Name, Address, Payload> implements Channel<Na
         }
     }
 
-    public Connection<Name, Payload> open(final Listener<Name, Payload> listener)
+    public Connection<Name> open(final Listener<Name, Payload> listener)
             throws InterruptedException {
 
         synchronized (lock) {

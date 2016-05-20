@@ -8,12 +8,14 @@
 
 package com.shuffle.protocol.message;
 
+import java.io.Serializable;
+
 /**
  * The phases of the shuffle protocol.
  *
  * Created by Daniel Krawisz on 12/3/15.
  */
-public enum Phase {
+public enum Phase implements Serializable {
     Uninitiated,
     Announcement, // Everone generates new encryption keys and distributes them to one another.
     Shuffling, // In turn, each of the players adds his own new address and reshufles the result.

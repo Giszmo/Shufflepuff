@@ -314,7 +314,7 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
         //this.path = path;
     }
 
-    private class WebsocketConnection implements Connection<InetAddress, Bytestring> {
+    private class WebsocketConnection implements Connection<InetAddress> {
         private boolean closed = false;
 
         public InetAddress identity() {
@@ -346,7 +346,7 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
 
 
     @Override
-    public Connection<InetAddress, Bytestring> open(Listener<InetAddress, Bytestring> listener) {
+    public Connection<InetAddress> open(Listener<InetAddress, Bytestring> listener) {
         if (listener == null) {
             throw new NullPointerException();
         }

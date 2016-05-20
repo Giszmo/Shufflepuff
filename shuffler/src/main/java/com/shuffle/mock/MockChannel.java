@@ -16,6 +16,7 @@ import com.shuffle.p2p.Listener;
 import com.shuffle.p2p.Peer;
 import com.shuffle.p2p.Session;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -24,7 +25,7 @@ import java.util.Map;
  *
  * Created by Daniel Krawisz on 3/2/16.
  */
-public class MockChannel<Q, X> implements Channel<Q, X> {
+public class MockChannel<Q, X extends Serializable> implements Channel<Q, X> {
     final Map<Q, MockChannel<Q, X>> knownHosts;
     final Map<Q, MockPeer> peers = new HashMap<>();
     MockConnection connection;
@@ -35,7 +36,7 @@ public class MockChannel<Q, X> implements Channel<Q, X> {
         this.me = me;
     }
 
-    class MockConnection implements Connection<Q, X> {
+    class MockConnection implements Connection<Q> {
 
         @Override
         public Q identity() {
@@ -172,7 +173,7 @@ public class MockChannel<Q, X> implements Channel<Q, X> {
     }
 
     @Override
-    public Connection<Q, X> open(Listener<Q, X> listener) {
+    public Connection<Q> open(Listener<Q, X> listener) {
 
         if (this.listener != null) throw new NullPointerException();
         this.listener = listener;

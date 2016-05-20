@@ -13,6 +13,7 @@ import com.shuffle.bitcoin.Address;
 import com.shuffle.bitcoin.Coin;
 import com.shuffle.bitcoin.CoinNetworkException;
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.p2p.Bytestring;
 
 import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.NetworkParameters;
@@ -98,6 +99,11 @@ public abstract class Bitcoin implements Coin {
                 throw new CoinNetworkException();
             }
             return true;
+        }
+
+        @Override
+        public Bytestring serialize() {
+            return new Bytestring(bitcoinj.bitcoinSerialize());
         }
     }
 

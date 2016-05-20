@@ -32,7 +32,7 @@ public class TestTcpChannel {
 
     // The three connections we would like to open.
     // This is also a vector.
-    Connection<Integer, Integer>[] conn;
+    Connection<Integer>[] conn;
 
     // The peers that represent the programs' view of one anothers
     // This is an assymmetric 2-tensor.
@@ -116,11 +116,6 @@ public class TestTcpChannel {
             }
 
             @Override
-            public boolean open() throws InterruptedException {
-                return peer.open();
-            }
-
-            @Override
             public void close() throws InterruptedException {
                 peer.close();
             }
@@ -172,10 +167,10 @@ public class TestTcpChannel {
             }
         }
 
-        private class TcpTestConnection implements Connection<Integer, Integer> {
-            private final Connection<InetSocketAddress, Bytestring> conn;
+        private class TcpTestConnection implements Connection<Integer> {
+            private final Connection<InetSocketAddress> conn;
 
-            private TcpTestConnection(Connection<InetSocketAddress, Bytestring> conn) {
+            private TcpTestConnection(Connection<InetSocketAddress> conn) {
                 this.conn = conn;
             }
 
@@ -190,7 +185,7 @@ public class TestTcpChannel {
             }
 
             @Override
-            public boolean closed() {
+            public boolean closed() throws InterruptedException {
                 return conn.closed();
             }
         }
@@ -212,7 +207,7 @@ public class TestTcpChannel {
         }
 
         @Override
-        public Connection<Integer, Integer> open(Listener<Integer, Integer> listener) {
+        public Connection<Integer> open(Listener<Integer, Integer> listener) {
             return new TcpTestConnection(tcp.open(new TcpTestListener(listener)));
         }
     }
@@ -337,7 +332,7 @@ public class TestTcpChannel {
 
         channels = new TcpTestChannel[3];
         listen = new TestListener[3];
-        conn = (Connection<Integer, Integer>[]) new Connection[3];
+        conn = (Connection<Integer>[]) new Connection[3];
         peer = (Peer<Integer, Integer>[][]) new Peer[3][3];
         session = (Session<Integer, Integer>[][]) new Session[3][3];
         rec = (Receive<Integer>[][]) new Receive[3][3];

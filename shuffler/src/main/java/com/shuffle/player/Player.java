@@ -16,6 +16,7 @@ import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.chan.BasicChan;
 import com.shuffle.chan.Chan;
+import com.shuffle.p2p.Bytestring;
 import com.shuffle.p2p.Channel;
 import com.shuffle.protocol.CoinShuffle;
 import com.shuffle.protocol.Mailbox;
@@ -37,7 +38,7 @@ import java.util.TreeSet;
  *
  * Created by Daniel Krawisz on 2/1/16.
  */
-class Player<Identity, Bytestring> {
+class Player<Identity> {
     private static final Logger log = LogManager.getLogger(Player.class);
 
     private final SigningKey sk;

@@ -15,7 +15,7 @@ package com.shuffle.p2p;
  *
  * Created by Daniel Krawisz on 2/22/16.
  */
-public interface Connection<Identity, Message> {
+public interface Connection<Identity> {
     // Our own identity on this channel. For TCP, this would be a IP address.
     Identity identity();
 
@@ -25,5 +25,5 @@ public interface Connection<Identity, Message> {
 
     // Whether the channel has been closed. After this method returns true, it can only return true
     // after that.
-    boolean closed();
+    boolean closed() throws InterruptedException;
 }

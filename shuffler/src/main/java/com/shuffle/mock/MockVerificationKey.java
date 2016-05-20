@@ -9,13 +9,11 @@
 package com.shuffle.mock;
 
 import com.shuffle.bitcoin.Address;
-import com.shuffle.bitcoin.Signature;
-import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
-import com.shuffle.protocol.InvalidImplementationError;
-import com.shuffle.protocol.message.Packet;
+import com.shuffle.p2p.Bytestring;
 
 import java.io.Serializable;
+import java.util.Arrays;
 
 /**
  * A mock implementation of a VerificationKey.
@@ -29,27 +27,22 @@ public class MockVerificationKey implements VerificationKey, Serializable {
         this.index = index;
     }
 
-    // These functions are not implemented yet.
     @Override
-    public boolean verify(Transaction t, Signature sig) throws InvalidImplementationError {
-        if (!(sig instanceof MockSignature)) {
-            throw new InvalidImplementationError();
+    public Bytestring[] verify(Bytestring bytestring) {
+        if (bytestring.bytes.length < 4) return null;
+
+        Bytestring[] chopped = bytestring.chop(new int[]{bytestring.bytes.length - 4});
+
+        if (verify(chopped[0], chopped[1])) {
+            return chopped;
         }
 
-        MockSignature mock = (MockSignature)sig;
-
-        return mock.t != null && mock.t.equals(t) && mock.key.equals(this);
+        return null;
     }
 
     @Override
-    public boolean verify(Packet packet, Signature sig) {
-        if (!(sig instanceof MockSignature)) {
-            throw new InvalidImplementationError();
-        }
-
-        MockSignature mock = (MockSignature)sig;
-
-        return mock.packet != null && mock.packet.equals(packet) && mock.key.equals(this);
+    public boolean verify(Bytestring payload, Bytestring signature) {
+        return Arrays.equals(signature.bytes, new MockSigningKey(index).sign(payload).bytes);
     }
 
     @Override

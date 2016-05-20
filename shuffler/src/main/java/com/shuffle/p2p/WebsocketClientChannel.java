@@ -252,7 +252,7 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
 
     }
 
-    private class WebsocketConnection implements Connection<URI, Bytestring> {
+    private class WebsocketConnection implements Connection<URI> {
         private boolean closed = false;
 
         @Override
@@ -280,7 +280,7 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
     }
 
     @Override
-    public Connection<URI, Bytestring> open(Listener<URI, Bytestring> listener) {
+    public Connection<URI> open(Listener<URI, Bytestring> listener) {
         synchronized (lock) {
             if (running) return null;
             running = true;

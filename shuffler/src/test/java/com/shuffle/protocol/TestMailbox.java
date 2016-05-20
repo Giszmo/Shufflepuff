@@ -10,24 +10,25 @@ package com.shuffle.protocol;
 
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.chan.Inbox;
+
 import com.shuffle.player.Messages;
 import com.shuffle.mock.MockSessionIdentifier;
 import com.shuffle.mock.MockSigningKey;
 import com.shuffle.mock.MockVerificationKey;
-import com.shuffle.player.MockNetwork;
+import com.shuffle.player.SessionIdentifier;
 import com.shuffle.protocol.blame.BlameException;
 import com.shuffle.protocol.message.Packet;
 import com.shuffle.protocol.message.Phase;
-import com.shuffle.sim.NetworkSim;
 
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 import java.util.Set;
 
 /**
@@ -38,11 +39,20 @@ import java.util.Set;
 public class TestMailbox {
 
     static class BroadcastTestCase {
-        public final int recipients;
+        public final int[] recipients;
         public final int sender;
 
         public BroadcastTestCase(int recipients, int sender) {
-            this.recipients = recipients;
+            LinkedList<Integer> r = new LinkedList<>();
+
+            for (int i = 1; i <= recipients; i++) {
+                if (i != sender) r.add(i);
+            }
+
+            this.recipients = new int[r.size()];
+            for (int i = 0; i < this.recipients.length; i++) {
+                this.recipients[i] = r.removeFirst();
+            }
             this.sender = sender;
         }
     }
@@ -58,32 +68,35 @@ public class TestMailbox {
                         new BroadcastTestCase(4, 2),
                 };
 
+        int testCase = 0;
         for (BroadcastTestCase test : tests) {
+            testCase++;
+            System.out.println("Test case " + testCase);
 
             // make the set of players.
             Set<VerificationKey> players = new HashSet<>();
-            for (int i = 1; i <= test.recipients; i ++) {
+            for (int i : test.recipients) {
                 players.add(new MockVerificationKey(i));
             }
 
             MockSigningKey me = new MockSigningKey(test.sender);
+            SessionIdentifier session = new MockSessionIdentifier("test broadcast");
 
-            MockNetwork network = new MockNetwork(me);
+            MockNetwork network = new MockNetwork(session, test.sender, test.recipients, 100);
 
-            Messages messages = new Messages(new MockSessionIdentifier("test Broadcast"), me.VerificationKey(), network, network);
+            Messages messages = network.messages(me.VerificationKey());
 
             new Mailbox(me.VerificationKey(), players, messages
             ).broadcast(messages.make(), Phase.Shuffling);
 
-            for (Map.Entry<? extends Packet, VerificationKey> sent : network.getResponses()) {
-                VerificationKey sentBy = sent.getValue();
-                Assert.assertTrue(players.contains(sentBy));
-                players.remove(sentBy);
+            for (Inbox.Envelope<VerificationKey, com.shuffle.player.Packet> sent
+                    : network.getResponses()) {
+
+                VerificationKey sentTo = sent.from;
+                Assert.assertTrue(players.contains(sentTo));
+                players.remove(sentTo);
             }
 
-            Assert.assertEquals(1, players.size());
-
-            players.remove(me.VerificationKey());
             Assert.assertEquals(0, players.size());
         }
     }
@@ -91,14 +104,18 @@ public class TestMailbox {
     static class SendToTestCase {
         public final int sender;
         public final int recipient;
-        public final int players;
+        public final int[] players;
         public final boolean success;
 
         public SendToTestCase(int sender, int recipient, int players, boolean success) {
             this.sender = sender;
             this.recipient = recipient;
-            this.players = players;
+            this.players = new int[players];
             this.success = success;
+
+            for (int i = 0; i < players; i++) {
+                this.players[i] = i + 1;
+            }
         }
     }
 
@@ -116,21 +133,20 @@ public class TestMailbox {
         int index = 0;
         for (SendToTestCase test : tests) {
             // The player sending and inbox.
-            MockSigningKey sk = new MockSigningKey(1);
+            MockSigningKey sk = new MockSigningKey(test.sender);
 
             // Create mock network object.
-            MockNetwork network = new com.shuffle.player.MockNetwork(sk);
+            SessionIdentifier session = new MockSessionIdentifier("testSend" + index);
+            MockNetwork network = new MockNetwork(session, test.sender, test.players, 100);
 
             // make the set of players.
             Set<VerificationKey> players = new HashSet<>();
-            for (int j = 1; j <= test.players; j ++) {
+            for (int j : test.players) {
                 players.add(new MockVerificationKey(j));
             }
 
             // Set up the shuffle machine (only used to query for the current phase).
-            Messages messages = new Messages(
-                    new MockSessionIdentifier("testSend" + index),
-                    sk.VerificationKey(), network, network);
+            Messages messages = network.messages(sk.VerificationKey());
 
             new Mailbox(
                     sk.VerificationKey(), players, messages
@@ -140,7 +156,7 @@ public class TestMailbox {
 
             int expected = (test.success ? 1 : 0);
 
-            Queue<Map.Entry<com.shuffle.player.Packet, VerificationKey>> responses = network.getResponses();
+            List<Inbox.Envelope<VerificationKey, com.shuffle.player.Packet>> responses = network.getResponses();
             Assert.assertEquals(
                     String.format(
                             "Recieved %d responses when only expected %d in test case %d",
@@ -148,9 +164,9 @@ public class TestMailbox {
                     (test.success ? 1 : 0),
                     responses.size());
 
-            for (Map.Entry msg : responses) {
+            for (Inbox.Envelope<VerificationKey, com.shuffle.player.Packet> msg : responses) {
                 Assert.assertTrue("Received response does not equal expected",
-                        new MockVerificationKey(test.recipient).equals(msg.getValue()));
+                        new MockVerificationKey(test.recipient).equals(msg.from));
             }
             index++;
         }
@@ -158,6 +174,7 @@ public class TestMailbox {
 
     static class ReceiveFromTestCase {
         public final int[] players;
+        public final int recipient;
         public final int requested; // The player that the message was expected from.
         public final Phase phase; // The expected phase.
         public final Packet packet;
@@ -165,12 +182,14 @@ public class TestMailbox {
 
         public ReceiveFromTestCase(
                 int[] players,
+                int recipient,
                 int requested,
                 Phase phase,
                 Packet packet,
                 boolean error
         ) {
             this.players = players;
+            this.recipient = recipient;
             this.requested = requested;
             this.packet = packet;
             this.error = error;
@@ -178,7 +197,7 @@ public class TestMailbox {
         }
     }
 
-    @Test(expected = WaitingException.class)
+    @Test()
     public void testReceiveFrom()
             throws InvalidParticipantSetException, InterruptedException,
             BlameException, FormatException, WaitingException, IOException {
@@ -186,8 +205,8 @@ public class TestMailbox {
         ReceiveFromTestCase[] tests = new ReceiveFromTestCase[]{
                 // time out exception test case.
                 new ReceiveFromTestCase(
-                        new int []{1,2,3}, 2, Phase.Shuffling, null, true
-                ),
+                        new int []{1,2,3}, 1, 2, Phase.Shuffling, null, true
+                )
                 // Various malformed inputs.
                 // TODO
         };
@@ -195,7 +214,7 @@ public class TestMailbox {
         int index = 0;
         for (ReceiveFromTestCase test : tests) {
             // The player sending and inbox.
-            MockSigningKey sk = new MockSigningKey(1);
+            MockSigningKey sk = new MockSigningKey(test.recipient);
 
             // make the set of players.
             Set<VerificationKey> players = new HashSet<>();
@@ -203,20 +222,23 @@ public class TestMailbox {
                 players.add(new MockVerificationKey(test.players[j - 1]));
             }
 
-            MockNetwork network = new MockNetwork(sk);
+            SessionIdentifier session = new MockSessionIdentifier("receiveFromTest" + index);
+            MockNetwork network = new MockNetwork(session, test.recipient, test.players, 100);
 
-            new Mailbox(sk.VerificationKey(), players,
-                    new Messages(
-                            new MockSessionIdentifier("receiveFromTest" + index),
-                            sk.VerificationKey(),
-                            network, network)
-            ).receiveFrom(new MockVerificationKey(test.requested), test.phase);
+            try {
+                new Mailbox(sk.VerificationKey(), players, network.messages(sk.VerificationKey())
+                ).receiveFrom(new MockVerificationKey(test.requested), test.phase);
+            } catch (WaitingException e) {
+                if (test.packet != null) {
+                    Assert.fail("Waiting exception caught when not expected.");
+                }
+            }
             index++;
         }
     }
 
     static class ReceiveFromMultipleTestCase {
-        public final int players;
+        public final int[] players;
         public final int me;
         public final int[] receiveFrom; // Who are we expecting?
         public final int[] sendBefore; // Send before we call the function.
@@ -230,12 +252,16 @@ public class TestMailbox {
                 int[] sendBefore,
                 int[] sendAfter
         ) {
-            this.players = players;
+            this.players = new int[players];
             this.me = me;
             this.receiveFrom = receiveFrom;
             this.sendBefore = sendBefore;
             this.sendAfter = sendAfter;
             timeoutExpected = false;
+
+            for (int i = 0; i < players; i++) {
+                this.players[i] = i + 1;
+            }
         }
 
         public ReceiveFromMultipleTestCase(
@@ -246,12 +272,16 @@ public class TestMailbox {
                 int[] sendAfter,
                 boolean timeoutExpected
         ) {
-            this.players = players;
+            this.players = new int[players];
             this.me = me;
             this.receiveFrom = receiveFrom;
             this.sendBefore = sendBefore;
             this.sendAfter = sendAfter;
             this.timeoutExpected = timeoutExpected;
+
+            for (int i = 0; i < players; i++) {
+                this.players[i] = i + 1;
+            }
         }
     }
 
@@ -280,54 +310,57 @@ public class TestMailbox {
 
         int i = 0;
         for (ReceiveFromMultipleTestCase test : tests) {
-            System.out.println("receive from multiple test case " + i + " me = " + test.me);
+            System.out.println("receive from multiple test case " + i + "; me = " + test.me);
 
             // The player sending and inbox.
-            MockSigningKey sk = new MockSigningKey(test.me);
+            SigningKey sk = new MockSigningKey(test.me);
+            VerificationKey vk = sk.VerificationKey();
+
+            SessionIdentifier session = new MockSessionIdentifier("receiveFromMultiple" + i);
 
             // Create mock network object.
-            MockNetwork network = new MockNetwork(sk);
-
-            MockSessionIdentifier mockSessionIdentifier
-                    = new MockSessionIdentifier("receiveFromMultiple" + i);
-
-            Map<SigningKey, Messages> messages = new HashMap<>();
+            MockNetwork network = new MockNetwork(session, test.me, test.players, 100);
 
             // make the set of players.
             Set<VerificationKey> players = new HashSet<>();
-            for (int j = 1; j <= test.players; j ++) {
+            for (int j : test.players) {
+                if (j != test.me) continue;
+
                 MockSigningKey player = new MockSigningKey(j);
                 players.add(player.VerificationKey());
-
-                messages.put(player, new Messages(mockSessionIdentifier, player.VerificationKey(), network, network));
             }
 
             // Set up the network operations object.
-            Mailbox mailbox = new Mailbox(sk.VerificationKey(), players, messages.get(sk));
+            Mailbox mailbox = new Mailbox(sk.VerificationKey(), players, network.messages(vk));
 
             // Send the first set of messages.
             for (int from: test.sendBefore) {
-                messages.get(new MockSigningKey(from)).make().prepare(Phase.BroadcastOutput,
-                        new MockVerificationKey(test.me)).send();
+                VerificationKey k = new MockVerificationKey(from);
+                Packet p = network.messages(k).make().prepare(Phase.BroadcastOutput, vk);
+                network.sendFrom(k, p);
+
             }
 
+            VerificationKey disorderedSender = new MockVerificationKey((test.me % test.players.length) + 1);
             {
                 // Receive a message from an earlier phase to make sure we
                 // flip through the first set of messages.
-                messages.get(new MockSigningKey(1)).make().prepare(Phase.Shuffling,
-                        new MockVerificationKey(test.me)).send();
+                Packet p = network.messages(disorderedSender).make().prepare(Phase.Shuffling, vk);
+                Assert.assertTrue(network.sendFrom(disorderedSender, p));
+
             }
 
             try {
-                mailbox.receiveFrom(new MockVerificationKey(1), Phase.Shuffling);
+                mailbox.receiveFrom(disorderedSender, Phase.Shuffling);
             } catch (WaitingException e) {
                 Assert.fail();
             }
 
             // Then send the second set of messages.
             for (int from: test.sendAfter) {
-                messages.get(new MockSigningKey(from)).make().prepare(Phase.BroadcastOutput,
-                        new MockVerificationKey(test.me)).send();
+                VerificationKey k = new MockVerificationKey(from);
+                Packet p = network.messages(k).make().prepare(Phase.BroadcastOutput, vk);
+                network.sendFrom(k, p);
             }
 
             Set<VerificationKey> receiveFrom = new HashSet<>();
@@ -351,9 +384,6 @@ public class TestMailbox {
 
             // There should be one message for each participant.
             for (int from : test.receiveFrom) {
-                if (!messages.containsKey(new MockSigningKey(from))) {
-                    Assert.fail();
-                }
                 received.remove(new MockVerificationKey(from));
             }
 

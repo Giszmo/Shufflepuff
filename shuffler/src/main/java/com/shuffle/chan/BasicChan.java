@@ -36,80 +36,75 @@ public class BasicChan<X> implements Chan<X> {
         }
     }
 
-    private boolean sendClosed = false;
-    private boolean receiveClosed = false;
+    private boolean closed = false;
     private boolean closeSent = false;
-    private final LinkedBlockingQueue<Message> queue;
+    private final LinkedBlockingQueue<Message> q;
+
+    private final Object lock = new Object();
 
     public BasicChan(int n) {
         if (n < 1) throw new IllegalArgumentException();
 
-        queue = new LinkedBlockingQueue<>(n);
+        q = new LinkedBlockingQueue<>(n);
     }
 
     public BasicChan() {
-        queue = new LinkedBlockingQueue<>(1);
+        q = new LinkedBlockingQueue<>(1);
     }
 
     private X receiveMessage(Message m) {
-        if (sendClosed && !closeSent) {
-            // There is definitely room in the queue at this point for this.
-            queue.offer(new Message());
+        if (closed && !closeSent) {
+            // There is definitely room in the queue because we just removed
+            // one element and no more were allowed to be put in.
+            q.add(new Message());
             closeSent = true;
-        }
-
-        if (m.x == null) {
-            receiveClosed = true;
         }
 
         return m.x;
     }
 
     @Override
-    public synchronized X receive() throws InterruptedException {
-        if (receiveClosed) {
+    public X receive() throws InterruptedException {
+        if (closed && q.size() == 0) {
+
             return null;
         }
 
-        return receiveMessage(queue.take());
+        return receiveMessage(q.take());
     }
 
     @Override
-    public synchronized X receive(long l, TimeUnit u) throws InterruptedException {
-        if (receiveClosed) {
+    public X receive(long l, TimeUnit u) throws InterruptedException {
+        if (closed && q.size() == 0) {
             return null;
         }
 
-        Message m = queue.poll(l, u);
-        if (m == null) {
-            return null;
-        }
-        return receiveMessage(m);
+        return receiveMessage(q.poll(l, u));
     }
 
     @Override
-    public boolean send(X x) throws InterruptedException {
+    public synchronized boolean send(X x) throws InterruptedException {
         if (x == null) {
             throw new NullPointerException();
         }
 
-        if (sendClosed) return false;
+        if (closed) return false;
 
-        queue.put(new Message(x));
+        q.put(new Message(x));
 
         return true;
     }
 
     @Override
-    public void close() {
-        sendClosed = true;
+    public synchronized void close() {
+        closed = true;
 
-        closeSent = queue.offer(new Message());
+        closeSent = q.offer(new Message());
     }
 
     @Override
     public boolean closed() {
-        return receiveClosed;
+        return closed && q.size() == 0;
     }
 
     @Override
