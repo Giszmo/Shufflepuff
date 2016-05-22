@@ -36,6 +36,6 @@ public class AddressImpl implements Address {
       if (!(o instanceof AddressImpl)) {
          throw new IllegalArgumentException("unable to compare with other address");
       }
-      return address.compareTo(((AddressImpl) o).address);
+      return address.compareTo((new AddressImpl(o.toString())).address);
    }
 }

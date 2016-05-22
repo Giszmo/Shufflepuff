@@ -18,10 +18,12 @@ import org.bitcoinj.wallet.KeyChain;
 import java.io.File;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
+import java.util.Arrays;
 
 
 public class BitcoinCrypto implements Crypto {
@@ -30,6 +32,9 @@ public class BitcoinCrypto implements Crypto {
    NetworkParameters params = TestNet3Params.get();
    String fileprefix = "_shuffle";
    WalletAppKit kit;
+
+   //Alphabet defining valid characters used in address
+   private final static String ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
 
    //Generate Keypair using HMAC
@@ -50,7 +55,7 @@ public class BitcoinCrypto implements Crypto {
 
    // create derivation path for shuffle keys
    HDUtils hdUtils = new HDUtils();
-   final String path = HDUtils.formatPath(HDUtils.parsePath("ShuffleAutH/"));
+   final String path = HDUtils.formatPath(HDUtils.parsePath("5H/"));
    int decKeyCounter = 0;
 
    public void initKit() {
@@ -63,6 +68,47 @@ public class BitcoinCrypto implements Crypto {
       kit.awaitRunning();
       kit.peerGroup().addPeerDiscovery(new DnsDiscovery(params));
    }
+
+   //Validate addresses function
+   public static boolean ValidateBitcoinAddress(String addr) {
+      if (addr.length() < 26 || addr.length() > 35) return false;
+      byte[] decoded = DecodeBase58(addr, 58, 25);
+      if (decoded == null) return false;
+
+      byte[] hash = Sha256(decoded, 0, 21, 2);
+
+      return Arrays.equals(Arrays.copyOfRange(hash, 0, 4), Arrays.copyOfRange(decoded, 21, 25));
+   }
+
+   private static byte[] DecodeBase58(String input, int base, int len) {
+      byte[] output = new byte[len];
+      for (int i = 0; i < input.length(); i++) {
+         char t = input.charAt(i);
+
+         int p = ALPHABET.indexOf(t);
+         if (p == -1) return null;
+         for (int j = len - 1; j > 0; j--, p /= 256) {
+            p += base * (output[j] & 0xFF);
+            output[j] = (byte) (p % 256);
+         }
+         if (p != 0) return null;
+      }
+
+      return output;
+   }
+
+   private static byte[] Sha256(byte[] data, int start, int len, int recursion) {
+      if (recursion == 0) return data;
+
+      try {
+         MessageDigest md = MessageDigest.getInstance("SHA-256");
+         md.update(Arrays.copyOfRange(data, start, start + len));
+         return Sha256(md.digest(), 0, 32, recursion - 1);
+      } catch (NoSuchAlgorithmException e) {
+         return null;
+      }
+   }
+
 
 
    public boolean isValidAddress(String address) {
