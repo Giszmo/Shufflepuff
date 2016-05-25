@@ -6,7 +6,7 @@
  *
  */
 
-package com.shuffle.player;
+package com.shuffle.chan.packet;
 
 import java.io.Serializable;
 

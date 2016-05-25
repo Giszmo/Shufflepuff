@@ -9,7 +9,7 @@
 package com.shuffle.moderator;
 
 
-import com.shuffle.player.SessionIdentifier;
+import com.shuffle.chan.packet.SessionIdentifier;
 
 /**
  * REST API:

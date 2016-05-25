@@ -15,9 +15,8 @@ import com.shuffle.monad.NaturalSummableFuture;
 import com.shuffle.monad.SummableFuture;
 import com.shuffle.monad.SummableFutureZero;
 import com.shuffle.monad.SummableMaps;
-import com.shuffle.player.Messages;
-import com.shuffle.player.Packet;
 import com.shuffle.protocol.blame.Matrix;
+import com.shuffle.protocol.message.Packet;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;

@@ -12,8 +12,10 @@ import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.chan.Send;
-import com.shuffle.chan.SigningSend;
-import com.shuffle.chan.VerifyingSend;
+import com.shuffle.chan.packet.Signed;
+import com.shuffle.chan.packet.SigningSend;
+import com.shuffle.chan.packet.VerifyingSend;
+import com.shuffle.chan.packet.SessionIdentifier;
 import com.shuffle.p2p.Bytestring;
 import com.shuffle.p2p.Channel;
 import com.shuffle.p2p.Connection;
@@ -21,6 +23,7 @@ import com.shuffle.p2p.Listener;
 import com.shuffle.chan.Inbox;
 import com.shuffle.p2p.Peer;
 import com.shuffle.p2p.Session;
+import com.shuffle.protocol.message.Packet;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -139,14 +142,14 @@ public class Connect<Address> {
         private final Map<Address, VerificationKey> keys;
         private final Peers peers;
         private final SigningSend.Marshaller<Packet> marshaller;
-        private final Inbox<VerificationKey, VerifyingSend.Signed<Packet>> inbox;
+        private final Inbox<VerificationKey, Signed<Packet>> inbox;
 
         private SigningListener(
                 SigningKey me,
                 Peers peers,
                 Map<Address, VerificationKey> keys,
                 SigningSend.Marshaller<Packet> marshaller,
-                Inbox<VerificationKey, VerifyingSend.Signed<Packet>> inbox) {
+                Inbox<VerificationKey, Signed<Packet>> inbox) {
 
             if (me == null || peers == null || keys == null
                     || marshaller == null || inbox == null) throw new NullPointerException();
@@ -203,7 +206,7 @@ public class Connect<Address> {
 
         Map<VerificationKey, Send<Packet>> players = new HashMap<>();
 
-        Inbox<VerificationKey, VerifyingSend.Signed<Packet>> inbox = new Inbox<>(100);
+        Inbox<VerificationKey, Signed<Packet>> inbox = new Inbox<>(100);
 
         Listener<Address, Bytestring> listener = new SigningListener(me, peers, keys, marshall, inbox);
 
@@ -253,7 +256,7 @@ public class Connect<Address> {
             }
 
             VerificationKey key = keys.get(address);
-            Send<VerifyingSend.Signed<Packet>> processor = inbox.receivesFrom(key);
+            Send<Signed<Packet>> processor = inbox.receivesFrom(key);
             if (processor != null) {
                 Session<Address, Bytestring> session =
                         peer.openSession(new VerifyingSend<Packet>(processor, marshall, key));

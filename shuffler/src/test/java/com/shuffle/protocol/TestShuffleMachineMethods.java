@@ -24,7 +24,7 @@ import com.shuffle.mock.MockSessionIdentifier;
 import com.shuffle.mock.MockSigningKey;
 import com.shuffle.mock.MockVerificationKey;
 import com.shuffle.mock.RandomSequence;
-import com.shuffle.player.SessionIdentifier;
+import com.shuffle.chan.packet.SessionIdentifier;
 import com.shuffle.protocol.message.Message;
 
 import org.apache.logging.log4j.Logger;

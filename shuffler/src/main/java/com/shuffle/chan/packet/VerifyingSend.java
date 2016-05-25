@@ -1,10 +1,8 @@
-package com.shuffle.chan;
+package com.shuffle.chan.packet;
 
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.chan.Send;
 import com.shuffle.p2p.Bytestring;
-import com.shuffle.player.Messages;
-
-import java.util.concurrent.TimeUnit;
 
 /**
  * Ensures that all messages are signed and properly formatted after they are received.
@@ -12,23 +10,6 @@ import java.util.concurrent.TimeUnit;
  * Created by Daniel Krawisz on 4/13/16.
  */
 public class VerifyingSend<X> implements Send<Bytestring> {
-
-    public static class Signed<X> {
-        public final X message;
-        public final Bytestring signature;
-
-        Signed(X message, Bytestring signature) {
-            if (message == null || signature == null) throw new NullPointerException();
-
-            this.message = message;
-            this.signature = signature;
-        }
-
-        @Override
-        public String toString() {
-            return "Signed[" + message + ", " + signature + "]";
-        }
-    }
 
     private final SigningSend.Marshaller<X> marshaller;
     private final Send<Signed<X>> send;

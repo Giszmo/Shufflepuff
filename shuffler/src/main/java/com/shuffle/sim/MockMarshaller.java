@@ -10,8 +10,8 @@ package com.shuffle.sim;
 
 import com.shuffle.p2p.Bytestring;
 import com.shuffle.player.Messages;
-import com.shuffle.chan.SigningSend;
-import com.shuffle.player.Packet;
+import com.shuffle.chan.packet.SigningSend;
+import com.shuffle.protocol.message.Packet;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -45,7 +45,7 @@ public class MockMarshaller implements SigningSend.Marshaller<Packet> {
     }
 
     @Override
-    public Messages.Packet unmarshall(Bytestring string) {
+    public Packet unmarshall(Bytestring string) {
 
         ByteArrayInputStream b = new ByteArrayInputStream(string.bytes);
         Object obj = null;

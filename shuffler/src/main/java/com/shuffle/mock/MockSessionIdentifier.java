@@ -8,7 +8,7 @@
 
 package com.shuffle.mock;
 
-import com.shuffle.player.SessionIdentifier;
+import com.shuffle.chan.packet.SessionIdentifier;
 
 import java.io.Serializable;
 

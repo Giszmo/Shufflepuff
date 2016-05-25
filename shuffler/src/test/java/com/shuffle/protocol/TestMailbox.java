@@ -16,7 +16,7 @@ import com.shuffle.player.Messages;
 import com.shuffle.mock.MockSessionIdentifier;
 import com.shuffle.mock.MockSigningKey;
 import com.shuffle.mock.MockVerificationKey;
-import com.shuffle.player.SessionIdentifier;
+import com.shuffle.chan.packet.SessionIdentifier;
 import com.shuffle.protocol.blame.BlameException;
 import com.shuffle.protocol.message.Packet;
 import com.shuffle.protocol.message.Phase;
@@ -89,7 +89,7 @@ public class TestMailbox {
             new Mailbox(me.VerificationKey(), players, messages
             ).broadcast(messages.make(), Phase.Shuffling);
 
-            for (Inbox.Envelope<VerificationKey, com.shuffle.player.Packet> sent
+            for (Inbox.Envelope<VerificationKey, Packet> sent
                     : network.getResponses()) {
 
                 VerificationKey sentTo = sent.from;
@@ -156,7 +156,7 @@ public class TestMailbox {
 
             int expected = (test.success ? 1 : 0);
 
-            List<Inbox.Envelope<VerificationKey, com.shuffle.player.Packet>> responses = network.getResponses();
+            List<Inbox.Envelope<VerificationKey, Packet>> responses = network.getResponses();
             Assert.assertEquals(
                     String.format(
                             "Recieved %d responses when only expected %d in test case %d",
@@ -164,7 +164,7 @@ public class TestMailbox {
                     (test.success ? 1 : 0),
                     responses.size());
 
-            for (Inbox.Envelope<VerificationKey, com.shuffle.player.Packet> msg : responses) {
+            for (Inbox.Envelope<VerificationKey, Packet> msg : responses) {
                 Assert.assertTrue("Received response does not equal expected",
                         new MockVerificationKey(test.recipient).equals(msg.from));
             }

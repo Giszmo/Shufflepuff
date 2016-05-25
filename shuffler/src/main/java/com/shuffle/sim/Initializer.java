@@ -5,11 +5,10 @@ import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.chan.Inbox;
 import com.shuffle.chan.Receive;
 import com.shuffle.chan.Send;
-import com.shuffle.chan.SigningSend;
-import com.shuffle.chan.VerifyingSend;
-import com.shuffle.player.Messages;
-import com.shuffle.player.Packet;
-import com.shuffle.player.SessionIdentifier;
+import com.shuffle.chan.packet.Signed;
+import com.shuffle.chan.packet.SigningSend;
+import com.shuffle.chan.packet.VerifyingSend;
+import com.shuffle.chan.packet.SessionIdentifier;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -22,7 +21,7 @@ import java.util.Map;
 class Initializer<X> {
 
     // The set of incoming mailboxes for each player.
-    public final Map<SigningKey, Inbox<VerificationKey, VerifyingSend.Signed<X>>> mailboxes = new HashMap<>();
+    public final Map<SigningKey, Inbox<VerificationKey, Signed<X>>> mailboxes = new HashMap<>();
 
     // The set of channels that player use to send to other players.
     public final Map<SigningKey, Map<VerificationKey, Send<X>>> networks = new HashMap<>();
@@ -43,12 +42,12 @@ class Initializer<X> {
     public static class Connections<X> {
         public final VerificationKey identity;
         public final Map<VerificationKey, Send<X>> send;
-        public final Receive<Inbox.Envelope<VerificationKey, VerifyingSend.Signed<X>>> receive;
+        public final Receive<Inbox.Envelope<VerificationKey, Signed<X>>> receive;
 
         public Connections(
                 VerificationKey identity,
                 Map<VerificationKey, Send<X>> send,
-                Receive<Inbox.Envelope<VerificationKey, VerifyingSend.Signed<X>>> receive) {
+                Receive<Inbox.Envelope<VerificationKey, Signed<X>>> receive) {
 
             if (identity == null || send == null || receive == null)
                 throw new NullPointerException();
@@ -68,14 +67,14 @@ class Initializer<X> {
         networks.put(sk, inputs);
 
         // Ceate a new mailbox.
-        Inbox<VerificationKey, VerifyingSend.Signed<X>> inbox = new Inbox<>(capacity);
+        Inbox<VerificationKey, Signed<X>> inbox = new Inbox<>(capacity);
 
         // Create input channels for this new mailbox that lead to all other mailboxes
         // and create input channels for all the other mailboxes for this new one.
-        for (Map.Entry<SigningKey, Inbox<VerificationKey, VerifyingSend.Signed<X>>> entry : mailboxes.entrySet()) {
+        for (Map.Entry<SigningKey, Inbox<VerificationKey, Signed<X>>> entry : mailboxes.entrySet()) {
             SigningKey ks = entry.getKey();
             VerificationKey kv = ks.VerificationKey();
-            Inbox<VerificationKey, VerifyingSend.Signed<X>> box = entry.getValue();
+            Inbox<VerificationKey, Signed<X>> box = entry.getValue();
 
             // Create a session from the new mailbox to the previous one.
             inputs.put(kv, new SigningSend<>(new VerifyingSend<>(box.receivesFrom(vk), mm, vk), mm, sk));

@@ -9,7 +9,7 @@
 package com.shuffle.moderator;
 
 import com.shuffle.bitcoin.Transaction;
-import com.shuffle.player.SessionIdentifier;
+import com.shuffle.chan.packet.SessionIdentifier;
 
 import java.util.List;
 import java.util.SortedSet;

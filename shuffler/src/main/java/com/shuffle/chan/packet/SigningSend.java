@@ -1,6 +1,7 @@
-package com.shuffle.chan;
+package com.shuffle.chan.packet;
 
 import com.shuffle.bitcoin.SigningKey;
+import com.shuffle.chan.Send;
 import com.shuffle.p2p.Bytestring;
 
 /**

@@ -26,7 +26,7 @@ import com.shuffle.p2p.Bytestring;
 import com.shuffle.p2p.Channel;
 import com.shuffle.p2p.TcpChannel;
 import com.shuffle.player.Connect;
-import com.shuffle.player.SessionIdentifier;
+import com.shuffle.chan.packet.SessionIdentifier;
 import com.shuffle.protocol.CoinShuffle;
 import com.shuffle.protocol.FormatException;
 import com.shuffle.protocol.InvalidParticipantSetException;

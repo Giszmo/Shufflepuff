@@ -12,7 +12,7 @@ import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.monad.Either;
-import com.shuffle.player.SessionIdentifier;
+import com.shuffle.chan.packet.SessionIdentifier;
 import com.shuffle.protocol.blame.Matrix;
 
 import org.apache.logging.log4j.Logger;

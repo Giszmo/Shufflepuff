@@ -3,8 +3,8 @@ package com.shuffle.sim;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.chan.Inbox;
-import com.shuffle.chan.SigningSend;
-import com.shuffle.chan.VerifyingSend;
+import com.shuffle.chan.packet.Signed;
+import com.shuffle.chan.packet.SigningSend;
 import com.shuffle.mock.MockSessionIdentifier;
 import com.shuffle.mock.MockSigningKey;
 import com.shuffle.p2p.Bytestring;
@@ -63,14 +63,14 @@ public class TestInitializer {
                 Initializer.Connections<Integer> con = prev.getValue();
 
                 con.send.get(sk.VerificationKey()).send(message);
-                Inbox.Envelope<VerificationKey, VerifyingSend.Signed<Integer>> r
+                Inbox.Envelope<VerificationKey, Signed<Integer>> r
                         = c.receive.receive(10, TimeUnit.MILLISECONDS);
 
                 Assert.assertTrue(r.payload.message.equals(message));
                 message++;
 
                 c.send.get(prev.getKey().VerificationKey()).send(message);
-                Inbox.Envelope<VerificationKey, VerifyingSend.Signed<Integer>> re =
+                Inbox.Envelope<VerificationKey, Signed<Integer>> re =
                         con.receive.receive();
 
                 Assert.assertTrue(re.payload.message.equals(message));
