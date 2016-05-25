@@ -28,7 +28,6 @@ import com.shuffle.monad.SummableMap;
 import com.shuffle.monad.SummableMaps;
 import com.shuffle.p2p.Bytestring;
 import com.shuffle.p2p.Channel;
-import com.shuffle.sim.MockMarshaller;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -82,7 +81,7 @@ public class TestConnect {
             try {
                 Messages messages = connect.connect(
                     me, channel, keys,
-                    new MockMarshaller(), maxRetries);
+                    new Messages.JavaMarshaller(), maxRetries);
                 if (messages != null) {
                     net.send(messages);
                 }

@@ -163,7 +163,7 @@ public class CoinShuffle {
 
                 // Pass it along to the next player.
                 if (me != N) {
-                    mailbox.send(shuffled.prepare(phase.get(), players.get(me + 1)));
+                    mailbox.send(shuffled, phase.get(), players.get(me + 1));
                 }
 
                 // Phase 3: broadcast outputs.

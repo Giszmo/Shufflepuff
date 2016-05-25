@@ -20,9 +20,9 @@ import com.shuffle.mock.MockSigningKey;
 import com.shuffle.mock.MockVerificationKey;
 import com.shuffle.p2p.Bytestring;
 import com.shuffle.player.Messages;
+import com.shuffle.protocol.message.MessageFactory;
 import com.shuffle.protocol.message.Packet;
 import com.shuffle.chan.packet.SessionIdentifier;
-import com.shuffle.sim.MockMarshaller;
 
 import org.junit.Assert;
 
@@ -82,10 +82,11 @@ public class MockNetwork  {
     // outgoing messages.
     private final Inbox<VerificationKey, Packet> outbox;
 
-    private final Map<VerificationKey, Send<Packet>> in = new HashMap<>();
     private final Map<VerificationKey, Send<Packet>> out = new HashMap<>();
 
     private final Map<VerificationKey, Messages> messages = new HashMap<>();
+
+    private final VerificationKey me;
 
     public MockNetwork(SessionIdentifier session, int me, int[] others, int cap) {
         // First create the inbox and outbox.
@@ -94,10 +95,10 @@ public class MockNetwork  {
         Inbox<VerificationKey, Signed<Packet>> inbox
                 = new Inbox<>(cap);
 
-        VerificationKey vkme = new MockVerificationKey(me);
+        this.me = new MockVerificationKey(me);
 
         InnerMarshaller om = new InnerMarshaller();
-        MockMarshaller im = new MockMarshaller();
+        Messages.JavaMarshaller im = new Messages.JavaMarshaller();
 
         for (int peer : others) {
             if (peer == me) continue;
@@ -105,22 +106,22 @@ public class MockNetwork  {
             VerificationKey vkp = new MockVerificationKey(peer);
             SigningKey skp = new MockSigningKey(peer);
 
+            // Create a spot in the outbox for messages sent to this peer.
+            out.put(vkp, outbox.receivesFrom(vkp));
+
             Send<Signed<Packet>> incoming = inbox.receivesFrom(vkp);
             Assert.assertTrue(incoming != null);
 
-            // create a channel into the inbox.
-            this.in.put(vkp,
-                    new SigningSend<Packet>(
-                            new VerifyingSend<>(incoming, im, vkp), om, skp));
+            HashMap<VerificationKey, Send<Packet>> outFrom = new HashMap<>();
+            Send<Packet> toFrom = new SigningSend<Packet>(new VerifyingSend<>(incoming, im, vkp), om, skp);
+            outFrom.put(this.me, toFrom);
 
-            out.put(vkp, outbox.receivesFrom(vkp));
-
-            messages.put(vkp, new Messages(session, vkp,
-                    new HashMap<VerificationKey, Send<Packet>>(),
+            messages.put(vkp, new Messages(session, vkp, outFrom,
                     new BasicChan<Inbox.Envelope<VerificationKey, Signed<Packet>>>()));
+
         }
 
-        messages.put(vkme, new Messages(session, vkme, out, inbox));
+        messages.put(this.me, new Messages(session, this.me, out, inbox));
     }
 
     public Messages messages(VerificationKey k) {
@@ -131,19 +132,10 @@ public class MockNetwork  {
         return outbox.receive();
     }
 
-    // Send a message that is received by the test mailbox as if it was from k.
-    public boolean sendFrom(VerificationKey k, com.shuffle.protocol.message.Packet p) throws InterruptedException {
-        return in.get(k).send(p);
-    }
-
     // This means we want to end the simulation and drain all messages sent by the
     // test mailbox.
     public List<Inbox.Envelope<VerificationKey, Packet>> getResponses() throws InterruptedException {
         // First close all channels.
-        for (Send<Packet> p : in.values()) {
-            p.close();
-        }
-
         for (Send<Packet> p : out.values()) {
             p.close();
         }

@@ -242,7 +242,7 @@ class Player implements Runnable {
         Messages messages = null;
         try {
             conn = new Connect<>(param.init.crypto(), param.session);
-            messages = conn.connect(param.me, tcp, param.identities, new MockMarshaller(), 3);
+            messages = conn.connect(param.me, tcp, param.identities, new Messages.JavaMarshaller(), 3);
         } catch (IOException e) {
             // Indicates that something has gone wrong with the initial connection.
             return null;

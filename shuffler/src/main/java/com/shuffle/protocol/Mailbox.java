@@ -65,16 +65,18 @@ public class Mailbox {
     }
 
     // Send a message into the network.
-    public void send(Packet packet) throws IOException, InterruptedException {
+    public void send(Message message, Phase phase, VerificationKey to) throws IOException, InterruptedException {
 
         // Don't send anything to a nonexistent player.
-        if (!players.contains(packet.to())) {
+        if (!players.contains(to)) {
             return;
         }
 
+        Packet packet = message.send(phase, to);
+
         // If this is a message to myself, don't send it. Just pretend we received it.
         // This is useful later when we have to collect all blame messages later.
-        if (packet.to().equals(me)) {
+        if (to.equals(me)) {
             history.add(packet);
             if (packet.phase() == Phase.Blame) {
                 try {
@@ -83,14 +85,12 @@ public class Mailbox {
                     e.printStackTrace();
                 }
             }
-        } else {
-            packet.send();
         }
     }
 
     public void broadcast(Message message, Phase phase) throws IOException, InterruptedException {
         for (VerificationKey to : players) {
-            send(message.prepare(phase, to));
+            send(message, phase, to);
         }
     }
 

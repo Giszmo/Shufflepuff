@@ -27,10 +27,4 @@ public interface Packet extends Serializable {
     Phase phase();
     VerificationKey from();
     VerificationKey to();
-    Bytestring serialize();
-
-    // Send across the CoinShuffle network.
-    void send() throws // May be thrown if this protocol runs in an interruptable thread.
-            InterruptedException,
-            IOException; // May be thrown if the internet connection fails.
 }

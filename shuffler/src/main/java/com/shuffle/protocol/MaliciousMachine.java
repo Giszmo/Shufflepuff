@@ -80,8 +80,7 @@ public final class MaliciousMachine extends CoinShuffle {
                 }
 
                 for (VerificationKey to : players.values()) {
-                    mailbox.send(
-                            (equivocate.contains(to) ? eq : message).prepare(phase.get(), to));
+                    mailbox.send(equivocate.contains(to) ? eq : message, phase.get(), to);
                 }
             }
             return dk;
@@ -105,8 +104,7 @@ public final class MaliciousMachine extends CoinShuffle {
             Message otherCheck = equivocationCheckHash(players, otherKeys, newAddresses);
 
             for (VerificationKey to : players.values()) {
-                mailbox.send((equivocate.contains(to) ? otherCheck : equivocationCheck).prepare(
-                        phase.get(), to));
+                mailbox.send(equivocate.contains(to) ? otherCheck : equivocationCheck, phase.get(), to);
             }
 
             // Wait for a similar message from everyone else and check that the result is the name.
@@ -170,8 +168,7 @@ public final class MaliciousMachine extends CoinShuffle {
                 otherAddresses = readNewAddresses(otherShuffled);
 
                 for (VerificationKey to : players.values()) {
-                    mailbox.send((equivocate.contains(to) ? otherShuffled : shuffled).prepare(
-                            phase.get(), to));
+                    mailbox.send(equivocate.contains(to) ? otherShuffled : shuffled, phase.get(), to);
                 }
             } else {
                 newAddresses = readNewAddresses(mailbox.receiveFrom(players.get(N), phase.get()));
@@ -193,8 +190,7 @@ public final class MaliciousMachine extends CoinShuffle {
             Message otherCheck = equivocationCheckHash(players, encryptonKeys, otherAddresses);
 
             for (VerificationKey to : players.values()) {
-                mailbox.send((equivocate.contains(to) ? otherCheck : equivocationCheck).prepare(
-                        phase.get(), to));
+                mailbox.send(equivocate.contains(to) ? otherCheck : equivocationCheck, phase.get(), to);
             }
 
             // Wait for a similar message from everyone else and check that the result is the name.

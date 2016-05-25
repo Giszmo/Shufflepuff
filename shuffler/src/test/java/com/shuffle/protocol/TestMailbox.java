@@ -150,9 +150,7 @@ public class TestMailbox {
 
             new Mailbox(
                     sk.VerificationKey(), players, messages
-            ).send(messages.make().prepare(
-                    Phase.Shuffling,
-                    new MockVerificationKey(test.recipient)));
+            ).send(messages.make(), Phase.Shuffling, new MockVerificationKey(test.recipient));
 
             int expected = (test.success ? 1 : 0);
 
@@ -334,21 +332,16 @@ public class TestMailbox {
             Mailbox mailbox = new Mailbox(sk.VerificationKey(), players, network.messages(vk));
 
             // Send the first set of messages.
-            for (int from: test.sendBefore) {
+            for (int from : test.sendBefore) {
                 VerificationKey k = new MockVerificationKey(from);
-                Packet p = network.messages(k).make().prepare(Phase.BroadcastOutput, vk);
-                network.sendFrom(k, p);
+                network.messages(k).make().send(Phase.BroadcastOutput, vk);
 
             }
 
             VerificationKey disorderedSender = new MockVerificationKey((test.me % test.players.length) + 1);
-            {
-                // Receive a message from an earlier phase to make sure we
-                // flip through the first set of messages.
-                Packet p = network.messages(disorderedSender).make().prepare(Phase.Shuffling, vk);
-                Assert.assertTrue(network.sendFrom(disorderedSender, p));
-
-            }
+            // Receive a message from an earlier phase to make sure we
+            // flip through the first set of messages.
+            Assert.assertNotNull(network.messages(disorderedSender).make().send(Phase.Shuffling, vk));
 
             try {
                 mailbox.receiveFrom(disorderedSender, Phase.Shuffling);
@@ -359,8 +352,7 @@ public class TestMailbox {
             // Then send the second set of messages.
             for (int from: test.sendAfter) {
                 VerificationKey k = new MockVerificationKey(from);
-                Packet p = network.messages(k).make().prepare(Phase.BroadcastOutput, vk);
-                network.sendFrom(k, p);
+                network.messages(k).make().send(Phase.BroadcastOutput, vk);
             }
 
             Set<VerificationKey> receiveFrom = new HashSet<>();

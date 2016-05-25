@@ -17,6 +17,7 @@ import com.shuffle.chan.Receive;
 import com.shuffle.chan.Send;
 import com.shuffle.chan.packet.Signed;
 import com.shuffle.chan.packet.SessionIdentifier;
+import com.shuffle.chan.packet.SigningSend;
 import com.shuffle.p2p.Bytestring;
 import com.shuffle.chan.Inbox;
 import com.shuffle.protocol.FormatException;
@@ -25,7 +26,14 @@ import com.shuffle.protocol.blame.Blame;
 import com.shuffle.protocol.message.MessageFactory;
 import com.shuffle.protocol.message.Phase;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.Deque;
 import java.util.Iterator;
@@ -362,23 +370,22 @@ public class Messages implements MessageFactory {
             return to;
         }
 
-        @Override
-        public Bytestring serialize() {
-            return new Bytestring(toString().getBytes());
-        }
+        public Packet send() throws InterruptedException {
+            if (messages == null) return null;
 
-        @Override
-        public void send() throws InterruptedException {
-            if (messages == null) return;
+            if (to().equals(from())) return this;
 
             Send<com.shuffle.protocol.message.Packet> chan = messages.net.get(to);
 
-            if (chan == null) return;
+            if (chan == null) return null;
 
             // About to send message.
             if (chan.send(this)) {
                 messages.sent.add(this);
+                return this;
             }
+
+            return null;
         }
     }
 
@@ -444,16 +451,6 @@ public class Messages implements MessageFactory {
         @Override
         public VerificationKey to() {
             return packet.to();
-        }
-
-        @Override
-        public Bytestring serialize() {
-            return new Bytestring(toString().getBytes());
-        }
-
-        @Override
-        public void send() throws InterruptedException {
-            // Message cannot be sent because it is not ours.
         }
     }
 
@@ -595,9 +592,8 @@ public class Messages implements MessageFactory {
             return new Message(session, from, atoms.next, messages);
         }
 
-        @Override
-        public Packet prepare(Phase phase, VerificationKey to) {
-            return new Packet(this, phase, to, messages);
+        public Packet send(Phase phase, VerificationKey to) throws InterruptedException {
+            return new Packet(this, phase, to, messages).send();
         }
 
         @Override
@@ -627,6 +623,49 @@ public class Messages implements MessageFactory {
             if (atoms == null) return "[]";
 
             return atoms.toString();
+        }
+    }
+
+    /**
+     * The JavaMarshaller uses java's serializable interface to turn objects into byte arrays.
+     *
+     * Created by Daniel Krawisz on 1/31/16.
+     */
+    public static class JavaMarshaller implements SigningSend.Marshaller<com.shuffle.protocol.message.Packet> {
+        private static final Logger log = LogManager.getLogger(JavaMarshaller.class);
+
+        @Override
+        public Bytestring marshall(com.shuffle.protocol.message.Packet packet) {
+
+            ByteArrayOutputStream b = new ByteArrayOutputStream();
+            try {
+                ObjectOutputStream o = new ObjectOutputStream(b);
+                o.writeObject(packet);
+            } catch (IOException e) {
+                log.error("Could not marshall packet " + packet + " got error " + e);
+                return null;
+            }
+            return new Bytestring(b.toByteArray());
+        }
+
+        @Override
+        public com.shuffle.protocol.message.Packet unmarshall(Bytestring string) {
+
+            ByteArrayInputStream b = new ByteArrayInputStream(string.bytes);
+            Object obj = null;
+            try {
+                ObjectInputStream o = new ObjectInputStream(b);
+                obj = o.readObject();
+            } catch (ClassNotFoundException | IOException e) {
+                log.error("Could not unmarshall " + string + " got error " + e);
+                return null;
+            }
+
+            if (!(obj instanceof Packet)) {
+                return null;
+            }
+
+            return (Packet)obj;
         }
     }
 }

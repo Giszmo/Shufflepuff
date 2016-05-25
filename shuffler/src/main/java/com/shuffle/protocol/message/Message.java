@@ -15,6 +15,8 @@ import com.shuffle.p2p.Bytestring;
 import com.shuffle.protocol.FormatException;
 import com.shuffle.protocol.blame.Blame;
 
+import java.io.IOException;
+
 /**
  * Created by Daniel Krawisz on 12/19/15.
  */
@@ -39,8 +41,10 @@ public interface Message {
 
     Message rest() throws FormatException;
 
-    // Prepare message to be sent.
-    Packet prepare(Phase phase, VerificationKey to);
-
     Message hashed();
+
+    // Send across the CoinShuffle network.
+    Packet send(Phase phase, VerificationKey to) throws // May be thrown if this protocol runs in an interruptable thread.
+            InterruptedException,
+            IOException; // May be thrown if the internet connection fails.
 }

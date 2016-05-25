@@ -15,6 +15,7 @@ import com.shuffle.monad.NaturalSummableFuture;
 import com.shuffle.monad.SummableFuture;
 import com.shuffle.monad.SummableFutureZero;
 import com.shuffle.monad.SummableMaps;
+import com.shuffle.player.Messages;
 import com.shuffle.protocol.blame.Matrix;
 import com.shuffle.protocol.message.Packet;
 
@@ -38,7 +39,7 @@ public final class Simulator {
 
     public static Map<SigningKey, Either<Transaction, Matrix>> run(InitialState init) {
 
-        final Initializer<Packet> initializer = new Initializer<>(init.session, new MockMarshaller(), 2 * (1 + init.size() ));
+        final Initializer<Packet> initializer = new Initializer<>(init.session, new Messages.JavaMarshaller(), 2 * (1 + init.size() ));
         final Map<SigningKey, Adversary> machines = init.getPlayers(initializer);
 
         Map<SigningKey, Either<Transaction, Matrix>> results = runSimulation(machines);
