@@ -43,8 +43,6 @@ class Player<Identity> {
 
     private final SigningKey sk;
 
-    private final Crypto crypto;
-
     private final Coin coin;
 
     private final MessageFactory messages;
@@ -80,14 +78,12 @@ class Player<Identity> {
     Player(
             SigningKey sk,
             MessageFactory messages, // Object that knows how to create and copy messages.
-            Crypto crypto, // Connects to the cryptography.
             Coin coin // Connects us to the Bitcoin or other cryptocurrency netork.
     ) {
-        if (sk == null || crypto == null || coin == null || messages == null) {
+        if (sk == null || coin == null || messages == null) {
             throw new NullPointerException();
         }
         this.sk = sk;
-        this.crypto = crypto;
         this.coin = coin;
         this.messages = messages;
     }

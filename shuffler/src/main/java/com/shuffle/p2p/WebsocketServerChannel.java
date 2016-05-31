@@ -412,4 +412,9 @@ public class WebsocketServerChannel implements Channel<InetAddress, Bytestring> 
         return peers.get(you);
     }
 
+    @Override
+    public InetAddress identity() {
+        return me;
+    }
+
 }

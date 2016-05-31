@@ -13,8 +13,10 @@ import com.shuffle.bitcoin.CoinNetworkException;
 import com.shuffle.bitcoin.Crypto;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.chan.packet.Packet;
 import com.shuffle.player.Messages;
 import com.shuffle.chan.packet.SessionIdentifier;
+import com.shuffle.player.P;
 import com.shuffle.protocol.CoinShuffle;
 import com.shuffle.protocol.MaliciousMachine;
 import com.shuffle.protocol.message.MessageFactory;
@@ -368,19 +370,19 @@ public class InitialState {
         }
     }
 
-    public Map<SigningKey, Adversary> getPlayers(Initializer initializer) {
+    public Map<SigningKey, Adversary> getPlayers(Initializer<Packet<VerificationKey, P>> initializer) {
         Map<SigningKey, Adversary> p = new HashMap<>();
 
-        for (PlayerInitialState player : players) {
+        for (final PlayerInitialState player : players) {
             if (player.sk == null) {
                 continue;
             }
 
-            Initializer.Connections c = initializer.connect(player.sk);
+            Initializer.Connections<Packet<VerificationKey, P>> c = initializer.connect(player.sk);
 
             try {
                 p.put(player.sk,
-                        player.adversary(new Messages(session, player.vk, c.send, c.receive)));
+                        player.adversary(new Messages(session, player.sk, c.send, c.receive)));
 
             } catch (CoinNetworkException e) {
                 return null; // Should not really happen.

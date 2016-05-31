@@ -5,27 +5,19 @@ import com.shuffle.chan.Send;
 import com.shuffle.p2p.Bytestring;
 
 /**
+ * A Send object that adds a signature to
+ *
  * Created by Daniel Krawisz on 4/13/16.
  */
 public class SigningSend<X> implements Send<X> {
 
-    /**
-     * Represents a way of serializing a class.
-     *
-     * Created by Daniel Krawisz on 1/31/16.
-     */
-    public interface Marshaller<X> {
-        Bytestring marshall(X x);
-
-        X unmarshall(Bytestring string);
-    }
-
-    private final Send<Bytestring> session;
+    // TODO replace this with Send<Bytestring>.
+    private final Send<Signed<X>> session;
     private final Marshaller<X> marshaller;
     private final SigningKey key;
 
     public SigningSend(
-            Send<Bytestring> session,
+            Send<Signed<X>> session,
             Marshaller<X> marshaller,
             SigningKey key) {
 
@@ -39,7 +31,9 @@ public class SigningSend<X> implements Send<X> {
     @Override
     public boolean send(X x) throws InterruptedException {
         Bytestring b = marshaller.marshall(x);
-        return b != null && session.send(b.append(key.sign(b)));
+        if (b == null) return false;
+        Bytestring s = key.sign(b);
+        return s != null && session.send(new Signed<>(x, s));
 
     }
 

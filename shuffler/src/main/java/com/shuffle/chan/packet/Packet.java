@@ -21,4 +21,24 @@ public class Packet<Address extends Serializable, X extends Serializable> implem
         this.sequenceNumber = sequenceNumber;
         this.payload = payload;
     }
+
+    @Override
+    public String toString() {
+        return "{" + session + " " + from + " -> " + to + " " + sequenceNumber + " : " + payload + "}";
+    }
+
+    @Override
+    public int hashCode() {
+        return session.hashCode() + 17 * (from.hashCode() + 17 * (to.hashCode() + 17 * (sequenceNumber + 17 * payload.hashCode())));
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof Packet)) return false;
+
+        Packet p = (Packet)o;
+
+        return session.equals(p.session) && from.equals(p.from) && to.equals(p.to)
+                && sequenceNumber == p.sequenceNumber && payload.equals(p.payload);
+    }
 }

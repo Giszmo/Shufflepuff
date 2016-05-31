@@ -5,40 +5,33 @@ import com.shuffle.chan.Send;
 import com.shuffle.p2p.Bytestring;
 
 /**
- * Ensures that all messages are signed and properly formatted after they are received.
+ * Checks whether a message sent along the channel has been signed correctly by
+ * a given key. The message is ignored if it is not.
  *
  * Created by Daniel Krawisz on 4/13/16.
  */
 public class VerifyingSend<X> implements Send<Bytestring> {
 
-    private final SigningSend.Marshaller<X> marshaller;
+    private final Marshaller<Signed<X>> marshaller;
     private final Send<Signed<X>> send;
-    private final VerificationKey key;
 
     public VerifyingSend(
             Send<Signed<X>> send,
-            SigningSend.Marshaller<X> marshaller,
+            Marshaller<X> marshaller,
             VerificationKey key) {
 
         if (marshaller == null || send == null || key == null) throw new NullPointerException();
 
-        this.marshaller = marshaller;
+        this.marshaller = new VerifyingMarshaller<>(key, marshaller);
         this.send = send;
-        this.key = key;
     }
 
     @Override
     public boolean send(Bytestring bytestring) throws InterruptedException {
 
-        if (bytestring == null) return false;
+        Signed<X> x = marshaller.unmarshall(bytestring);
 
-        Bytestring[] stripped = key.verify(bytestring);
-
-        if (stripped == null) return false;
-
-        X x = marshaller.unmarshall(stripped[0]);
-
-        return x != null && send.send(new Signed<>(x, stripped[1]));
+        return x != null && send.send(x);
 
     }
 

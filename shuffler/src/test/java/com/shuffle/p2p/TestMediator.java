@@ -2,9 +2,8 @@ package com.shuffle.p2p;
 
 import com.shuffle.chan.BasicChan;
 import com.shuffle.chan.Chan;
-import com.shuffle.chan.Receive;
 import com.shuffle.chan.Send;
-import com.shuffle.mock.MockChannel;
+import com.shuffle.mock.MockNetwork;
 
 import org.junit.After;
 import org.junit.Assert;
@@ -13,8 +12,6 @@ import org.junit.Test;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Created by Daniel Krawisz on 5/3/16.
@@ -29,7 +26,7 @@ import java.util.concurrent.TimeUnit;
  */
                                                         public class TestMediator {
 
- Map<Integer, MockChannel<Integer, Mediator.Envelope<String, Integer>>> hosts;
+     Map<Integer, Channel<Integer, Mediator.Envelope<String, Integer>>> hosts;
                                       Map<Integer, Connection<Integer>> mockConn;
                                                    Map<Integer, String> names;
            Map<String, MediatorClientChannel<String, Integer, Integer>> clients;
@@ -91,9 +88,11 @@ import java.util.concurrent.TimeUnit;
                                                                 msgs      = new HashMap<>();
                                                                 mockConn  = new HashMap<>();
 
+                                                                MockNetwork<Integer, Mediator.Envelope<String, Integer>> mock = new MockNetwork<>();
+
                                                                 // Three peers and one mediator.
                                                                 for (int i = 0; i < 4; i ++) {
-                                                                    hosts.put(i, new MockChannel<>(i, hosts));
+                                                                    hosts.put(i, mock.node(i));
                                                                 }
 
                                                                 names.put(1, "Moe");
@@ -107,7 +106,7 @@ import java.util.concurrent.TimeUnit;
 
                                                              String name = names.get(i);
 
-           MockChannel<Integer, Mediator.Envelope<String, Integer>> host = hosts.get(i);
+               Channel<Integer, Mediator.Envelope<String, Integer>> host = hosts.get(i);
 
                                                                     // Make a new MediatorClientChannel using the MockChannel connected
                                                                     // to the Mediator.
@@ -119,7 +118,7 @@ import java.util.concurrent.TimeUnit;
                                                                     sessions.put(name, openSessions);
 
                                                                     // Open client.
-                                                Connection<Integer> mock = host.open(
+                                                Connection<Integer> hconn = host.open(
                                                                             new Listener<Integer, Mediator.Envelope<String, Integer>>(){
                                                                                 // The listener doesn't need to do anything because the
                                                                                 // mediator doesn't initiate connections.
@@ -130,15 +129,15 @@ import java.util.concurrent.TimeUnit;
                                                                                 }
                                                                             });
 
-                                                                    Assert.assertNotNull(mock);
+                                                                    Assert.assertNotNull(hconn);
 
-                                                                    mockConn.put(i, mock);
+                                                                    mockConn.put(i, hconn);
 
-                                                 Connection<String> connection = client.open(new TestListener(name, openSessions));
+                                                 Connection<String> cconn = client.open(new TestListener(name, openSessions));
 
-                                                                    Assert.assertTrue(connection != null);
+                                                                    Assert.assertTrue(cconn != null);
 
-                                                                    conn.put(name, connection);
+                                                                    conn.put(name, cconn);
                                                                 }
 
                                                             }

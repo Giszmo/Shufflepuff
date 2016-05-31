@@ -5,9 +5,8 @@ import com.shuffle.chan.Chan;
 import com.shuffle.chan.Receive;
 import com.shuffle.chan.Send;
 
-import junit.framework.Assert;
-
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -188,6 +187,11 @@ public class TestTcpChannel {
             public boolean closed() throws InterruptedException {
                 return conn.closed();
             }
+        }
+
+        @Override
+        public Integer identity() {
+            return me;
         }
 
         @Override

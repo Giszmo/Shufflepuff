@@ -14,19 +14,28 @@ import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.Transaction;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.chan.BasicChan;
+import com.shuffle.chan.BasicInbox;
 import com.shuffle.chan.Chan;
+import com.shuffle.chan.Inbox;
 import com.shuffle.chan.Receive;
 import com.shuffle.chan.Send;
+import com.shuffle.chan.packet.JavaMarshaller;
+import com.shuffle.chan.packet.Packet;
+import com.shuffle.chan.packet.Signed;
 import com.shuffle.mock.InsecureRandom;
 import com.shuffle.mock.MockCrypto;
 import com.shuffle.mock.MockSessionIdentifier;
+import com.shuffle.p2p.Collector;
+import com.shuffle.p2p.MappedChannel;
+import com.shuffle.p2p.MarshallChannel;
 import com.shuffle.player.Messages;
 import com.shuffle.mock.MockSigningKey;
 import com.shuffle.p2p.Bytestring;
 import com.shuffle.p2p.Channel;
 import com.shuffle.p2p.TcpChannel;
-import com.shuffle.player.Connect;
+import com.shuffle.p2p.Connect;
 import com.shuffle.chan.packet.SessionIdentifier;
+import com.shuffle.player.P;
 import com.shuffle.protocol.CoinShuffle;
 import com.shuffle.protocol.FormatException;
 import com.shuffle.protocol.InvalidParticipantSetException;
@@ -45,8 +54,11 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 /**
@@ -54,18 +66,19 @@ import java.util.regex.Pattern;
  *
  * Created by Daniel Krawisz on 2/3/16.
  */
-class Player implements Runnable {
-    private static class Parameters {
+class Player<Address> implements Runnable {
+
+    private static class Parameters<Address> {
         public final SigningKey me;
         SessionIdentifier session;
         public final int port;
         public final int threads;
         public final InitialState.PlayerInitialState init;
-        public final Map<InetSocketAddress, VerificationKey> identities;
+        public final Map<VerificationKey, Address> identities;
 
         public Parameters(SigningKey me, SessionIdentifier session, int port, int threads,
                           InitialState.PlayerInitialState init,
-                          Map<InetSocketAddress, VerificationKey> identities) {
+                          Map<VerificationKey, Address> identities) {
 
             this.me = me;
             this.session = session;
@@ -73,17 +86,20 @@ class Player implements Runnable {
             this.threads = threads;
             this.init = init;
             this.identities = identities;
+
         }
     }
 
     private final Send<Phase> msg ;
-    private final Executor exec;
-    private final Parameters param;
+    private final Parameters<Address> param;
+    private final Channel<VerificationKey, Signed<Packet<VerificationKey, P>>> channel;
 
-    private Player(Parameters param, Send<Phase> msg, Executor exec) {
+    private Player(Parameters<Address> param, Send<Phase> msg, Channel<Address, Bytestring> channel) {
         this.param = param;
-        this.exec = exec;
         this.msg = msg;
+
+        this.channel = new MarshallChannel<>(new MappedChannel<>(channel, param.identities, param.me.VerificationKey()),
+                new JavaMarshaller<Signed<Packet<VerificationKey, P>>>());
     }
 
     static String readFile(String path, Charset encoding)
@@ -163,9 +179,9 @@ class Player implements Runnable {
         return map;
     }
 
-    private static Parameters readParameters(String[] args) {
+    private static Parameters<InetSocketAddress> readParametersTcp(String[] args) {
         Map<String, String> options = readOptions(args);
-        Map<InetSocketAddress, VerificationKey> identities = new HashMap<>();
+        Map<VerificationKey, InetSocketAddress> identities = new HashMap<>();
         Crypto crypto = new MockCrypto(new InsecureRandom(7777));
 
         InitialState init = InitialState.successful(
@@ -179,7 +195,7 @@ class Player implements Runnable {
         int port = Integer.parseInt(options.get("-minport"));
         try {
             for (VerificationKey vk : keys) {
-                identities.put(new InetSocketAddress(InetAddress.getLocalHost(), port), vk);
+                identities.put(vk, new InetSocketAddress(InetAddress.getLocalHost(), port));
                 port ++;
             }
         } catch (UnknownHostException e) {
@@ -189,7 +205,7 @@ class Player implements Runnable {
         int i = Integer.parseInt(options.get("-identity")) - 1;
         InitialState.PlayerInitialState pinit = init.getPlayer(i);
 
-        return new Parameters(
+        return new Parameters<InetSocketAddress>(
                 new MockSigningKey(Integer.parseInt(options.get("-key"))),
                 new MockSessionIdentifier(options.get("-id")),
                 Integer.parseInt(options.get("-minport")) + i,
@@ -198,17 +214,23 @@ class Player implements Runnable {
     }
 
     public static void main(String[] args) {
-        Parameters param;
+        Parameters<InetSocketAddress> param;
 
         try {
-            param = readParameters(args);
+            param = readParametersTcp(args);
         } catch (IllegalArgumentException e) {
             System.out.println("Invalid arguments.");
             return;
         }
 
+        Executor exec = Executors.newFixedThreadPool(param.threads);
+
         final Chan<Phase> msg = new BasicChan<>();
-        Player player = new Player(param, msg, Executors.newFixedThreadPool(param.threads));
+
+        // The tcp channel over which we will be connecting.
+        Channel<InetSocketAddress, Bytestring> tcp =
+                new TcpChannel(InetSocketAddress.createUnresolved("localhost", param.port), exec);
+        Player<InetSocketAddress> player = new Player<>(param, msg, tcp);
         Thread thread = new Thread(player);
 
         thread.start();
@@ -232,25 +254,27 @@ class Player implements Runnable {
         }
     }
     
-    private static Transaction play(Parameters param, Send<Phase> msg, Executor exec)
+    private Transaction play(Parameters<Address> param, Send<Phase> msg)
             throws InterruptedException {
 
-        Channel<InetSocketAddress, Bytestring> tcp =
-                new TcpChannel(InetSocketAddress.createUnresolved("localhost", param.port), exec);
+        // Construct set of addresses we will be connecting to.
+        SortedSet<VerificationKey> keys = new TreeSet<>();
+        keys.addAll(param.identities.keySet());
 
-        Connect<InetSocketAddress> conn = null;
-        Messages messages = null;
+        Connect<VerificationKey, Signed<Packet<VerificationKey, P>>> conn
+                = new Connect<>(channel, param.init.crypto(), 2 * (1 + param.identities.size()));
+
+        // Pause here to ensure that all other instances of the program are connected to the internet.
+        Thread.sleep(5000);
+
+        Collector<VerificationKey, Signed<Packet<VerificationKey, P>>> m = null;
         try {
-            conn = new Connect<>(param.init.crypto(), param.session);
-            messages = conn.connect(param.me, tcp, param.identities, new Messages.JavaMarshaller(), 3);
+            m = conn.connect(keys, 3);
         } catch (IOException e) {
-            // Indicates that something has gone wrong with the initial connection.
-            return null;
-        } finally {
-            if (conn != null) {
-                conn.shutdown();
-            }
+            e.printStackTrace();
         }
+
+        Messages messages = new Messages(param.session, param.me, m.connected, m.inbox);
 
         try {
             return new CoinShuffle(
@@ -274,7 +298,9 @@ class Player implements Runnable {
             matrix.printStackTrace();
             return null;
         } finally {
-            conn.shutdown();
+            if (messages != null) {
+                messages.close();
+            }
         }
     }
 
@@ -283,7 +309,7 @@ class Player implements Runnable {
         // Run the protocol and signal to the other thread when it's done.
         try {
             try {
-                play(param, msg, exec);
+                play(param, msg);
             } finally {
                 msg.close();
             }

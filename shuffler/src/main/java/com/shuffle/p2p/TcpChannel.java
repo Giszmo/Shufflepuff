@@ -459,6 +459,11 @@ public class TcpChannel implements Channel<InetSocketAddress, Bytestring> {
     }
 
     @Override
+    public InetSocketAddress identity() {
+        return me;
+    }
+
+    @Override
     public Peer<InetSocketAddress, Bytestring> getPeer(InetSocketAddress you) {
 
         if (you.equals(me)) return null;

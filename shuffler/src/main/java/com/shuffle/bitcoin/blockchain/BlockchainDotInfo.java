@@ -56,9 +56,7 @@ public final class BlockchainDotInfo extends Bitcoin {
         URL obj = new URL(url);
         JSONTokener tokener = new JSONTokener(obj.openStream());
         JSONObject root = new JSONObject(tokener);
-        long satoshis = Long.valueOf(root.get("final_balance").toString());
-        System.out.println(satoshis);
-        return satoshis;
+        return Long.valueOf(root.get("final_balance").toString());
     }
 
 

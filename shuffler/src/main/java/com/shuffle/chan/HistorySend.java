@@ -8,7 +8,7 @@ import java.util.List;
  */
 public class HistorySend<X> implements Send<X> {
     private final Send<X> chan;
-    private final List<X> history = new LinkedList<>();
+    private final LinkedList<X> history = new LinkedList<>();
 
     public HistorySend(Send<X> chan) {
         this.chan = chan;
@@ -19,7 +19,7 @@ public class HistorySend<X> implements Send<X> {
         boolean sent = chan.send(x);
 
         if (sent) {
-            history.add(x);
+            history.addLast(x);
         }
 
         return sent;
@@ -34,5 +34,9 @@ public class HistorySend<X> implements Send<X> {
         List<X> h = new LinkedList<X>();
         h.addAll(history);
         return h;
+    }
+
+    public X last() {
+        return history.getLast();
     }
 }

@@ -24,7 +24,11 @@ import java.io.Serializable;
 public interface Packet extends Serializable {
 
     Message payload();
+
+    // The phase the message was created or purported to be created.
     Phase phase();
     VerificationKey from();
     VerificationKey to();
+
+    Bytestring signature();
 }

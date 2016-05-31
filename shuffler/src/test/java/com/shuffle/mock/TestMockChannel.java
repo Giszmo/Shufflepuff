@@ -9,7 +9,7 @@
 package com.shuffle.mock;
 
 import com.shuffle.chan.Send;
-import com.shuffle.mock.MockChannel;
+import com.shuffle.p2p.Channel;
 import com.shuffle.p2p.Connection;
 import com.shuffle.p2p.Listener;
 import com.shuffle.p2p.Session;
@@ -65,13 +65,15 @@ public class TestMockChannel {
 
     @Test
     public void testMockChannel() throws InterruptedException {
+        MockNetwork<Integer, String> mock = new MockNetwork<>();
+
         // Create channels.
-        Map<Integer, MockChannel<Integer, String>> knownHosts = new HashMap<>();
+        Map<Integer, Channel<Integer, String>> knownHosts = new HashMap<>();
         Map<Integer, Connection<Integer>> connections = new HashMap<>();
         Map<Integer, MockListener> listeners = new HashMap<>();
         Map<Integer, MockSend> receivers = new HashMap<>();
-        knownHosts.put(1, new MockChannel<>(1, knownHosts));
-        knownHosts.put(2, new MockChannel<>(2, knownHosts));
+        knownHosts.put(1, mock.node(1));
+        knownHosts.put(2, mock.node(2));
         listeners.put(1, new MockListener());
         listeners.put(2, new MockListener());
         receivers.put(1, new MockSend());

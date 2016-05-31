@@ -10,14 +10,15 @@ package com.shuffle.sim;
 
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.Transaction;
+import com.shuffle.bitcoin.VerificationKey;
+import com.shuffle.chan.packet.Packet;
 import com.shuffle.monad.Either;
 import com.shuffle.monad.NaturalSummableFuture;
 import com.shuffle.monad.SummableFuture;
 import com.shuffle.monad.SummableFutureZero;
 import com.shuffle.monad.SummableMaps;
-import com.shuffle.player.Messages;
+import com.shuffle.player.P;
 import com.shuffle.protocol.blame.Matrix;
-import com.shuffle.protocol.message.Packet;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
@@ -39,7 +40,7 @@ public final class Simulator {
 
     public static Map<SigningKey, Either<Transaction, Matrix>> run(InitialState init) {
 
-        final Initializer<Packet> initializer = new Initializer<>(init.session, new Messages.JavaMarshaller(), 2 * (1 + init.size() ));
+        final Initializer<Packet<VerificationKey, P>> initializer = new Initializer<>(init.session, 2 * (1 + init.size() ));
         final Map<SigningKey, Adversary> machines = init.getPlayers(initializer);
 
         Map<SigningKey, Either<Transaction, Matrix>> results = runSimulation(machines);

@@ -16,11 +16,12 @@ import com.shuffle.protocol.FormatException;
 import com.shuffle.protocol.blame.Blame;
 
 import java.io.IOException;
+import java.io.Serializable;
 
 /**
  * Created by Daniel Krawisz on 12/19/15.
  */
-public interface Message {
+public interface Message extends Serializable {
     boolean isEmpty();
 
     Message attach(EncryptionKey ek);

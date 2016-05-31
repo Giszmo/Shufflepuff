@@ -29,7 +29,7 @@ public class TestInbox {
         // Who should messages be sent from in this test?
         final List<Integer> messages = new LinkedList<>();
 
-        final Inbox<Integer, Integer> inbox = new Inbox<>(100);
+        final Inbox<Integer, Integer, Integer> inbox = new BasicInbox<>(100);
         final Map<Integer, Send<Integer>> send = new HashMap<>();
             
         for (int p : tpeers) {

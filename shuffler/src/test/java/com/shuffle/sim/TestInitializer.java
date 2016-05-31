@@ -3,6 +3,7 @@ package com.shuffle.sim;
 import com.shuffle.bitcoin.SigningKey;
 import com.shuffle.bitcoin.VerificationKey;
 import com.shuffle.chan.Inbox;
+import com.shuffle.chan.packet.Marshaller;
 import com.shuffle.chan.packet.Signed;
 import com.shuffle.chan.packet.SigningSend;
 import com.shuffle.mock.MockSessionIdentifier;
@@ -21,7 +22,7 @@ import java.util.concurrent.TimeUnit;
  * Created by Daniel Krawisz on 5/21/16.
  */
 public class TestInitializer {
-    private class IntMarshaller implements SigningSend.Marshaller<Integer> {
+    private class IntMarshaller implements Marshaller<Integer> {
 
         @Override
         public Bytestring marshall(Integer integer) {
@@ -44,32 +45,35 @@ public class TestInitializer {
     @Test
     public void testInitializer() throws InterruptedException {
         int players = 8;
+        IntMarshaller im = new IntMarshaller();
+
         Initializer<Integer> initializer = new Initializer<Integer>(
-                new MockSessionIdentifier("test initializer " + players),
-                new IntMarshaller(),
-                2 * (1 + players ));
+                new MockSessionIdentifier("test initializer " + players), 2 * (1 + players ));
 
         Map<SigningKey, Initializer.Connections<Integer>> connections = new HashMap<>();
 
         for (int player = 1; player <= players; player ++) {
-            SigningKey sk = new MockSigningKey(player);
+            SigningKey alice = new MockSigningKey(player);
 
             // Add new player.
-            Initializer.Connections<Integer> c = initializer.connect(sk);
+            Initializer.Connections<Integer> c = initializer.connect(alice);
             int message = 0;
 
             // Should be able to receive from and send to every previous player.
             for (Map.Entry<SigningKey, Initializer.Connections<Integer>> prev : connections.entrySet()) {
                 Initializer.Connections<Integer> con = prev.getValue();
+                SigningKey bob = prev.getKey();
 
-                con.send.get(sk.VerificationKey()).send(message);
+                // Send a message from bob to alice.
+                new SigningSend<>(con.send.get(alice.VerificationKey()), im, bob).send(message);
                 Inbox.Envelope<VerificationKey, Signed<Integer>> r
                         = c.receive.receive(10, TimeUnit.MILLISECONDS);
 
                 Assert.assertTrue(r.payload.message.equals(message));
                 message++;
 
-                c.send.get(prev.getKey().VerificationKey()).send(message);
+                // Send a message from alice to bob.
+                new SigningSend<>(c.send.get(bob.VerificationKey()), im, alice).send(message);
                 Inbox.Envelope<VerificationKey, Signed<Integer>> re =
                         con.receive.receive();
 
@@ -78,7 +82,7 @@ public class TestInitializer {
             }
 
             // Add connections to map of previous players.
-            connections.put(sk, c);
+            connections.put(alice, c);
         }
     }
 }

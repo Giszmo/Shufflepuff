@@ -47,4 +47,9 @@ public abstract class FundamentalPeer<Identity, Message extends Serializable> im
         }
         currentSession = null;
     }
+
+    @Override
+    public int hashCode() {
+        return you.hashCode() * 17;
+    }
 }

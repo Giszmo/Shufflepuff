@@ -165,6 +165,11 @@ public class Multiplexer<X, Y, Message extends Serializable> implements Channel<
     }
 
     @Override
+    public Either<X, Y> identity() {
+        return new Either<X, Y>(x.identity(), y.identity());
+    }
+
+    @Override
     public Connection<Either<X, Y>> open(final Listener<Either<X, Y>, Message> listener)
             throws InterruptedException {
         

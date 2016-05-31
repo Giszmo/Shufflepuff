@@ -103,7 +103,6 @@ public class Adversary {
                             | InvalidParticipantSetException e) {
 
                         e.printStackTrace();
-                        System.out.println("Exception returned by " + sk + ": " + e.getMessage());
 
                     } finally {
                         q.close();

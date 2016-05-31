@@ -257,8 +257,7 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
 
         @Override
         public URI identity() {
-            // TODO
-            throw new NotImplementedException();
+            return WebsocketClientChannel.this.identity();
         }
 
         @Override
@@ -292,5 +291,11 @@ public class WebsocketClientChannel implements Channel<URI, Bytestring> {
     @Override
     public Peer<URI, Bytestring> getPeer(URI you) {
         return peers.get(you);
+    }
+
+    @Override
+    public URI identity() {
+        // TODO
+        throw new NotImplementedException();
     }
 }

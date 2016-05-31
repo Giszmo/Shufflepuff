@@ -20,6 +20,9 @@ import java.io.Serializable;
  * Created by Daniel Krawisz on 12/16/15.
  */
 public interface Channel<Identity, Message extends Serializable> {
+    // Our own identity on this channel. For TCP, this would be a IP address.
+    Identity identity();
+
     // Returns null if a peer could not be created for this identity.
     Peer<Identity, Message> getPeer(Identity you);
 
