@@ -204,11 +204,7 @@ public class BitcoinCrypto implements Crypto {
 
    public String getCurrentPathAsString() {
       System.out.println("Value of path variable: " + path);
-      StringBuilder stringBuilder = new StringBuilder();
-      stringBuilder.append(path);
-      stringBuilder.append("/" + getDecKeyCounter());
-      String fpath = stringBuilder.toString();
-      return fpath;
+      return path + "/" + getDecKeyCounter();
    }
 
     @Override
