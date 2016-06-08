@@ -32,7 +32,7 @@ public class AddressImplTest extends TestCase {
       System.out.println("addressi: " + addressi.toString());
       System.out.println("addressi2: " + addressi2.toString());
 
-      assertEquals(1, addressi.compareTo(addressi));
+      assertEquals(1, addressi.compareTo(new AddressImpl(address)));
    }
 
    @Test

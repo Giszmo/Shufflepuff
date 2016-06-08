@@ -21,20 +21,20 @@ import java.nio.charset.StandardCharsets;
  */
 public class SigningKeyImpl implements SigningKey {
 
-   ECKey verificationKey;
+   ECKey signingKey;
    BitcoinCrypto bitcoinCrypto = new BitcoinCrypto();
 
    public SigningKeyImpl(org.bitcoinj.core.ECKey ecKey) {
-      this.verificationKey = ecKey;
+      this.signingKey = ecKey;
    }
 
    public String toString() {
-      return this.verificationKey.toString();
+      return this.signingKey.getPrivateKeyAsWiF(bitcoinCrypto.getParams()).toString();
    }
 
    @Override
    public VerificationKey VerificationKey() {
-      return new VerificationKeyImpl(verificationKey.getPubKey());
+      return new VerificationKeyImpl(signingKey.getPubKey());
    }
 
 
@@ -44,7 +44,7 @@ public class SigningKeyImpl implements SigningKey {
       signature1 = null;
       try {
          Bitcoin.Transaction tj = (Bitcoin.Transaction) t;
-         ECKey.ECDSASignature signature = verificationKey.sign(tj.bitcoinj().getHash());
+         ECKey.ECDSASignature signature = signingKey.sign(tj.bitcoinj().getHash());
          byte[] signed = signature.encodeToDER();
          signature1 = new SignatureImpl(signed);
       } catch (BlockStoreException e) {
@@ -58,7 +58,7 @@ public class SigningKeyImpl implements SigningKey {
    @Override
    public Signature makeSignature(Packet p) {
       String input = p.toString();
-      ECKey.ECDSASignature signature = verificationKey.sign(Sha256Hash.twiceOf(input.getBytes(StandardCharsets.UTF_8)));
+      ECKey.ECDSASignature signature = signingKey.sign(Sha256Hash.twiceOf(input.getBytes(StandardCharsets.UTF_8)));
       byte[] signed = signature.encodeToDER();
       SignatureImpl signature1 = new SignatureImpl(signed);
       return signature1;
@@ -71,7 +71,7 @@ public class SigningKeyImpl implements SigningKey {
          throw new IllegalArgumentException("unable to compare with other SingingKey");
       }
       //get netParams to create correct address and check by address.
-      org.bitcoinj.core.Address a = ((SigningKeyImpl) o).verificationKey.toAddress(bitcoinCrypto.getParams());
+      org.bitcoinj.core.Address a = ((SigningKeyImpl) o).signingKey.toAddress(bitcoinCrypto.getParams());
       return a.compareTo(((org.bitcoinj.core.Address) o));
    }
 }

@@ -16,6 +16,8 @@ import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.wallet.KeyChain;
 
 import java.io.File;
+import java.security.GeneralSecurityException;
+import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.MessageDigest;
@@ -23,7 +25,10 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
+import java.util.Base64;
 
 
 public class BitcoinCrypto implements Crypto {
@@ -31,7 +36,8 @@ public class BitcoinCrypto implements Crypto {
    // Figure out which network we should connect to. Each one gets its own set of files.
    NetworkParameters params = TestNet3Params.get();
    String fileprefix = "_shuffle";
-   WalletAppKit kit;
+   WalletAppKit kit = null;
+
 
    //Alphabet defining valid characters used in address
    private final static String ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
@@ -55,15 +61,14 @@ public class BitcoinCrypto implements Crypto {
 
    // create derivation path for shuffle keys
    HDUtils hdUtils = new HDUtils();
-   final String path = HDUtils.formatPath(HDUtils.parsePath("5H/"));
+   String path = HDUtils.formatPath(HDUtils.parsePath("5H/"));
    int decKeyCounter = 0;
 
    public void initKit() {
       //initialize files and stuff here, add our address to the watched ones
-      kit = new WalletAppKit(params, new File("."), fileprefix);
       kit.setAutoSave(true);
       kit.connectToLocalHost();
-      kit.useTor();
+      // kit.useTor();
       kit.startAsync();
       kit.awaitRunning();
       kit.peerGroup().addPeerDiscovery(new DnsDiscovery(params));
@@ -120,6 +125,45 @@ public class BitcoinCrypto implements Crypto {
       }
    }
 
+   public static PrivateKey loadPrivateKey(String key64) throws GeneralSecurityException {
+      byte[] clear = Base64.getDecoder().decode(key64);
+      PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(clear);
+      KeyFactory fact = KeyFactory.getInstance("EC");
+      PrivateKey priv = fact.generatePrivate(keySpec);
+      Arrays.fill(clear, (byte) 0);
+      return priv;
+   }
+
+
+   public static PublicKey loadPublicKey(String stored) throws GeneralSecurityException {
+      byte[] data = Base64.getDecoder().decode(stored);
+      X509EncodedKeySpec spec = new X509EncodedKeySpec(data);
+      KeyFactory fact = KeyFactory.getInstance("EC");
+      return fact.generatePublic(spec);
+   }
+
+   public static String savePrivateKey(PrivateKey priv) throws GeneralSecurityException {
+      KeyFactory fact = KeyFactory.getInstance("EC");
+      PKCS8EncodedKeySpec spec = fact.getKeySpec(priv,
+            PKCS8EncodedKeySpec.class);
+      byte[] packed = spec.getEncoded();
+      //todo check
+      String key64 = Base64.getEncoder().encodeToString(packed);
+
+      Arrays.fill(packed, (byte) 0);
+      return key64;
+   }
+
+
+   public static String savePublicKey(PublicKey publ) throws GeneralSecurityException {
+      KeyFactory fact = KeyFactory.getInstance("DSA");
+      X509EncodedKeySpec spec = fact.getKeySpec(publ,
+            X509EncodedKeySpec.class);
+      return Base64.getEncoder().encodeToString(spec.getEncoded());
+   }
+
+
+
    private KeyPairGenerator getKeyPGen() {
       if (keyPG == null) {
          try {
@@ -151,13 +195,18 @@ public class BitcoinCrypto implements Crypto {
    }
 
    public Wallet getWallet() {
+      if (kit == null) {
+         kit = new WalletAppKit(params, new File("."), fileprefix);
+         initKit();
+      }
       return kit.wallet();
    }
 
    public String getCurrentPathAsString() {
+      System.out.println("Value of path variable: " + path);
       StringBuilder stringBuilder = new StringBuilder();
       stringBuilder.append(path);
-      stringBuilder.append(getDecKeyCounter());
+      stringBuilder.append("/" + getDecKeyCounter());
       String fpath = stringBuilder.toString();
       return fpath;
    }
@@ -165,7 +214,8 @@ public class BitcoinCrypto implements Crypto {
     @Override
     public DecryptionKey makeDecryptionKey() {
        String ppath = getCurrentPathAsString();
-       ECKey newDecKey = kit.wallet().getKeyByPath(HDUtils.parsePath(ppath));
+       System.out.println("Current path used by decryption key genereated: " + ppath);
+       ECKey newDecKey = getWallet().getKeyByPath(HDUtils.parsePath(ppath));
        decKeyCounter++;
        return new DecryptionKeyImpl(newDecKey);
     }
@@ -180,6 +230,7 @@ public class BitcoinCrypto implements Crypto {
     public int getRandom(int n) throws InvalidImplementationError {
          return sr.nextInt(n);
     }
+
 
    /**
     * Phase 1: Key exchange

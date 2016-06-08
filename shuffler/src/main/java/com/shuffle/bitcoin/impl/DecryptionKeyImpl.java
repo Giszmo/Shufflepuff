@@ -34,13 +34,20 @@ public class DecryptionKeyImpl implements DecryptionKey {
       this.encryptionKey = key.getPubKey();
    }
 
+
+   // returns private key in Private Key WIF (compressed, 52 characters base58, starts with a 'c')
    public java.lang.String toString() {
-      return this.key.toString();
+      return this.key.getPrivateKeyAsWiF(bitcoinCrypto.getParams());
+   }
+
+   public ECKey getKey() {
+      return ECKey.fromASN1(key.toASN1());
    }
 
    @Override
    public EncryptionKey EncryptionKey() {
-      return new EncryptionKeyImpl(key.getPubKey());
+      ECKey pubkey = ECKey.fromPublicOnly(encryptionKey);
+      return new EncryptionKeyImpl(pubkey);
    }
 
 
@@ -52,11 +59,11 @@ public class DecryptionKeyImpl implements DecryptionKey {
          return new AddressImpl(input);
       } else {
          try {
-            KeyFactory kf = KeyFactory.getInstance("ECIES");
+            KeyFactory kf = KeyFactory.getInstance("EC");
             PrivateKey privateKey = kf.generatePrivate(kf.getKeySpec((Key) key, KeySpec.class));
 
             //encrypt cipher
-            Cipher cipher = Cipher.getInstance("ECIES");
+            Cipher cipher = Cipher.getInstance("EC");
             cipher.init(Cipher.DECRYPT_MODE, privateKey);
             byte[] bytes = m.toString().getBytes(StandardCharsets.UTF_8);
             byte[] decrypted = cipher.doFinal(bytes);
