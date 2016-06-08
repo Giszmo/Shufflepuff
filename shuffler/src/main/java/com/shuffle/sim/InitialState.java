@@ -372,13 +372,19 @@ public class InitialState {
 
     public Map<SigningKey, Adversary> getPlayers(Initializer<Packet<VerificationKey, P>> initializer) {
         Map<SigningKey, Adversary> p = new HashMap<>();
+        Map<SigningKey, Initializer.Connections<Packet<VerificationKey, P>>> connections = new HashMap<>();
 
         for (final PlayerInitialState player : players) {
             if (player.sk == null) {
                 continue;
             }
 
-            Initializer.Connections<Packet<VerificationKey, P>> c = initializer.connect(player.sk);
+            connections.put(player.sk, initializer.connect(player.sk));
+        }
+
+        for (final PlayerInitialState player : players) {
+
+            Initializer.Connections<Packet<VerificationKey, P>> c = connections.get(player.sk);
 
             try {
                 p.put(player.sk,

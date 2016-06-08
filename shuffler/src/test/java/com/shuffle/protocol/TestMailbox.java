@@ -95,7 +95,7 @@ public class TestMailbox {
                 players.remove(sentTo);
             }
 
-            Assert.assertEquals(0, players.size());
+            Assert.assertTrue(players.contains(me.VerificationKey()));
         }
     }
 

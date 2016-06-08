@@ -24,6 +24,11 @@ public class BasicInbox<Address, X extends Serializable> implements Inbox<Addres
         private Transit() {
             this.m = null;
         }
+
+        @Override
+        public String toString() {
+            return "Tr[" + m + "]";
+        }
     }
 
     private final LinkedBlockingQueue<Transit<Address, X>> q;
@@ -45,6 +50,7 @@ public class BasicInbox<Address, X extends Serializable> implements Inbox<Addres
 
         @Override
         public boolean send(X x) throws InterruptedException {
+
             return !(closed || BasicInbox.this.closed) &&
                     q.add(new Transit<Address, X>(new Inbox.Envelope<Address, X>(from, x)));
         }
@@ -72,6 +78,7 @@ public class BasicInbox<Address, X extends Serializable> implements Inbox<Addres
     }
 
     private Envelope<Address, X> receiveMessage(Transit<Address, X> m) {
+
         if (m == null) return null;
 
         if (closed && !closeSent) {
@@ -95,6 +102,7 @@ public class BasicInbox<Address, X extends Serializable> implements Inbox<Addres
 
     @Override
     public Envelope<Address, X> receive(long l, TimeUnit u) throws InterruptedException {
+
         if (closed && q.size() == 0) {
             return null;
         }

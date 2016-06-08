@@ -371,6 +371,7 @@ public class Message implements com.shuffle.protocol.message.Message, Serializab
     @Override
     public com.shuffle.protocol.message.Packet send(Phase phase, VerificationKey to)
             throws InterruptedException {
+
         if (messages == null) return null;
 
         return messages.send(this, phase, to);

@@ -109,8 +109,7 @@ public class CoinShuffle {
             // Phase 1: Announcement
             // In the announcement phase, participants distribute temporary encryption keys.
             phase.set(Phase.Announcement);
-            log.info("Player " + me + " begins Coin Shuffle protocol "
-                    + " with " + N + " players.");
+            log.info(" * Player " + me + " begins Coin Shuffle protocol with " + N + " players.");
 
             // Check for sufficient funds.
             // There was a problem with the wording of the original paper which would have meant
@@ -136,10 +135,10 @@ public class CoinShuffle {
             readAnnouncements(announcement, encryptionKeys, changeAddresses);
 
             // Phase 2: Shuffle
-            // In the shuffle phase, we create a sequence of orderings which will b successively
-            // applied by each particpant. Everyone has the incentive to insert their own address
-            // at a random location, which is sufficient to ensure randomness of the whole thing
-            // to all participants.
+            // In the shuffle phase, players go in order and reorder the addresses they have been
+            // given by the previous player. They insert their own address in a random location.
+            // Everyone has the incentive to insert their own address at a random location, which
+            // is sufficient to ensure that the result appears random to everybody.
             phase.set(Phase.Shuffling);
 
             try {

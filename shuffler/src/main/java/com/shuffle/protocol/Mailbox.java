@@ -65,14 +65,14 @@ public class Mailbox {
     }
 
     // Send a message into the network.
-    public void send(Message message, Phase phase, VerificationKey to) throws IOException, InterruptedException {
+    public void send(Message m, Phase phase, VerificationKey to) throws IOException, InterruptedException {
 
         // Don't send anything to a nonexistent player.
         if (!players.contains(to)) {
             return;
         }
 
-        Packet packet = message.send(phase, to);
+        Packet packet = m.send(phase, to);
 
         // If this is a message to myself, don't send it. Just pretend we received it.
         // This is useful later when we have to collect all blame messages later.

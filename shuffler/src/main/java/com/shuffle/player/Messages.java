@@ -16,12 +16,10 @@ import com.shuffle.chan.IgnoreSend;
 import com.shuffle.chan.Receive;
 import com.shuffle.chan.Send;
 import com.shuffle.chan.packet.JavaMarshaller;
-import com.shuffle.chan.packet.Marshaller;
 import com.shuffle.chan.packet.OutgoingPacketSend;
 import com.shuffle.chan.packet.Packet;
 import com.shuffle.chan.packet.Signed;
 import com.shuffle.chan.packet.SessionIdentifier;
-import com.shuffle.chan.packet.VerifyingMarshaller;
 import com.shuffle.chan.packet.SigningSend;
 import com.shuffle.p2p.Bytestring;
 import com.shuffle.chan.Inbox;
@@ -116,16 +114,13 @@ public class Messages implements MessageFactory {
     private class Outgoing {
         public final Send<P> out;
         private final HistorySend<Signed<Packet<VerificationKey, P>>> h;
-        private final Marshaller<Signed<Packet<VerificationKey, P>>> m;
 
-        Outgoing(Send<P> out, HistorySend<Signed<Packet<VerificationKey, P>>> h, VerificationKey k,
-                 Marshaller<com.shuffle.chan.packet.Packet<VerificationKey, P>> m) {
+        Outgoing(Send<P> out, HistorySend<Signed<Packet<VerificationKey, P>>> h, VerificationKey k) {
 
-            if (k == null || out == null || h == null || m == null) throw new NullPointerException();
+            if (k == null || out == null || h == null) throw new NullPointerException();
 
             this.out = out;
             this.h = h;
-            this.m = new VerifyingMarshaller<>(k, m);
         }
 
         public List<Signed<Packet<VerificationKey, P>>> history() {
@@ -174,15 +169,15 @@ public class Messages implements MessageFactory {
             Send<Packet<VerificationKey, P>> signer = new SigningSend<>(h, jj, me);
             Send<P> p = new OutgoingPacketSend<>(signer, session, vk, k);
 
-            this.net.put(k, new Outgoing(p, h, vk, jj));
+            this.net.put(k, new Outgoing(p, h, vk));
         }
 
-        // We have a special channel for sending messages to ourself.
+        // We have a special channel for sending messages to ourselves.
         HistorySend<Signed<Packet<VerificationKey, P>>> h = new HistorySend<>(
                 new IgnoreSend<Signed<Packet<VerificationKey, P>>>());
 
         Send<P> p = new OutgoingPacketSend<>(new SigningSend<>(h, jj, me), session, vk, vk);
-        this.net.put(vk, new Outgoing(p, h, vk, jj));
+        this.net.put(vk, new Outgoing(p, h, vk));
     }
 
     @Override
@@ -192,6 +187,7 @@ public class Messages implements MessageFactory {
 
     @Override
     public com.shuffle.protocol.message.Packet receive() throws InterruptedException, IOException {
+
         // TODO make this a parameter.
         Inbox.Envelope<VerificationKey,
                 Signed<com.shuffle.chan.packet.Packet<VerificationKey, P>>> e

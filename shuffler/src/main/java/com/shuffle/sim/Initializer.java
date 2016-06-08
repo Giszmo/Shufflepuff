@@ -58,6 +58,7 @@ class Initializer<X> {
 
     // This function is called every time a new player is created in a simulation.
     public Connections<X> connect(SigningKey sk) {
+
         VerificationKey vk = sk.VerificationKey();
 
         // Create a new map. This will contain the channels from this mailbox to the others.

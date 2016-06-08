@@ -44,7 +44,7 @@ public class TestInitializer {
 
     @Test
     public void testInitializer() throws InterruptedException {
-        int players = 8;
+        int players = 88;
         IntMarshaller im = new IntMarshaller();
 
         Initializer<Integer> initializer = new Initializer<Integer>(
