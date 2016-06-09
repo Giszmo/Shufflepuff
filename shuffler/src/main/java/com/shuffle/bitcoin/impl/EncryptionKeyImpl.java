@@ -6,10 +6,12 @@ import com.shuffle.bitcoin.EncryptionKey;
 
 import org.apache.commons.codec.binary.Hex;
 import org.bitcoinj.core.ECKey;
+import org.spongycastle.jce.provider.BouncyCastleProvider;
 
 import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.PublicKey;
+import java.security.Security;
 import java.util.Base64;
 
 import javax.crypto.Cipher;
@@ -21,6 +23,10 @@ public class EncryptionKeyImpl implements EncryptionKey {
 
    ECKey encryptionKey;
 
+   static {
+      Security.addProvider(new BouncyCastleProvider());
+   }
+
    public EncryptionKeyImpl(byte[] ecPubKey) {
       this.encryptionKey = ECKey.fromPublicOnly(ecPubKey);
    }
@@ -29,12 +35,12 @@ public class EncryptionKeyImpl implements EncryptionKey {
       if (ecPubKey.hasPrivKey()) {
          this.encryptionKey = ECKey.fromPublicOnly(ecPubKey.getPubKey());
       } else {
-         this.encryptionKey = (ecPubKey);
+         this.encryptionKey = ecPubKey;
       }
    }
 
    public String toString() {
-      return new String(this.encryptionKey.getPublicKeyAsHex().toString());
+      return this.encryptionKey.getPublicKeyAsHex();
    }
 
    @Override
@@ -51,7 +57,7 @@ public class EncryptionKeyImpl implements EncryptionKey {
 
          //encrypt cipher
          Cipher cipher = Cipher.getInstance("EC");
-         cipher.init(Cipher.ENCRYPT_MODE, publicKey1);
+         cipher.init(Cipher.ENCRYPT_MODE, publicKey);
          byte[] bytes = m.toString().getBytes(StandardCharsets.UTF_8);
          byte[] encrypted = cipher.doFinal(bytes);
          add = new AddressImpl(Hex.encodeHexString(encrypted));

@@ -11,6 +11,7 @@ import org.junit.Test;
 import java.security.Provider;
 import java.security.SecureRandom;
 import java.security.Security;
+import java.util.Arrays;
 import java.util.Enumeration;
 
 import static org.junit.Assert.assertEquals;
@@ -40,7 +41,7 @@ public class DecryptionKeyImplTest {
    @Test
    public void testToString() throws Exception {
       System.out.println("\nBegin Test toString:");
-      String string = this.ecKey.getPrivateKeyAsWiF(bitcoinCrypto.getParams()).toString();
+      String string = this.ecKey.getPrivateKeyAsWiF(bitcoinCrypto.getParams());
       System.out.println("ECKey: " + this.ecKey);
       System.out.println("String ECKey WIF: " + string);
       System.out.println("String DecryptionKey: " + this.decryptionKey.toString());
@@ -57,16 +58,16 @@ public class DecryptionKeyImplTest {
 //
 //      PublicKey publicKey = BitcoinCrypto.loadPublicKey(Base64.getEncoder().encodeToString(ecKey.getPubKey()));
       Provider p[] = Security.getProviders();
-      for (int i = 0; i < p.length; i++) {
-         System.out.println(p[i]);
-         for (Enumeration e = p[i].keys(); e.hasMoreElements(); )
+      for (Provider aP : p) {
+         System.out.println(aP);
+         for (Enumeration e = aP.keys(); e.hasMoreElements(); )
             System.out.println("\t" + e.nextElement());
       }
       System.out.println("ecKey: " + ecKey.toString());
       System.out.println("ecKey priv: " + ecKey.getPrivateKeyAsHex());
       System.out.println("secureRandom: " + secureRandom.toString());
       System.out.println("decryptionKey: " + decryptionKey.toString());
-      System.out.println("ASN.1  " + ecKey.toASN1().toString());
+      System.out.println("ASN.1  " + Arrays.toString(ecKey.toASN1()));
 
       EncryptionKeyImpl encTest = new EncryptionKeyImpl(pub);
       System.out.println("\nencTest: " + encTest);
