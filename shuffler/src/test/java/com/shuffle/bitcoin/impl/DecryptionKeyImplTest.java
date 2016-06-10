@@ -1,5 +1,9 @@
 package com.shuffle.bitcoin.impl;
 
+import com.google.inject.Guice;
+import com.google.inject.Inject;
+import com.shuffle.DalvikModule;
+import com.shuffle.JvmModule;
 import com.shuffle.bitcoin.BitcoinCrypto;
 import com.shuffle.bitcoin.DecryptionKey;
 import com.shuffle.bitcoin.EncryptionKey;
@@ -7,7 +11,6 @@ import com.shuffle.bitcoin.EncryptionKey;
 import org.bitcoinj.core.ECKey;
 import org.junit.Before;
 import org.junit.Test;
-import org.spongycastle.jce.provider.BouncyCastleProvider;
 import org.spongycastle.util.encoders.Hex;
 
 import java.security.KeyPair;
@@ -22,6 +25,7 @@ import java.util.Arrays;
 import java.util.Enumeration;
 
 import javax.crypto.Cipher;
+import javax.inject.Named;
 
 import static org.junit.Assert.assertEquals;
 
@@ -29,10 +33,9 @@ import static org.junit.Assert.assertEquals;
  * Created by conta on 02.06.16.
  */
 public class DecryptionKeyImplTest {
-    static {
-        // add instance of provider class
-        Security.insertProviderAt(new BouncyCastleProvider(), 1);
-    }
+    @Inject
+    @Named("providerName")
+    private String providerName;
 
     ECKey ecKey;
     BitcoinCrypto bitcoinCrypto;
@@ -42,17 +45,17 @@ public class DecryptionKeyImplTest {
 
     @Before
     public void setUp() throws Exception {
+        Guice.createInjector(new JvmModule()).injectMembers(this);
+        System.out.println("Using " + providerName);
         this.bitcoinCrypto = new BitcoinCrypto();
         this.secureRandom = new SecureRandom();
         this.ecKey = new ECKey(secureRandom);
         this.decryptionKey = new DecryptionKeyImpl(this.ecKey);
-        //this.hKey = ECKey.fromPrivate()
-
     }
 
     @Test
     public void testECIESAvailability() throws Exception {
-        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("ECDH", BouncyCastleProvider.PROVIDER_NAME);
+        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("ECDH", providerName);
         keyPairGenerator.initialize(new ECGenParameterSpec("secp256r1"));
 
         KeyPair recipientKeyPair = keyPairGenerator.generateKeyPair();
@@ -60,7 +63,7 @@ public class DecryptionKeyImplTest {
         PrivateKey privKey = recipientKeyPair.getPrivate();
 
         // init the encryption cipher
-        Cipher iesCipher = Cipher.getInstance("ECIES", BouncyCastleProvider.PROVIDER_NAME);
+        Cipher iesCipher = Cipher.getInstance("ECIES", providerName);
         iesCipher.init(Cipher.ENCRYPT_MODE, pubKey);
 
         // use the cipher
