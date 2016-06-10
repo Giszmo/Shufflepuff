@@ -2,16 +2,15 @@ package com.shuffle.bitcoin.impl;
 
 import com.google.inject.Guice;
 import com.google.inject.Inject;
-import com.shuffle.DalvikModule;
 import com.shuffle.JvmModule;
 import com.shuffle.bitcoin.BitcoinCrypto;
 import com.shuffle.bitcoin.DecryptionKey;
 import com.shuffle.bitcoin.EncryptionKey;
 
+import org.apache.commons.codec.binary.Hex;
 import org.bitcoinj.core.ECKey;
 import org.junit.Before;
 import org.junit.Test;
-import org.spongycastle.util.encoders.Hex;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -75,7 +74,7 @@ public class DecryptionKeyImplTest {
         String decryptedMessage = new String(iesCipher.doFinal(encryptedMessage));
 
         System.out.println(message);
-        System.out.println(" -> " + Hex.toHexString(encryptedMessage));
+        System.out.println(" -> " + Hex.encodeHexString(encryptedMessage));
         System.out.println(" -> " + decryptedMessage);
     }
 
