@@ -15,6 +15,7 @@ package com.shuffle.p2p;
  */
 
 import java.io.Serializable;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
@@ -32,47 +33,18 @@ public class Bytestring implements Serializable {
     }
 
     public Bytestring prepend(Bytestring pre) {
-        byte[] newBytes = new byte[bytes.length + pre.bytes.length];
-
-        int i;
-        for (i = 0; i < pre.bytes.length; i++) {
-            newBytes[i] = pre.bytes[i];
-        }
-
-        for (byte aByte : bytes) {
-            newBytes[i] = aByte;
-            i++;
-        }
-
-        return new Bytestring(newBytes);
+        ByteBuffer target = ByteBuffer.wrap(new byte[bytes.length + pre.bytes.length]);
+        target.put(pre.bytes);
+        target.put(bytes);
+        return new Bytestring(target.array());
     }
 
     public Bytestring append(Bytestring post) {
-        byte[] newBytes = new byte[bytes.length + post.bytes.length];
-
-        int i;
-        for (i = 0; i < bytes.length; i++) {
-            newBytes[i] = bytes[i];
-        }
-
-        for (int j = 0; j < post.bytes.length; j++) {
-            newBytes[i] = post.bytes[j];
-            i++;
-        }
-
-        return new Bytestring(newBytes);
+        return post.prepend(this);
     }
 
-    private Bytestring cp9(int last, int next, int i) {
-
-        byte[] b = new byte[next - last];
-        for (int j = 0; j < b.length; j ++) {
-            b[j] = bytes[i];
-
-            i ++;
-        }
-
-        return new Bytestring(b);
+    private Bytestring cp9(int last, int next) {
+        return new Bytestring(Arrays.copyOfRange(bytes, last, next));
     }
 
     public Bytestring[] chop(int[] where) {
@@ -82,11 +54,15 @@ public class Bytestring implements Serializable {
         int i = 0;
 
         for (int next : where) {
-            if (next < last) continue;
+            if (next <= last) {
+                throw new IllegalArgumentException("chop locations have to be positive and increasing");
+            }
 
-            if (next > bytes.length) next = bytes.length;
+            if (next >= bytes.length) {
+                throw new IllegalArgumentException("trying to chop beyond the end?");
+            }
 
-            Bytestring section = cp9(last, next, i);
+            Bytestring section = cp9(last, next);
             l.add(section);
             i += section.bytes.length;
 
@@ -94,9 +70,7 @@ public class Bytestring implements Serializable {
         }
 
         if (i < bytes.length) {
-            l.add(cp9(last, bytes.length, i));
-        } else {
-            l.add(new Bytestring(new byte[]{}));
+            l.add(cp9(last, bytes.length));
         }
 
         return l.toArray(new Bytestring[l.size()]);
@@ -104,7 +78,7 @@ public class Bytestring implements Serializable {
 
     public Bytestring xor(Bytestring b) {
         if (bytes.length != b.bytes.length) {
-            return null;
+            throw new IllegalArgumentException("different length not allowed");
         }
 
         byte[] newBytes = new byte[bytes.length];
