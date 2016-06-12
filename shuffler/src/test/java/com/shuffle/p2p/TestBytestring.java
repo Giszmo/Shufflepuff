@@ -19,48 +19,38 @@ public class TestBytestring {
         Bytestring ab = new Bytestring(new byte[]{2, 3, 7, 12, 13});
         Bytestring ba = new Bytestring(new byte[]{12, 13, 2, 3, 7});
 
-        Assert.assertTrue(e.append(a).equals(a));
-        Assert.assertTrue(e.prepend(a).equals(a));
-        Assert.assertTrue(e.append(b).equals(b));
-        Assert.assertTrue(e.prepend(b).equals(b));
-        Assert.assertTrue(a.append(e).equals(a));
-        Assert.assertTrue(a.prepend(e).equals(a));
-        Assert.assertTrue(b.append(e).equals(b));
-        Assert.assertTrue(b.prepend(e).equals(b));
+        Bytestring[][] values = new Bytestring[][]{
+                {e, e, e},
+                {e, a, a},
+                {e, b, b},
+                {a, e, a},
+                {b, e, b},
+                {a, b, ab},
+                {b, a, ba}
+        };
 
-        Assert.assertTrue(a.append(b).equals(ab));
-        Assert.assertTrue(a.prepend(b).equals(ba));
-        Assert.assertTrue(b.append(a).equals(ba));
-        Assert.assertTrue(b.prepend(a).equals(ab));
+        for(Bytestring[] v: values) {
+            Assert.assertEquals(v[0].append(v[1]), v[2]);
+            Assert.assertEquals(v[1].prepend(v[0]), v[2]);
+        }
     }
 
-    static int chopTestNum = 0;
-    static void chopTestCase(byte[] input, int[] chop, byte[][] ex) {
-        chopTestNum ++;
-        Bytestring[] expected = new Bytestring[ex.length];
-        int i = 0;
-        for (byte[] b : ex) {
-            expected[i] = new Bytestring(b);
-            i++;
-        }
-
+    void chopTestCase(byte[] input, int[] chop, byte[][] expected) {
         Bytestring[] results = new Bytestring(input).chop(chop);
-        System.out.println("Chop test case " + chopTestNum
-                + "; expected " + Arrays.toString(expected)
-                + "; result " + Arrays.toString(results));
+        byte[][] resultBAs = new byte[results.length][];
+        for(int i=0; i<results.length; i++) {
+            resultBAs[i] = results[i].bytes;
+        }
+        String msg = "Chop test case; expected " + Arrays.deepToString(expected)
+                + "; result " + Arrays.deepToString(resultBAs);
 
-        Assert.assertTrue(Arrays.equals(expected, results));
+        Assert.assertTrue(msg, Arrays.deepEquals(expected, resultBAs));
     }
 
     @Test
     public void testChop() {
-        chopTestCase(new byte[]{}, new int[]{}, new byte[][]{new byte[]{}});
-        chopTestCase(new byte[]{}, new int[]{1}, new byte[][]{new byte[]{}, new byte[]{}});
-        chopTestCase(new byte[]{}, new int[]{1, 3},
-                new byte[][]{new byte[]{}, new byte[]{}, new byte[]{}});
+        chopTestCase(new byte[]{}, new int[]{}, new byte[][]{});
         chopTestCase(new byte[]{1}, new int[]{}, new byte[][]{new byte[]{1}});
-        chopTestCase(new byte[]{1}, new int[]{0}, new byte[][]{new byte[]{}, new byte[]{1}});
-        chopTestCase(new byte[]{1}, new int[]{1}, new byte[][]{new byte[]{1}, new byte[]{}});
         chopTestCase(
                 new byte[]{1, 2},
                 new int[]{1},
@@ -77,5 +67,25 @@ public class TestBytestring {
                 new byte[]{1, 2, 3},
                 new int[]{2},
                 new byte[][]{new byte[]{1, 2}, new byte[]{3}});
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testChopFailsChoppingBeyondEmptyArray() {
+        chopTestCase(new byte[]{}, new int[]{1}, null);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testChopFailsChoppingAtZero() {
+        chopTestCase(new byte[]{1}, new int[]{0}, null);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testChopFailsChoppingAtLength() {
+        chopTestCase(new byte[]{1, 3, 4}, new int[]{3}, null);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testChopFailsChoppingOutOfOrder() {
+        chopTestCase(new byte[]{1, 3, 4}, new int[]{2, 1}, null);
     }
 }
