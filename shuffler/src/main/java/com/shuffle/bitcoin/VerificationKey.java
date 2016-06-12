@@ -23,9 +23,6 @@ import java.io.Serializable;
  */
 public interface VerificationKey extends Comparable, Serializable {
 
-    // Separates message from signature and returns null if the verification fails.
-    Bytestring[] verify(Bytestring bytestring);
-
     boolean verify(Bytestring payload, Bytestring signature);
 
     boolean equals(Object vk);

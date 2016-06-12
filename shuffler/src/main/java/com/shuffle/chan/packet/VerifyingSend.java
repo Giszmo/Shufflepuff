@@ -10,10 +10,11 @@ import com.shuffle.p2p.Bytestring;
  *
  * Created by Daniel Krawisz on 4/13/16.
  */
-public class VerifyingSend<X> implements Send<Bytestring> {
+public class VerifyingSend<X> implements Send<Signed<X>> {
 
-    private final Marshaller<Signed<X>> marshaller;
+    private final Marshaller<X> marshaller;
     private final Send<Signed<X>> send;
+    private final VerificationKey key;
 
     public VerifyingSend(
             Send<Signed<X>> send,
@@ -22,16 +23,14 @@ public class VerifyingSend<X> implements Send<Bytestring> {
 
         if (marshaller == null || send == null || key == null) throw new NullPointerException();
 
-        this.marshaller = new VerifyingMarshaller<>(key, marshaller);
+        this.marshaller = marshaller;
         this.send = send;
+        this.key = key;
     }
 
     @Override
-    public boolean send(Bytestring bytestring) throws InterruptedException {
-
-        Signed<X> x = marshaller.unmarshall(bytestring);
-
-        return x != null && send.send(x);
+    public boolean send(Signed<X> x) throws InterruptedException {
+        return x != null && key.verify(marshaller.marshall(x.message), x.signature) && send.send(x);
 
     }
 

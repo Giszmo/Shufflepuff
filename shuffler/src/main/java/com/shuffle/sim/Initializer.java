@@ -20,7 +20,7 @@ import java.util.Map;
 class Initializer<X> {
 
     // The set of incoming mailboxes for each player.
-    public final Map<SigningKey, Inbox<VerificationKey, Signed<X>, Signed<X>>> mailboxes = new HashMap<>();
+    public final Map<SigningKey, Inbox<VerificationKey, Signed<X>>> mailboxes = new HashMap<>();
 
     // The set of channels that player use to send to other players.
     public final Map<SigningKey, Map<VerificationKey, Send<Signed<X>>>> networks = new HashMap<>();
@@ -66,14 +66,14 @@ class Initializer<X> {
         networks.put(sk, inputs);
 
         // Ceate a new mailbox.
-        Inbox<VerificationKey, Signed<X>, Signed<X>> inbox = new BasicInbox<>(capacity);
+        Inbox<VerificationKey, Signed<X>> inbox = new BasicInbox<>(capacity);
 
         // Create input channels for this new mailbox that lead to all other mailboxes
         // and create input channels for all the other mailboxes for this new one.
-        for (Map.Entry<SigningKey, Inbox<VerificationKey, Signed<X>, Signed<X>>> entry : mailboxes.entrySet()) {
+        for (Map.Entry<SigningKey, Inbox<VerificationKey, Signed<X>>> entry : mailboxes.entrySet()) {
             SigningKey ks = entry.getKey();
             VerificationKey kv = ks.VerificationKey();
-            Inbox<VerificationKey, Signed<X>, Signed<X>> box = entry.getValue();
+            Inbox<VerificationKey, Signed<X>> box = entry.getValue();
 
             // Create a session from the new mailbox to the previous one.
             inputs.put(kv, box.receivesFrom(vk));

@@ -39,7 +39,7 @@ public class MockNetwork  {
     // Haha yes it's silly to call an Inbox outbox. Normally you wouldn't use an Inbox
     // this way but for testing purposes it works fine because I just need to collect all
     // outgoing messages.
-    private final Inbox<VerificationKey, Signed<Packet<VerificationKey, P>>, Signed<Packet<VerificationKey, P>>> outbox;
+    private final Inbox<VerificationKey, Signed<Packet<VerificationKey, P>>> outbox;
 
     private final Map<VerificationKey, Send<Signed<Packet<VerificationKey, P>>>> out = new HashMap<>();
 
@@ -49,7 +49,7 @@ public class MockNetwork  {
         // First create the inbox and outbox.
         outbox = new BasicInbox<>(cap);
 
-        Inbox<VerificationKey, Signed<Packet<VerificationKey, P>>, Signed<Packet<VerificationKey, P>>> inbox
+        Inbox<VerificationKey, Signed<Packet<VerificationKey, P>>> inbox
                 = new BasicInbox<>(cap);
 
         VerificationKey vk = me.VerificationKey();

@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit;
  *
  * Created by Daniel Krawisz on 5/27/16.
  */
-public class BasicInbox<Address, X extends Serializable> implements Inbox<Address, X, X> {
+public class BasicInbox<Address, X extends Serializable> implements Inbox<Address, X> {
 
     private static class Transit<Address, X> {
         public final Envelope<Address, X> m;

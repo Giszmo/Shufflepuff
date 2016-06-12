@@ -28,19 +28,6 @@ public class MockVerificationKey implements VerificationKey, Serializable {
     }
 
     @Override
-    public Bytestring[] verify(Bytestring bytestring) {
-        if (bytestring.bytes.length < 4) return null;
-
-        Bytestring[] chopped = bytestring.chop(new int[]{bytestring.bytes.length - 4});
-
-        if (verify(chopped[0], chopped[1])) {
-            return chopped;
-        }
-
-        return null;
-    }
-
-    @Override
     public boolean verify(Bytestring payload, Bytestring signature) {
         return Arrays.equals(signature.bytes, new MockSigningKey(index).sign(payload).bytes);
     }

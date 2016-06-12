@@ -13,11 +13,11 @@ import java.util.concurrent.TimeUnit;
  *
  * Created by Daniel Krawisz on 5/27/16.
  */
-public class VerifyingInbox<X> implements Inbox<VerificationKey, Signed<X>, Bytestring> {
-    private final Inbox<VerificationKey, Signed<X>, Signed<X>> inner;
+public class VerifyingInbox<X> implements Inbox<VerificationKey, Signed<X>> {
+    private final Inbox<VerificationKey, Signed<X>> inner;
     private final Marshaller<X> marshaller;
 
-    public VerifyingInbox(Inbox<VerificationKey, Signed<X>, Signed<X>> inner, Marshaller<X> marshaller) {
+    public VerifyingInbox(Inbox<VerificationKey, Signed<X>> inner, Marshaller<X> marshaller) {
         this.inner = inner;
         this.marshaller = marshaller;
     }
@@ -28,7 +28,7 @@ public class VerifyingInbox<X> implements Inbox<VerificationKey, Signed<X>, Byte
     }
 
     @Override
-    public Send<Bytestring> receivesFrom(VerificationKey from) {
+    public Send<Signed<X>> receivesFrom(VerificationKey from) {
         Send<Signed<X>> onward = inner.receivesFrom(from);
 
         if (onward == null) return null;

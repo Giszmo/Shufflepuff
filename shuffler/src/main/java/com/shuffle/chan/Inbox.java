@@ -7,7 +7,7 @@ import java.io.Serializable;
  *
  * Created by Daniel Krawisz on 5/18/16.
  */
-public interface Inbox<Address, X, Y extends Serializable> extends Receive<Inbox.Envelope<Address, X>> {
+public interface Inbox<Address, X extends Serializable> extends Receive<Inbox.Envelope<Address, X>> {
 
     class Envelope<Address, X> implements Comparable<Envelope<Address, X>> {
         public final Address from;
@@ -38,7 +38,7 @@ public interface Inbox<Address, X, Y extends Serializable> extends Receive<Inbox
     }
 
     // A send into the inbox is opened, enabling someone to dump messages in it.
-    Send<Y> receivesFrom(Address from);
+    Send<X> receivesFrom(Address from);
 
     void close() throws InterruptedException;
 }

@@ -20,13 +20,13 @@ dependencies {
     compile 'org.glassfish.tyrus.ext:tyrus-extension-deflate:1.12'
     compile 'org.glassfish.tyrus.tests:tyrus-test-tools:1.12'
     compile 'junit:junit:4.12'
+    compile 'net.sf.jopt-simple:jopt-simple:5.0.2'
 }
 
 project.pmd.ignoreFailures = true
 project.findbugs.ignoreFailures = true
 
 apply plugin: 'application'
-mainClassName = "com.shuffle.sim.Player"
 
 jar {
     manifest {

@@ -17,9 +17,9 @@ public class Collector<Address, X extends Serializable> implements Listener<Addr
     // the program should be refactored so that they don't need to be public.
     public final ConcurrentMap<Address, Send<X>> connected = new ConcurrentHashMap<>();
 
-    public final Inbox<Address, X, X> inbox;
+    public final Inbox<Address, X> inbox;
 
-    public Collector(Inbox<Address, X, X> inbox) {
+    public Collector(Inbox<Address, X> inbox) {
         if (inbox == null) throw new NullPointerException();
         if (inbox.closed()) throw new IllegalArgumentException();
 
