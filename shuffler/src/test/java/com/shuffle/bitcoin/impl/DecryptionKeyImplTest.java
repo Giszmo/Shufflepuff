@@ -1,7 +1,6 @@
 package com.shuffle.bitcoin.impl;
 
 import com.google.inject.Guice;
-import com.google.inject.Inject;
 import com.shuffle.JvmModule;
 import com.shuffle.bitcoin.BitcoinCrypto;
 import com.shuffle.bitcoin.DecryptionKey;
@@ -24,7 +23,6 @@ import java.util.Arrays;
 import java.util.Enumeration;
 
 import javax.crypto.Cipher;
-import javax.inject.Named;
 
 import static org.junit.Assert.assertEquals;
 
@@ -32,10 +30,6 @@ import static org.junit.Assert.assertEquals;
  * Created by conta on 02.06.16.
  */
 public class DecryptionKeyImplTest {
-    @Inject
-    @Named("providerName")
-    private String providerName;
-
     ECKey ecKey;
     BitcoinCrypto bitcoinCrypto;
     DecryptionKey decryptionKey;
@@ -44,8 +38,8 @@ public class DecryptionKeyImplTest {
 
     @Before
     public void setUp() throws Exception {
+        // The module also initializes the BouncyCastle crypto
         Guice.createInjector(new JvmModule()).injectMembers(this);
-        System.out.println("Using " + providerName);
         this.bitcoinCrypto = new BitcoinCrypto();
         this.secureRandom = new SecureRandom();
         this.ecKey = new ECKey(secureRandom);
@@ -54,7 +48,7 @@ public class DecryptionKeyImplTest {
 
     @Test
     public void testECIESAvailability() throws Exception {
-        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("ECDH", providerName);
+        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("ECIES");
         keyPairGenerator.initialize(new ECGenParameterSpec("secp256r1"));
 
         KeyPair recipientKeyPair = keyPairGenerator.generateKeyPair();
@@ -62,7 +56,7 @@ public class DecryptionKeyImplTest {
         PrivateKey privKey = recipientKeyPair.getPrivate();
 
         // init the encryption cipher
-        Cipher iesCipher = Cipher.getInstance("ECIES", providerName);
+        Cipher iesCipher = Cipher.getInstance("ECIES");
         iesCipher.init(Cipher.ENCRYPT_MODE, pubKey);
 
         // use the cipher
